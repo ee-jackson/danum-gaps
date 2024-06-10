@@ -1,13 +1,13 @@
-# template-project
+# danum-gaps
 
-This repository contains the [research compendium](https://research-compendium.science) for the project: X. The compendium is a collection of all digital parts of the research project to date.
+This repository contains the [research compendium](https://research-compendium.science) for the project: Growth and survival of enrichment planted tree seedlings in old-growth and selectively logged lowland dipterocarp rainforest. The compendium is a collection of all digital parts of the research project to date.
 
 ## Contents:
 
 ### [`code/`](code/)
-The [`code/`](code/) directory contains two subdirectories:
+The [`code/`](code/) directory contains these subdirectories:
 
-[`notebooks/`](code/notebooks/) contains R Markdown or Quarto files that are used for exploratory analysis. They produce figures and documents.  All `.Rmd` files in [`notebooks/`](code/notebooks/) are knitted to `.md` `github_documents` to make the GitHub repo browsable.
+[`notebooks/`](code/notebooks/) contains Quarto files that are used for exploratory analysis. They produce figures and documents.  
 
 [`scripts/`](code/scripts/) contains action scripts, i.e. all the code for cleaning, combining, and analysing the data. All paths in the scripts are relative to the root directory (where the `.Rproj` file lives). Each `.R` script has a summary at the top of what it does. The scripts are numbered in the order in which they would typically be run.
 

@@ -1,10 +1,15 @@
 ## Project specific ignores:
 
 data/
-code/exploration/*html
+docs/r-veryard
+code/notebooks/*html
+code/graveyard
+output/plots
+*.doc
+*.docx
+*.xlsx
 
-
-## R + RStudio ignores:
+## R ignores:
 
 # History files
 .Rhistory
@@ -62,7 +67,7 @@ rsconnect/
 .LSOverride
 
 # Icon must end with two \r
-Icon
+Icon?
 
 # Thumbnails
 ._*

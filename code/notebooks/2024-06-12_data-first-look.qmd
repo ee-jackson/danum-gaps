@@ -1,0 +1,74 @@
+---
+title: "Data, first look"
+author: 'eleanorjackson'
+date: '`r format(Sys.time(), "%d %B, %Y")`' 
+format: gfm
+editor: source
+---
+
+```{r setup}
+#| include: false
+
+file_name <- rstudioapi::getSourceEditorContext()$path
+
+knitr::opts_chunk$set(
+  fig.path =
+    paste0("figures/", sub("\\.Rmd$", "", basename(file_name)), "/", sep = "")
+)
+
+ggplot2::theme_set(ggplot2::theme_classic(base_size = 10))
+```
+
+```{r packages}
+#| output: false
+
+library("tidyverse")
+library("here")
+library("patchwork")
+library("janitor")
+```
+
+```{r}
+file_names <-
+  as.list(dir(path = here::here("data", "raw"),
+              pattern = "DanumGaps_Data_*", 
+              full.names = TRUE))
+
+data_list <-
+  lapply(X = file_names, 
+         FUN = readxl::read_excel,
+         range = readxl::cell_cols("A:K"),
+         na = c("", "NA"),
+         col_types = c("date", 
+                       "text",
+                       "text",
+                       "text",
+                       "text",
+                       "text",
+                       "numeric",
+                       "numeric",
+                       "numeric",
+                       "numeric",
+                       "text") )
+
+names(data_list) <-
+  lapply(file_names, basename)
+
+all_data <-
+  bind_rows(data_list, .id = 'df') %>%
+  clean_names()
+
+rm(data_list)
+
+```
+
+```{r}
+all_data %>% 
+  mutate(survey_yr = as.ordered(year(survey_date))) %>% 
+  rowwise() %>% 
+  mutate(dbh_mean = mean(c(dbh_1, dbh_2, na.rm = TRUE))) %>% 
+  filter(canopy == "G") %>% 
+  ggplot(aes(x = survey_yr, y = dbh_mean)) +
+  geom_boxplot()
+```
+

@@ -44,7 +44,7 @@ data_list <-
                        "text",
                        "text",
                        "text",
-                       "text",
+                       "numeric",
                        "numeric",
                        "numeric",
                        "numeric",
@@ -56,19 +56,54 @@ names(data_list) <-
 
 all_data <-
   bind_rows(data_list, .id = 'df') %>%
-  clean_names()
+  clean_names() %>% 
+  mutate(across(canopy:plant_no, as.factor))
 
 rm(data_list)
-
 ```
 
 ```{r}
+glimpse(all_data)
+
+summary(all_data)
+```
+
+
+```{r}
 all_data %>% 
-  mutate(survey_yr = as.ordered(year(survey_date))) %>% 
+  mutate(survey_yr = as.ordered(readr::parse_number(df))) %>%
   rowwise() %>% 
   mutate(dbh_mean = mean(c(dbh_1, dbh_2, na.rm = TRUE))) %>% 
   filter(canopy == "G") %>% 
   ggplot(aes(x = survey_yr, y = dbh_mean)) +
-  geom_boxplot()
+  geom_boxplot() +
+  ylim(0, 100)
 ```
 
+```{r}
+all_data %>% 
+  mutate(survey_yr = as.ordered(readr::parse_number(df))) %>%
+  filter(canopy == "G" &
+           survival == 1) %>% 
+  count(survey_yr)
+```
+
+```{r}
+all_data %>% 
+  mutate(survey_yr = as.ordered(readr::parse_number(df))) %>% 
+  filter(canopy == "G") %>% 
+  drop_na(survival) %>% 
+  group_by(survey_yr) %>% 
+  count(survival) %>% 
+  pivot_wider(names_from = survival, 
+              values_from = n, 
+              id_cols = survey_yr) %>% 
+  rename(alive = `1`, dead = `0`) %>% 
+  mutate(dead = replace_na(dead, 0)) %>% 
+  ggplot(aes(x = survey_yr, y = dead/378)) +
+  geom_point() 
+```
+
+Maybe more data was collected in years > 2018?
+
+Let's see if we can get a unique plot id.

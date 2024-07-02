@@ -2,22 +2,31 @@
 title: "Data, first look"
 author: 'eleanorjackson'
 date: '`r format(Sys.time(), "%d %B, %Y")`' 
-format: gfm
+format: gfm+emoji
 editor: source
 ---
 
 ```{r setup}
 #| include: false
 
-file_name <- rstudioapi::getSourceEditorContext()$path
+file_name <- knitr::current_input()
 
 knitr::opts_chunk$set(
   fig.path =
-    paste0("figures/", sub("\\.Rmd$", "", basename(file_name)), "/", sep = "")
+    paste0("figures/", sub("\\.rmarkdown$", "", basename(file_name)), "/", sep = "")
 )
 
 ggplot2::theme_set(ggplot2::theme_classic(base_size = 10))
 ```
+
+In this notebook I'm going to take a first look at the Danum Gaps data.
+Currently we've got 3 versions of the data: 
+
+- some census-level excel files from Andy (which I think are raw data)
+- the data published by Mikey [on Zenodo](https://zenodo.org/records/10701333) to accompany [his publication](https://doi.org/10.1038/s43247-024-01335-5)
+- the cleaned data that Ryan used for his thesis [published on OSF](https://osf.io/cfb69/?view_only=812168fc288d4ffb89e7eec3dada01c1)
+
+Do these data match up? Can we add newly collected data to Ryan's dataset?
 
 ```{r packages}
 #| output: false
@@ -27,6 +36,11 @@ library("here")
 library("patchwork")
 library("janitor")
 ```
+
+Reading in the `DanumGaps_Data_*` files from Andy. 
+There are 8 files: 2015, 2015_plus, 2016, 2017, 2018, 2019, 2023 and 2024.
+Are these just the "intensive" plots? 
+We should be able to add to the 2024 data this August.
 
 ```{r}
 file_names <-
@@ -54,7 +68,7 @@ data_list <-
 names(data_list) <-
   lapply(file_names, basename)
 
-all_data <-
+andy_data <-
   bind_rows(data_list, .id = 'df') %>%
   clean_names() %>% 
   mutate(across(canopy:plant_no, as.factor))
@@ -63,47 +77,146 @@ rm(data_list)
 ```
 
 ```{r}
-glimpse(all_data)
+glimpse(andy_data)
 
-summary(all_data)
+summary(andy_data)
 ```
 
 
 ```{r}
-all_data %>% 
+andy_data %>% 
   mutate(survey_yr = as.ordered(readr::parse_number(df))) %>%
-  rowwise() %>% 
-  mutate(dbh_mean = mean(c(dbh_1, dbh_2, na.rm = TRUE))) %>% 
   filter(canopy == "G") %>% 
-  ggplot(aes(x = survey_yr, y = dbh_mean)) +
-  geom_boxplot() +
-  ylim(0, 100)
+  mutate(survival = as.factor(survival)) %>% 
+  group_by(survey_yr, survival) %>% 
+  summarise(n_obs = n()) %>% 
+  ggplot(aes(x = survey_yr, y = n_obs, fill = survival)) +
+  geom_col() 
+```
+
+I think there were two rounds of censusing in 2015, 
+which is why the number of observations doubles.
+
+Taking a look at the data from [Mikey on Zenodo](https://doi.org/10.5281/zenodo.10701333).
+I don't think this is all the data that's been collected 
+but may allow us to link plant ID's to species.
+
+```{r}
+read_tsv(
+  here::here("data", "raw", "download_zenodo", "DataGrowthSurvivalClean.txt")
+  ) %>% 
+  clean_names() -> mikey_data
+
+glimpse(mikey_data)
+```
+
+So, this data spans 2004 - 2017, and perhaps it includes more of the plots?
+
+```{r}
+n_distinct(mikey_data$plant_id)
+
+n_distinct(andy_data$plant_no)
+  
+```
+
+Yep ok, Mikey's data includes observations from 2,000 seedlings 
+and Andy's data covers 36 seedlings. Is that right? Doesn't seem like many.
+
+Let's check out the `plant_id` and `plant_no` variables 
+to see if they are actually unique plant IDs or not.
+
+```{r}
+mikey_data %>% 
+  group_by(block, canopy, plot, subplot,
+           genus, species) %>% 
+  summarise(n()) %>% 
+  glimpse()
+```
+
+There are 1,932 unique seedlings when using block-canopy-plot-subplot 
+as a unique identifier.
+
+```{r}
+mikey_data %>% 
+  group_by(block, canopy, plot, subplot,
+           genus, species, plant_id) %>% 
+  summarise(n(), .groups = "drop") %>% 
+  count()
+
+n_distinct(mikey_data$plant_id)
+```
+
+`plant_id` is supposed to be a unique ID for individual seedlings.
+When we include `plant_id` in our block-canopy-plot-subplot ID we get 2,017 counts,
+although there are 2,000 distinct `plant_id` values.. :thinking:
+
+I think the subplots might have different species abundances. 
+They should have 25 seedlings each, but could be one of 26 different species.
+
+```{r}
+mikey_data %>% 
+  group_by(block, canopy, plot, subplot) %>% 
+  summarise(n_sp = n_distinct(species), 
+            .groups = "drop") %>% 
+  count(n_sp, name = "n_subplots")
+```
+
+Yep, this lines up!
+
+Now taking a look at Andy's data.
+We are missing the `plot` variable that's in Mikey's data.
+
+```{r}
+andy_data %>% 
+  group_by(block, canopy, subplot,
+           plant_no) %>% 
+  summarise(n()) %>% 
+  glimpse()
+```
+
+I think that in this data `plant_no` is only unique at the subplot level.
+There is a max of 8 observations per row, 
+which makes sense - one for each round of censusing. 
+There are 284 unique rows which sounds like a more sensible number of seedlings.
+But what species are they?
+
+There is also the cleaned data that Ryan has made [available on OSF](http://bit.ly/3TKgKOo).
+
+```{r}
+read_csv(
+  here::here("docs", 
+             "r-veryard", 
+             "data", 
+             "combined_sbe_danum_data.csv")
+  ) %>% 
+  clean_names() -> ryan_data
+
+glimpse(ryan_data)
+```
+
+Here it looks like `tree_id` is a combination of `plot`, `cohort` and 
+perhaps a subplot level plant ID?
+
+I'm just interested in the Danum plots at the moment.
+
+```{r}
+ryan_data %>% 
+  filter(type == "Primary") -> ryan_data_danum
+
+n_distinct(ryan_data_danum$tree_id) 
+  
 ```
 
 ```{r}
-all_data %>% 
-  mutate(survey_yr = as.ordered(readr::parse_number(df))) %>%
-  filter(canopy == "G" &
-           survival == 1) %>% 
-  count(survey_yr)
+ryan_data_danum %>% 
+  mutate(year = year(survey_date)) %>% 
+  group_by(year) %>% 
+  summarise(n())
 ```
 
-```{r}
-all_data %>% 
-  mutate(survey_yr = as.ordered(readr::parse_number(df))) %>% 
-  filter(canopy == "G") %>% 
-  drop_na(survival) %>% 
-  group_by(survey_yr) %>% 
-  count(survival) %>% 
-  pivot_wider(names_from = survival, 
-              values_from = n, 
-              id_cols = survey_yr) %>% 
-  rename(alive = `1`, dead = `0`) %>% 
-  mutate(dead = replace_na(dead, 0)) %>% 
-  ggplot(aes(x = survey_yr, y = dead/378)) +
-  geom_point() 
-```
+Ryan's data covers 2004 to 2017 - that's the same time span as Mikey's data.
+2005, 2010, 2013, 2014, 2015 and 2017 have approx double the number of observations,
+were two censuses done in those years?
 
-Maybe more data was collected in years > 2018?
-
-Let's see if we can get a unique plot id.
+I think we are going to need the raw data and scripts that Ryan used to 
+create his `combined_sbe_danum_data.csv` file.

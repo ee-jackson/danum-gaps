@@ -1,6 +1,6 @@
 # danum-gaps
 
-This repository contains the [research compendium](https://research-compendium.science) for the project: Growth and survival of enrichment planted tree seedlings in old-growth and selectively logged lowland dipterocarp rainforest. The compendium is a collection of all digital parts of the research project to date.
+This repository contains the [research compendium](https://research-compendium.science) for the project: Growth and survival of enrichment planted tree seedlings in old-growth and selectively logged lowland dipterocarp rainforest.
 
 ## Contents:
 
@@ -18,7 +18,7 @@ The original data is stored in the `data/raw/` subdirectory. Any data that is pr
 The [`output/`](output/) directory contains the subdirectories [`figures/`](output/figures/) and [`results/`](output/results/), which contain the figures used in the paper and other output from analyses, respectively.
 
 ### [`docs/`](docs/)
-The [`docs/`](docs/) directory contains the [data dictionary](docs/data-dictionary.md) (i.e. metadata), [project notebook](docs/project-notebook.md), [protocols](docs/protocols.md) and any other relevant documents.
+The [`docs/`](docs/) directory contains the [data dictionary](docs/data-dictionary.md) (i.e. metadata), [protocols](docs/protocols.md) and any other relevant documents.
 
 ## Usage
 To reproduce results and figures run the `.R` scripts in [`code/scripts/`](code/scripts/) in the order in which they are labelled.

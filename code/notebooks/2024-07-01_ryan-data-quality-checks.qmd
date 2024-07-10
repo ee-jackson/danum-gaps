@@ -1,0 +1,139 @@
+---
+title: "QC of Ryan's data"
+author: 'Francisco Navarro Rosales'
+date: '`r format(Sys.time(), "%d %B, %Y")`' 
+format: gfm+emoji
+editor: source
+---
+
+```{r setup}
+#| include: false
+
+file_name <- knitr::current_input()
+
+knitr::opts_chunk$set(
+  fig.path =
+    paste0("figures/", sub("\\.rmarkdown$", "", basename(file_name)), "/", sep = "")
+)
+
+ggplot2::theme_set(ggplot2::theme_classic(base_size = 10))
+```
+
+In [2024-06-04_plotting-survival.md](2024-06-04_plotting-survival.md) we noticed that 
+the number of observations per plot didn't remain constant across each census in the secondary forest.
+
+This is a further investigation!
+
+```{r packages}
+#| output: false
+
+library("tidyverse")
+library("here")
+library("janitor")
+library("lubridate")
+```
+
+Upload data
+
+```{r}
+ryan_data <-
+  read_csv(
+  here::here("docs", 
+             "r-veryard", 
+             "data", 
+             "combined_sbe_danum_data.csv")
+  ) %>% 
+  clean_names() 
+
+glimpse(ryan_data)
+```
+
+Creating a `days` variable - days since first survey
+
+```{r}
+min_date_primary <-
+  ryan_data %>% 
+  filter(type == "Primary") %>% 
+  summarise(min_date = min(survey_date)) %>% 
+  pluck(1,1)
+
+min_date_secondary <-
+  ryan_data %>% 
+  filter(type == "Secondary") %>% 
+  summarise(min_date = min(survey_date)) %>% 
+  pluck(1,1)
+
+ryan_data <-
+  ryan_data %>% 
+  mutate(days =
+    case_when(type == "Primary" ~ difftime(survey_date, min_date_primary),
+              type == "Secondary" ~ difftime(survey_date, min_date_secondary))
+    ) %>% 
+  mutate(days = time_length(days, unit = "days"))
+
+```
+
+Filter for secondary forest type (SBE)
+
+```{r}
+data_secondary <- filter(ryan_data, type =="Secondary")
+```
+
+Plot record abundance across time
+
+```{r}
+data_secondary %>% 
+  group_by(plot, census) %>% 
+  summarise(count = n(), days = mean(days)) %>% 
+  ggplot(aes(x = days, y = count, colour = plot)) +
+  geom_point() +
+  geom_path() 
+```
+
+WEIRD: Lets flag issues
+
+```{r}
+# Step A: Select tree_ids with multiple plot values
+tree_id_multiple_plots <- data_secondary %>%
+  group_by(tree_id) %>%
+  summarize(n_plots = n_distinct(plot)) %>%
+  filter(n_plots > 1) %>%
+  mutate(has_multiple_plots = "Yes")
+
+# Step B: Select tree_ids with multiple species values
+tree_id_multiple_species <- data_secondary %>%
+  group_by(tree_id) %>%
+  summarize(n_species = n_distinct(species)) %>%
+  filter(n_species > 1) %>%
+  mutate(has_multiple_species = "Yes")
+
+# Step C: Select tree_ids containing 'QO' or 'NAO'
+tree_id_with_QO_NAO <- data_secondary %>%
+  filter(str_detect(tree_id, "QO|NAO")) %>%
+  distinct() %>%
+  mutate(has_QO_NAO = "Yes") %>%
+  select(tree_id, has_QO_NAO)
+
+# Combine into a final summary dataset
+tree_id_summary <- full_join(tree_id_multiple_plots, tree_id_multiple_species, by = "tree_id") %>%
+  full_join(tree_id_with_QO_NAO, by = "tree_id") %>%
+  mutate(
+    has_multiple_plots = ifelse(is.na(has_multiple_plots), "No", has_multiple_plots),
+    has_multiple_species = ifelse(is.na(has_multiple_species), "No", has_multiple_species),
+    has_QO_NAO = ifelse(is.na(has_QO_NAO), "No", has_QO_NAO)
+  ) %>%
+  select(tree_id, has_multiple_plots, has_multiple_species, has_QO_NAO)
+
+# Remove these tree_ids from the original data_secondary dataset
+data_secondary_filtered <- data_secondary %>%
+  anti_join(tree_id_summary, by = "tree_id")
+
+# Plot this filtered dataset, issues are removed
+data_secondary_filtered %>% 
+  group_by(plot, census) %>% 
+  summarise(count = n(), 
+            days = mean(days))%>% 
+  ggplot(aes(x = days, y = count, colour = plot)) +
+  geom_point() + geom_path() + theme_classic()
+```
+

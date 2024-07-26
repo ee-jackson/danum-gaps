@@ -1,0 +1,208 @@
+---
+title: "Modelling growth"
+author: 'eleanorjackson'
+date: '`r format(Sys.time(), "%d %B, %Y")`' 
+format: gfm+emoji
+editor: source
+---
+
+```{r setup}
+#| include: false
+
+file_name <- knitr::current_input()
+
+knitr::opts_chunk$set(
+  fig.path =
+    paste0("figures/", sub("\\.rmarkdown$", "", basename(file_name)), "/", sep = "")
+)
+
+ggplot2::theme_set(ggplot2::theme_classic(base_size = 10))
+```
+
+Whilst I'm waiting for the raw data, 
+I thought I'd try fitting a few models to Ryan's cleaned data.
+
+```{r packages}
+#| output: false
+
+library("tidyverse")
+library("here")
+library("patchwork")
+library("janitor")
+library("lubridate")
+library("brms")
+
+```
+
+```{r}
+read_csv(
+  here::here("docs", 
+             "r-veryard", 
+             "data", 
+             "combined_sbe_danum_data.csv")
+  ) %>% 
+  clean_names() -> ryan_data
+
+glimpse(ryan_data)
+```
+
+Let's create a days-since-start variable. 
+I'm not sure when the first measurements were taken, 
+at the same time as planting out in the field,
+or in the first survey weeks/months later?
+
+Maybe it would be good to have the germination dates for each individual, 
+then we could model by age - 
+might allow us to tease out or account for the differences induced by different planting dates.
+
+```{r}
+min_date_primary <-
+  ryan_data %>% 
+  filter(type == "Primary") %>% 
+  summarise(min_date = min(survey_date)) %>% 
+  pluck(1,1)
+
+min_date_secondary <-
+  ryan_data %>% 
+  filter(type == "Secondary") %>% 
+  summarise(min_date = min(survey_date)) %>% 
+  pluck(1,1)
+
+ryan_data <-
+  ryan_data %>% 
+  mutate(days_since =
+    case_when(type == "Primary" ~ difftime(survey_date, min_date_primary),
+              type == "Secondary" ~ difftime(survey_date, min_date_secondary))
+    ) %>% 
+  mutate(days_since = time_length(days_since, unit = "days"))
+
+```
+
+```{r}
+ryan_data %>% 
+  ggplot(aes(x = days_since, y = log(dbh_mean))) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(aes(colour = type),
+              method = "glm", method.args = list(family = "gaussian")) +
+  
+  ryan_data %>% 
+  ggplot(aes(x = days_since, y = dbh_mean)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(aes(colour = type),
+              method = "glm", method.args = list(family = "gaussian")) +
+  
+  patchwork::plot_layout(guides = "collect")
+```
+
+I had a quick look at some other papers that model tree growth
+and it seems that many of them just model rate of growth.
+
+Let's try modelling tree growth rate (in mm per year)?
+
+Growth rate = 
+
+DBH at time 1 - DBH at time 2 / (difference in days / 365.25)
+
+```{r}
+first <- 
+  ryan_data %>% 
+  drop_na(dbh_mean) %>% 
+  group_by(type, plot, tree_id, species) %>% 
+  slice_min(days_since, n = 1) %>% 
+  ungroup()
+
+last <- 
+  ryan_data %>% 
+  drop_na(dbh_mean) %>% 
+  group_by(type, plot, tree_id, species) %>% 
+  slice_max(days_since, n = 1) %>% 
+  ungroup()
+
+growth_data <- 
+  bind_rows(first, last) %>% 
+  group_by(type, plot, tree_id, species) %>% 
+  summarise(growth = max(dbh_mean) - min(dbh_mean),
+            time = max(days_since) - min(days_since)) %>% 
+  mutate(growth_rate = growth / (time / 365.25) ) %>% 
+  drop_na(growth_rate)
+```
+
+```{r}
+growth_data %>% 
+  ggplot(aes(x = type, y = growth_rate)) +
+  geom_boxplot()
+```
+
+```{r}
+growth_data %>% 
+  ggplot(aes(x = type, y = growth_rate)) +
+  geom_boxplot() +
+  facet_wrap(~ species)
+```
+
+Try a quick `lmer`
+
+```{r}
+m1 <- 
+  lme4::lmer(
+  formula = "growth_rate ~ type * species + (1 | plot)",
+  data = growth_data
+)
+
+summary(m1)
+```
+
+
+```{r}
+#| include: false
+
+m2 <-
+  brm(data = growth_data, 
+      family = gaussian,
+      scale(growth_rate) ~ type + species + (1 | plot),
+      iter = 2000, warmup = 1000, chains = 4, cores = 4,
+      seed = 123)
+```
+
+Let's include an interaction between forest type and species.
+
+```{r}
+#| output: false
+m3 <-
+  brm(data = growth_data, 
+      family = gaussian,
+      scale(growth_rate) ~ type * species + (1 | plot),
+      iter = 2000, warmup = 1000, chains = 4, cores = 4,
+      seed = 123)
+```
+
+```{r}
+m3
+```
+
+Plotting the posterior estimates
+
+```{r}
+bayesplot::mcmc_areas(m3, pars = c("b_Intercept", "b_typeSecondary") )
+
+```
+
+```{r}
+bayesplot::mcmc_areas(m3, regex_pars = "b_species") +
+  bayesplot::mcmc_areas(m3, regex_pars = "b_typeSecondary:species") 
+
+```
+
+This seems promising. 
+
+Seedlings grew slower in the primary forest compared to the secondary forest.
+Species grow differently in the different forest types, see _S. macrophylla_.
+
+
+If we do want to model growth specifically (rather than rate of growth),
+I started reading 
+[Applied Longitudinal Data Analysis: Modeling Change and Event Occurrence](https://solo.bodleian.ox.ac.uk/permalink/44OXF_INST/101jqdh/cdi_proquest_miscellaneous_37690487)
+and Chapter 5 looked like it could be helpful.
+They talk about how measurement collection is often not evenly spaced and 
+how individuals can be different ages at the start of an experiment.
+Thankfully, there is a {brms} and {tidyverse} translation of the book [avalible here.](https://bookdown.org/content/4253/)

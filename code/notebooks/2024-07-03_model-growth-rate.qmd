@@ -198,6 +198,31 @@ This seems promising.
 Seedlings grew slower in the primary forest compared to the secondary forest.
 Species grow differently in the different forest types, see _S. macrophylla_.
 
+## Conditional effects
+
+```{r}
+conditional_effects(m3) 
+```
+
+```{r}
+conditional_preds <- marginaleffects::predictions(
+  m3, 
+  newdata = marginaleffects::datagrid(type = c("Primary", "Secondary")), 
+  by = "type", 
+  re_formula = NA
+) %>% 
+  marginaleffects::posteriordraws()
+
+p_conditional_preds <- conditional_preds %>% 
+  ggplot(aes(x = draw, fill = factor(type))) +
+  ggdist::stat_halfeye() +
+  labs(x = "Growth rate (scaled)", y = "Density", fill = "Forest type",
+       title = "Conditional means") +
+  theme(plot.subtitle = ggtext::element_markdown())
+
+p_conditional_preds
+```
+
 
 If we do want to model growth specifically (rather than rate of growth),
 I started reading 

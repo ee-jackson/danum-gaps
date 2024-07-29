@@ -1,6 +1,6 @@
 # Modelling growth
 eleanorjackson
-2024-07-26
+2024-07-29
 
 Whilst I’m waiting for the raw data, I thought I’d try fitting a few
 models to Ryan’s cleaned data.
@@ -375,6 +375,39 @@ This seems promising.
 Seedlings grew slower in the primary forest compared to the secondary
 forest. Species grow differently in the different forest types, see *S.
 macrophylla*.
+
+## Conditional effects
+
+``` r
+conditional_effects(m3) 
+```
+
+![](figures/2024-07-03_model-growth-rate/unnamed-chunk-13-1.png)
+
+![](figures/2024-07-03_model-growth-rate/unnamed-chunk-13-2.png)
+
+![](figures/2024-07-03_model-growth-rate/unnamed-chunk-13-3.png)
+
+``` r
+conditional_preds <- marginaleffects::predictions(
+  m3, 
+  newdata = marginaleffects::datagrid(type = c("Primary", "Secondary")), 
+  by = "type", 
+  re_formula = NA
+) %>% 
+  marginaleffects::posteriordraws()
+
+p_conditional_preds <- conditional_preds %>% 
+  ggplot(aes(x = draw, fill = factor(type))) +
+  ggdist::stat_halfeye() +
+  labs(x = "Growth rate (scaled)", y = "Density", fill = "Forest type",
+       title = "Conditional means") +
+  theme(plot.subtitle = ggtext::element_markdown())
+
+p_conditional_preds
+```
+
+![](figures/2024-07-03_model-growth-rate/unnamed-chunk-14-1.png)
 
 If we do want to model growth specifically (rather than rate of growth),
 I started reading [Applied Longitudinal Data Analysis: Modeling Change

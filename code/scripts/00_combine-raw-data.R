@@ -1,0 +1,156 @@
+#!/usr/bin/env Rscript
+
+## Author: E E Jackson, eleanor.elizabeth.j@gmail.com
+## Script: 00_combine-raw-data.R
+## Desc: Combine data from 3 different sources into one csv file
+## Date created: 2024-08-06
+
+
+# packages ----------------------------------------------------------------
+
+library("tidyverse")
+library("here")
+library("patchwork")
+library("janitor")
+
+
+# get secondary forest data -----------------------------------------------
+
+file_names <-
+  as.list(dir(path = here::here("data", "raw", "dv"),
+              pattern = "DanumGaps_Data_*",
+              full.names = TRUE))
+
+data_list <-
+  lapply(X = file_names,
+         FUN = readxl::read_excel,
+         range = readxl::cell_cols("A:K"),
+         na = c("", "NA"),
+         col_types = c("date",
+                       "text",
+                       "text",
+                       "text",
+                       "text",
+                       "numeric",
+                       "numeric",
+                       "numeric",
+                       "numeric",
+                       "numeric",
+                       "text") )
+
+names(data_list) <-
+  lapply(file_names, basename)
+
+data_dv_sps <-
+  read_csv(
+    here::here("data", "raw", "dv", "species_nos.csv"),
+    col_types = "fcc"
+  )
+
+# Data pre-2015 is in this file
+data_dv_charlie <-
+  read_csv(here::here("data", "raw", "dv", "charlie_data.csv"),
+           col_types = "Tcccciddddcd"
+           ) %>%
+  mutate(df = "charlie_data.csv")
+
+data_dv <-
+  bind_rows(data_list, .id = 'df') %>%
+  clean_names() %>%
+  mutate(height_apex = NA) %>%
+  bind_rows(data_dv_charlie) %>%
+  rename(plot = block,
+         dbh1 = dbh_1,
+         dbh2 = dbh_2) %>%
+
+  # Only gaps and plots without drought treatment
+  filter(canopy == "G" & subplot == "A") %>%
+  select(- canopy, - subplot) %>%
+
+  # Repairing individual cases of missing plant number
+  mutate(plant_no = case_when(is.na(plant_no) & plot == 1 ~ "8",
+                              plant_no == "6.8" & plot == 6 ~ "8",
+                              .default = plant_no) ) %>%
+
+  # Plant nos are unique to species
+  mutate(plant_id =
+    str_extract(plant_no, pattern = "\\d+")
+  ) %>%
+  left_join(data_dv_sps, by = c("plant_id" = "plant_no")) %>%
+
+  # Create unique ID per individual
+  mutate(plot = as.numeric(plot)) %>%
+  mutate(plot = formatC(plot,
+                        width = 2,
+                        format = "d",
+                        flag = "0"),
+         survey_date = ymd(survey_date)) %>%
+  mutate(plant_id = paste(plot, plant_no, sep = "_"),
+         genus_species = paste(genus, species, sep = "_")) %>%
+
+  # Making cols match the primary forest data
+  mutate(line = NA, position = NA, old_new = NA,
+         planting_date = NA, height_apex = NA, forest_type = "secondary") %>%
+  select(forest_type, plant_id, plot, line, position, old_new, plant_no,
+         genus, species, genus_species,
+         planting_date, survey_date,
+         survival, height_apex, diam1, diam2, dbh1, dbh2)
+
+rm(data_list)
+
+
+# get primary forest data -------------------------------------------------
+
+data_sbe <-
+  read_csv(
+    here::here("data", "raw", "sbe", "SBE_compiled_dataFull.csv")
+  ) %>%
+  clean_names() %>%
+  rename(old_new = o_n,
+         planting_date = plantingdate,
+         survey_date = surveydate,
+         height_apex = heightapex) %>%
+
+  # Only intensively censused plots
+  filter(pl %in% c(3, 5, 8, 11, 14, 17)) %>%
+
+  mutate(plot = ifelse(is.na(pl), NA,
+                       formatC(pl,
+                               width = 3,
+                               format = "d",
+                               flag = "0")),
+         line = ifelse(is.na(li), NA,
+                       formatC(li,
+                               width = 2,
+                               format = "d",
+                               flag = "0")),
+         position = ifelse(is.na(po), NA,
+                     formatC(po,
+                             width = 3,
+                             format = "d",
+                             flag = "0"))
+         ) %>%
+
+  mutate(
+    planting_date = dmy(planting_date),
+    survey_date = dmy(survey_date),
+    plant_id = paste(plot, line, position, old_new, sep = "_"),
+    survival = case_when(
+      survival == "yes" ~ 1,
+      survival == "no" ~ 0,
+      .default = NA
+    )
+  ) %>%
+  # Making cols match the secondary forest data
+  mutate(plant_no = NA, forest_type = "primary") %>%
+  select(forest_type, plant_id, plot, line, position, old_new, plant_no,
+         genus, species, genus_species,
+         planting_date, survey_date,
+         survival, height_apex, diam1, diam2, dbh1, dbh2)
+
+
+# join --------------------------------------------------------------------
+
+data_comb <- bind_rows(data_dv, data_sbe)
+
+write_csv(data_comb, here::here("data", "derived", "data_combined.csv"))

@@ -6,7 +6,7 @@
 ## Date created: 2024-08-06
 
 
-# packages ----------------------------------------------------------------
+# Packages ----------------------------------------------------------------
 
 library("tidyverse")
 library("here")
@@ -14,7 +14,7 @@ library("patchwork")
 library("janitor")
 
 
-# get secondary forest data -----------------------------------------------
+# Get secondary forest data -----------------------------------------------
 
 file_names <-
   as.list(dir(path = here::here("data", "raw", "dv"),
@@ -47,18 +47,40 @@ data_dv_sps <-
     col_types = "fcc"
   )
 
-# Data pre-2015 is in this file
-data_dv_charlie <-
-  read_csv(here::here("data", "raw", "dv", "charlie_data.csv"),
-           col_types = "Tcccciddddcd"
-           ) %>%
-  mutate(df = "charlie_data.csv")
+# Some older secondary forest data is in this file and formatted differently
+data_dv_older <-
+  readxl::read_excel(
+    here::here("data", "raw", "dv", "AllDataClean2018_DanumGaps.xlsx"),
+    na = c("", "NA"),
+    range = readxl::cell_cols("A:AE"),
+    col_types = c("text","date","numeric","numeric",
+                  "numeric","text","text","numeric",
+                  "text","numeric","text","numeric",
+                  "text","text","text","numeric",
+                  "numeric","numeric","numeric","numeric",
+                  "numeric","numeric","numeric","numeric",
+                  "numeric","numeric","numeric","numeric",
+                  "numeric","numeric","text") ) %>%
+  select(Survey.date, Year, Team, Canopy, Block, Subplot, Plant.no, Survival,
+         Diam1, Diam2, DBH.1, DBH.2, Comments, Height.apex) %>%
+  janitor::clean_names()
+
+# Some data is replicated in DanumGaps_Data_* files
+data_dv_pre2015 <-
+  data_dv_older %>%
+  filter(year < 2015 |
+           year == 2015 & team == "Malua") %>%
+  select(- year, - team) %>%
+  mutate(df = "AllDataClean2018_DanumGaps.xlsx")
+
+
+# Combine secondary forest data sources -----------------------------------
 
 data_dv <-
   bind_rows(data_list, .id = 'df') %>%
   clean_names() %>%
   mutate(height_apex = NA) %>%
-  bind_rows(data_dv_charlie) %>%
+  bind_rows(data_dv_pre2015) %>%
   rename(plot = block,
          dbh1 = dbh_1,
          dbh2 = dbh_2) %>%
@@ -99,7 +121,7 @@ data_dv <-
 rm(data_list)
 
 
-# get primary forest data -------------------------------------------------
+# Get primary forest data -------------------------------------------------
 
 data_sbe <-
   read_csv(
@@ -149,8 +171,9 @@ data_sbe <-
          survival, height_apex, diam1, diam2, dbh1, dbh2)
 
 
-# join --------------------------------------------------------------------
+# Combine secondary and primary forest data -------------------------------
 
-data_comb <- bind_rows(data_dv, data_sbe)
+data_comb <-
+  bind_rows(data_dv, data_sbe)
 
 write_csv(data_comb, here::here("data", "derived", "data_combined.csv"))

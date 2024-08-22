@@ -1,6 +1,6 @@
 # Investigating size at planting/first survey
 eleanorjackson
-2024-08-20
+2024-08-22
 
 > Seedlings were not planted in the forest types at the same time, the
 > secondary forest of SBE was planted first then the left over seedlings
@@ -87,8 +87,8 @@ data %>%
     # A tibble: 2 × 2
       forest_type `n()`
       <fct>       <int>
-    1 primary     11705
-    2 secondary       2
+    1 primary         2
+    2 secondary   11705
 
 This is mostly happening in the SBE data.
 
@@ -158,7 +158,7 @@ data %>%
 
 ![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-8-1.png)
 
-The primary forest (Danum) seedlings often have a greater spread of
+The secondary forest (SBE) seedlings often have a greater spread of
 sizes and a larger mean size in their first survey. They were planted
 later, but were larger at the time of planting.
 
@@ -168,31 +168,34 @@ But some species have pretty good overlap:
 - *S. macroptera*
 - *S. faguetiana*
 
-I’ve forgotten that there are two cohorts of primary forest seedlings,
-perhaps that’s why they have a wider distribution of sizes.
+I’ve forgotten that there are two cohorts of secondary forest seedlings,
+let’s split them out.
 
 ``` r
 data %>% 
   filter(
-    forest_type == "primary" & 
+    forest_type == "secondary" & 
       survey_date == first_survey &
       !is.na(old_new)) %>% 
   ggplot(aes(x = dbase_mean, 
              fill = forest_type,
              colour = forest_type,
              linetype = old_new)) +
-  geom_density(alpha = 0.3) +
+  geom_density(alpha = 0.3,
+               colour = scales::hue_pal()(2)[[2]],
+               fill = scales::hue_pal()(2)[[2]]) +
   facet_wrap(~genus_species) +
   stat_summary(aes(xintercept = ..x.., y = 0), 
                fun = mean, 
                geom = "vline", 
-               orientation = "y") +
+               orientation = "y",
+               colour = scales::hue_pal()(2)[[2]]) +
   xlim(0, 20) 
 ```
 
 ![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-9-1.png)
 
-Very similar for most species.
+Similar for most species..
 
 Now comparing all three groups: secondary forest, primary forest first
 cohort & primary forest second cohort.
@@ -204,7 +207,7 @@ data %>%
   ungroup() %>% 
   filter(survey_date == first_survey) %>% 
   filter(case_when(
-    forest_type == "primary" ~ !is.na(old_new),
+    forest_type == "secondary" ~ !is.na(old_new),
     T ~ is.na(old_new)
   )) %>% 
   ggplot(aes(x = dbase_mean, 
@@ -222,7 +225,7 @@ data %>%
 
 ![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-10-1.png)
 
-The old and new secondary cohorts seem very close to each other compared
+The old and new secondary cohorts are much closer to each other compared
 to the primary forest seedlings.
 
 Biggest differences in old v new seen for *H. sangal, S. beccariana, S.
@@ -237,7 +240,7 @@ data %>%
   rowwise() %>% 
   mutate(type = paste(forest_type, old_new, sep = "_")) %>% 
   ungroup() %>% 
-  filter(type != "primary_NA") %>% 
+  filter(type != "secondary_NA") %>% 
   ggplot(aes(y = log(dbase_mean),
              x = survey_date,
              fill = type,
@@ -273,7 +276,7 @@ data %>%
   rowwise() %>% 
   mutate(type = paste(forest_type, old_new, sep = "_")) %>% 
   ungroup() %>% 
-  filter(type != "primary_NA") %>% 
+  filter(type != "secondary_NA") %>% 
   ggplot(aes(y = log(dbase_mean),
              x = days_since_first_survey,
              fill = type,
@@ -292,7 +295,7 @@ data %>%
   rowwise() %>% 
   mutate(type = paste(forest_type, old_new, sep = "_")) %>% 
   ungroup() %>% 
-  filter(type != "primary_NA") %>% 
+  filter(type != "secondary_NA") %>% 
   drop_na(dbase_mean) %>% 
   ggplot(aes(y = log(dbase_mean),
              x = days_since_first_survey,
@@ -314,7 +317,7 @@ data %>%
   mutate(type = paste(forest_type, old_new, sep = "_")) %>% 
   ungroup() %>% 
   drop_na(dbase_mean) %>% 
-  filter(type != "primary_NA" &
+  filter(type != "secondary_NA" &
            (genus_species == "Shorea_macrophylla" |
            genus_species == "Shorea_johorensis")) %>% 
   ggplot(aes(y = log(dbase_mean),
@@ -407,7 +410,8 @@ last one before the break in data collection around 2008.
 
 Growth rate =
 
-size at time 1 - size at time 2 / (difference in days / 365.25)
+size at time<sup>1</sup> - size at time<sup>2</sup> / (difference in
+days / 365.25)
 
 ``` r
 # get last survey date pre 2008
@@ -467,12 +471,14 @@ data %>%
 ``` r
 data %>% 
   drop_na(growth_rate_initial) %>% 
-  filter(survey_date == yr3_survey) %>% 
+  filter(survey_date == first_survey) %>% 
   ggplot(aes(y = growth_rate_initial, 
              x = start_size,
-             colour = days_since_first_survey)) +
-  geom_point(shape = 16, alpha = 0.5) +
-  scale_colour_viridis_c()
+             colour = forest_type)) +
+  geom_point(shape = 16, alpha = 0.5, size = 0.5) +
+  geom_smooth(se = FALSE,
+              method = "glm", method.args = list(family = "gaussian")) +
+  facet_wrap(~genus_species)
 ```
 
 ![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-21-1.png)
@@ -484,10 +490,167 @@ data %>%
   ggplot(aes(y = growth_rate_initial, 
              x = start_size,
              colour = forest_type)) +
-  geom_point(shape = 16, alpha = 0.5, size = 1) +
-  geom_smooth(se = FALSE,
-              method = "glm", method.args = list(family = "gaussian")) +
-  facet_wrap(~genus_species)
+  geom_point(shape = 16, alpha = 0.5, size = 0.5) +
+  geom_smooth(method = "glm", method.args = list(family = "gaussian")) +
+  facet_wrap(~genus_species, scales = "free")
 ```
 
 ![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-22-1.png)
+
+Negative trend for primary forest seedlings is as expected. But the
+sample size is smaller.
+
+Perhaps SBE seedlings are beyond initial growth spurt at this point? -
+they were larger at the time of planting.
+
+Let’s look at the overall growth rate, and only include individuals that
+survived till at least 2015. Would expect the trend in primary forest
+seedlings to reverse.
+
+``` r
+# get last survey date
+data <- 
+  data %>% 
+  drop_na(dbase_mean) %>%
+  filter(survey_date < "2015-01-01") %>% 
+  filter(survey_date != first_survey) %>% 
+  group_by(plant_id) %>%
+  slice_max(survey_date, with_ties = FALSE) %>%
+  ungroup() %>% 
+  select(plant_id, survey_date) %>%
+  rename(last_survey = survey_date) %>% 
+  distinct() %>%
+  right_join(data) 
+
+# get size at that date
+data <- 
+  data %>%
+  drop_na(dbase_mean) %>%
+  filter(survey_date == last_survey) %>% 
+  rename(last_size = dbase_mean) %>% 
+  select(plant_id, last_size) %>% 
+  distinct() %>% 
+  right_join(data)
+
+# calculate initial growth rate
+data <- 
+  data %>%
+  drop_na(dbase_mean) %>%
+  filter(survey_date == first_survey |
+           survey_date == last_survey) %>% 
+  pivot_longer(cols = c(start_size, last_size)) %>% 
+  group_by(plant_id) %>%
+  summarise(growth = max(value) - min(value),
+            time = max(days_since_first_survey)) %>% 
+  mutate(time = time_length(time, unit = "days")) %>% 
+  filter(time > 0) %>% 
+  mutate(growth_rate_total = growth / (time / 365.25) ) %>% 
+  select(plant_id, growth_rate_total) %>% 
+  distinct() %>%
+  right_join(data)
+```
+
+``` r
+data %>% 
+  drop_na(growth_rate_total) %>% 
+  filter(survey_date == first_survey) %>% 
+  ggplot(aes(y = growth_rate_total, 
+             x = start_size,
+             colour = forest_type)) +
+  geom_point(shape = 16, alpha = 0.5, size = 1) +
+  geom_smooth(method = "glm", method.args = list(family = "gaussian")) +
+  facet_wrap(~forest_type, scales = "free")
+```
+
+![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-24-1.png)
+
+``` r
+data %>% 
+  drop_na(growth_rate_total) %>% 
+  filter(survey_date == first_survey) %>% 
+  ggplot(aes(y = growth_rate_total, 
+             x = start_size,
+             colour = forest_type)) +
+  geom_point(shape = 16, alpha = 0.5, size = 0.5) +
+  geom_smooth(method = "glm", method.args = list(family = "gaussian")) +
+  facet_wrap(~genus_species, scales = "free")
+```
+
+![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-25-1.png)
+
+We still have that positive trend in the SBE seedlings.
+
+Let’s reduce the growth period as much as possible and calculate growth
+rate using the first + second survey of each individual.
+
+``` r
+# get last survey date
+data <- 
+  data %>% 
+  filter(forest_type == "secondary") %>% 
+  drop_na(dbase_mean) %>%
+  filter(survey_date != first_survey) %>% 
+  group_by(plant_id) %>%
+  slice_min(survey_date, with_ties = FALSE) %>%
+  ungroup() %>% 
+  select(plant_id, survey_date) %>%
+  rename(second_survey = survey_date) %>% 
+  distinct() %>%
+  right_join(data) 
+
+# get size at that date
+data <- 
+  data %>%
+  filter(forest_type == "secondary") %>% 
+  drop_na(dbase_mean) %>%
+  filter(survey_date == second_survey) %>% 
+  rename(second_size = dbase_mean) %>% 
+  select(plant_id, second_size) %>% 
+  distinct() %>% 
+  right_join(data)
+
+# calculate initial growth rate
+data <- 
+  data %>%
+  drop_na(dbase_mean) %>%
+  filter(forest_type == "secondary") %>% 
+  filter(survey_date == first_survey |
+           survey_date == second_survey) %>% 
+  pivot_longer(cols = c(start_size, second_size)) %>% 
+  group_by(plant_id) %>%
+  summarise(growth = max(value) - min(value),
+            time = max(days_since_first_survey)) %>% 
+  mutate(time = time_length(time, unit = "days")) %>% 
+  filter(time > 0) %>% 
+  mutate(growth_rate_initial = growth / (time / 365.25) ) %>% 
+  select(plant_id, growth_rate_initial) %>% 
+  distinct() %>%
+  right_join(data)
+```
+
+``` r
+data %>% 
+  filter(forest_type == "secondary") %>% 
+  drop_na(growth_rate_total) %>% 
+  filter(survey_date == first_survey) %>% 
+  ggplot(aes(y = growth_rate_initial, 
+             x = start_size)) +
+  geom_point(shape = 16, alpha = 0.5, size = 1,
+             colour = scales::hue_pal()(2)[[2]]) +
+  geom_smooth(method = "glm", method.args = list(family = "gaussian"),
+              colour = scales::hue_pal()(2)[[2]]) +
+  facet_wrap(~forest_type, scales = "free") +
+  xlim(0, 30)
+```
+
+![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-27-1.png)
+
+It’s still there!
+
+## Summary
+
+- SBE / secondary forest seedlings are generally larger at the time of
+  planting
+- There is a negative correlation between starting size and growth rate
+  for Danum seedlings
+  - but the opposite trend for SBE seedlings

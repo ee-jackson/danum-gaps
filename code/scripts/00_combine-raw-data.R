@@ -14,7 +14,7 @@ library("patchwork")
 library("janitor")
 
 
-# Get secondary forest data -----------------------------------------------
+# Get primary forest data -------------------------------------------------
 
 file_names <-
   as.list(dir(path = here::here("data", "raw", "dv"),
@@ -47,7 +47,7 @@ data_dv_sps <-
     col_types = "fcc"
   )
 
-# Some older secondary forest data is in this file and formatted differently
+# Some older primary forest data is in this file and formatted differently
 data_dv_older <-
   readxl::read_excel(
     here::here("data", "raw", "dv", "AllDataClean2018_DanumGaps.xlsx"),
@@ -74,7 +74,7 @@ data_dv_pre2015 <-
   mutate(df = "AllDataClean2018_DanumGaps.xlsx")
 
 
-# Combine secondary forest data sources -----------------------------------
+# Combine primary forest data sources -------------------------------------
 
 data_dv <-
   bind_rows(data_list, .id = 'df') %>%
@@ -112,7 +112,7 @@ data_dv <-
 
   # Making cols match the primary forest data
   mutate(line = NA, position = NA, old_new = NA,
-         planting_date = NA, height_apex = NA, forest_type = "secondary") %>%
+         planting_date = NA, height_apex = NA, forest_type = "primary") %>%
   select(forest_type, plant_id, plot, line, position, old_new, plant_no,
          genus, species, genus_species,
          planting_date, survey_date,
@@ -121,7 +121,7 @@ data_dv <-
 rm(data_list)
 
 
-# Get primary forest data -------------------------------------------------
+# Get secondary forest data -----------------------------------------------
 
 data_sbe <-
   read_csv(
@@ -163,8 +163,8 @@ data_sbe <-
       .default = NA
     )
   ) %>%
-  # Making cols match the secondary forest data
-  mutate(plant_no = NA, forest_type = "primary") %>%
+  # Making cols match the primary forest data
+  mutate(plant_no = NA, forest_type = "secondary") %>%
   select(forest_type, plant_id, plot, line, position, old_new, plant_no,
          genus, species, genus_species,
          planting_date, survey_date,

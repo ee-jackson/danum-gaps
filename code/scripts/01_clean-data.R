@@ -46,8 +46,9 @@ paste("There are", length(lazarus_ids), "Lazarus trees", sep = " ")
 
 last_alive_dates <-
   data_comb %>%
+  filter(survival == "1") %>%
   group_by(plant_id) %>%
-  slice_max(survey_date, with_ties = FALSE) %>%
+  slice_max(lubridate::ymd(survey_date), with_ties = FALSE) %>%
   select(plant_id, survey_date) %>%
   rename(last_alive = survey_date)
 
@@ -55,16 +56,20 @@ last_alive_dates <-
 # and previous records of survival == 0 were incorrect
 data_comb <-
   data_comb %>%
+  filter(plant_id %in% lazarus_ids) %>%
   left_join(last_alive_dates,
             by = "plant_id") %>%
   mutate(
     survival = case_when(
       survey_date <= last_alive ~ 1,
 
-      survey_date > last_alive ~ 0
+      survey_date > last_alive ~ 0,
+
+      is.na(survey_date) ~ NA
       )
     ) %>%
-  select(- last_alive)
+  select(- last_alive) %>%
+  bind_rows(filter(data_comb, ! plant_id %in% lazarus_ids))
 
 
 # Clean growth ------------------------------------------------------------

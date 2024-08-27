@@ -1,6 +1,6 @@
 # Investigating size at planting/first survey
 eleanorjackson
-2024-08-22
+2024-08-27
 
 > Seedlings were not planted in the forest types at the same time, the
 > secondary forest of SBE was planted first then the left over seedlings
@@ -72,24 +72,6 @@ data %>%
            <int>    <int>
     1      11707    16941
 
-There are a lot of entries with a record for survival but no diameter
-measurement. **Why would survival be recorded without a diameter
-measurement?**
-
-``` r
-data %>% 
-  filter(survey_date == first_survey) %>% 
-  filter(is.na(dbase_mean) & is.na(dbh_mean)) %>% 
-  group_by(forest_type) %>% 
-  summarise(n())
-```
-
-    # A tibble: 2 × 2
-      forest_type `n()`
-      <fct>       <int>
-    1 primary         2
-    2 secondary   11705
-
 This is mostly happening in the SBE data.
 
 Find the first survey without size NAs instead.
@@ -132,7 +114,7 @@ data %>%
   plot_layout(ncol = 1)
 ```
 
-![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-7-1.png)
+![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-6-1.png)
 
 Looks like it’s going to be best to look at basal diameter. **Is there a
 way to estimate DBH from basal diameter or vice versa?**
@@ -156,7 +138,7 @@ data %>%
   ggtitle("Size at first survey")
 ```
 
-![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-8-1.png)
+![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-7-1.png)
 
 The secondary forest (SBE) seedlings often have a greater spread of
 sizes and a larger mean size in their first survey. They were planted
@@ -193,7 +175,7 @@ data %>%
   xlim(0, 20) 
 ```
 
-![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-9-1.png)
+![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-8-1.png)
 
 Similar for most species..
 
@@ -223,7 +205,7 @@ data %>%
   xlim(0, 20) 
 ```
 
-![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-10-1.png)
+![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-9-1.png)
 
 The old and new secondary cohorts are much closer to each other compared
 to the primary forest seedlings.
@@ -251,9 +233,9 @@ data %>%
   scale_x_date(guide = guide_axis(angle = 90)) 
 ```
 
-![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-11-1.png)
+![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-10-1.png)
 
-For most species, the seedlings have similar patterns of growth -
+For some species the seedlings have similar patterns of growth -
 parallel lines.
 
 Making that plot again but using `days_since_first_survey` on the
@@ -286,7 +268,7 @@ data %>%
   facet_wrap(~genus_species, scales = "free_y")
 ```
 
-![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-13-1.png)
+![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-12-1.png)
 
 Now adding in data points.
 
@@ -307,7 +289,7 @@ data %>%
   facet_wrap(~genus_species, scales = "free_y") 
 ```
 
-![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-14-1.png)
+![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-13-1.png)
 
 I want to look at a few of the species more closely.
 
@@ -331,7 +313,7 @@ data %>%
   theme(legend.position = "top") 
 ```
 
-![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-15-1.png)
+![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-14-1.png)
 
 ## Individual growth ~ starting size
 
@@ -361,7 +343,7 @@ data %>%
   facet_wrap(~genus_species)
 ```
 
-![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-17-1.png)
+![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-16-1.png)
 
 Steeper purple lines compared to yellow lines would mean that smaller
 seedlings have a faster rate of growth. Maybe some evidence of this in
@@ -401,7 +383,7 @@ data %>%
   plot_layout(ncol = 1, guides = "collect")
 ```
 
-![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-18-1.png)
+![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-17-1.png)
 
 Is rate of growth faster for smaller seedlings?
 
@@ -466,7 +448,7 @@ data %>%
   geom_smooth(method = "glm", method.args = list(family = "gaussian"))
 ```
 
-![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-20-1.png)
+![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-19-1.png)
 
 ``` r
 data %>% 
@@ -481,7 +463,7 @@ data %>%
   facet_wrap(~genus_species)
 ```
 
-![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-21-1.png)
+![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-20-1.png)
 
 ``` r
 data %>% 
@@ -495,7 +477,7 @@ data %>%
   facet_wrap(~genus_species, scales = "free")
 ```
 
-![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-22-1.png)
+![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-21-1.png)
 
 Negative trend for primary forest seedlings is as expected. But the
 sample size is smaller.
@@ -513,6 +495,7 @@ data <-
   data %>% 
   drop_na(dbase_mean) %>%
   filter(survey_date < "2015-01-01") %>% 
+  filter(survival == 1) %>% 
   filter(survey_date != first_survey) %>% 
   group_by(plant_id) %>%
   slice_max(survey_date, with_ties = FALSE) %>%
@@ -562,7 +545,7 @@ data %>%
   facet_wrap(~forest_type, scales = "free")
 ```
 
-![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-24-1.png)
+![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-23-1.png)
 
 ``` r
 data %>% 
@@ -576,7 +559,7 @@ data %>%
   facet_wrap(~genus_species, scales = "free")
 ```
 
-![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-25-1.png)
+![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-24-1.png)
 
 We still have that positive trend in the SBE seedlings.
 
@@ -643,7 +626,7 @@ data %>%
   xlim(0, 30)
 ```
 
-![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-27-1.png)
+![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-26-1.png)
 
 It’s still there!
 

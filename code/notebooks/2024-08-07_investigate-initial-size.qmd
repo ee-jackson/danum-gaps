@@ -91,17 +91,6 @@ data %>%
                )
 ```
 
-There are a lot of entries with a record for survival but no diameter measurement.
-__Why would survival be recorded without a diameter measurement?__
-
-```{r}
-data %>% 
-  filter(survey_date == first_survey) %>% 
-  filter(is.na(dbase_mean) & is.na(dbh_mean)) %>% 
-  group_by(forest_type) %>% 
-  summarise(n())
-```
-
 This is mostly happening in the SBE data. 
 
 Find the first survey without size NAs instead.
@@ -255,7 +244,7 @@ data %>%
   scale_x_date(guide = guide_axis(angle = 90)) 
 ```
 
-For most species, the seedlings have similar patterns of growth - parallel lines.
+For some species the seedlings have similar patterns of growth - parallel lines.
 
 Making that plot again but using `days_since_first_survey` on 
 the y-axis, rather than `survey_date`.
@@ -503,6 +492,7 @@ data <-
   data %>% 
   drop_na(dbase_mean) %>%
   filter(survey_date < "2015-01-01") %>% 
+  filter(survival == 1) %>% 
   filter(survey_date != first_survey) %>% 
   group_by(plant_id) %>%
   slice_max(survey_date, with_ties = FALSE) %>%

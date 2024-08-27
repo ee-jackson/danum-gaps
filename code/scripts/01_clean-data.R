@@ -89,7 +89,8 @@ data_comb <-
 
 data_comb <-
   data_comb %>%
-  drop_na(survey_date) %>%
+  filter(!if_all(c(survival, dbh_mean, dbase_mean), is.na)) %>%
+  distinct() %>%
   mutate_if(is.character, as.factor)
 
 saveRDS(data_comb,

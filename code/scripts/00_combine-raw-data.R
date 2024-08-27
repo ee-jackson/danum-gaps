@@ -163,6 +163,10 @@ data_sbe <-
       .default = NA
     )
   ) %>%
+  mutate(plant_id = case_when(
+    is.na(position) ~ paste(plant_id, species, sep = "_"),
+    .default = plant_id
+  )) %>%
   # Making cols match the primary forest data
   mutate(plant_no = NA, forest_type = "secondary") %>%
   select(forest_type, plant_id, plot, line, position, old_new, plant_no,

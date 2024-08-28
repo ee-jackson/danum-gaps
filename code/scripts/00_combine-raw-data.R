@@ -61,8 +61,8 @@ data_dv_older <-
                   "numeric","numeric","numeric","numeric",
                   "numeric","numeric","numeric","numeric",
                   "numeric","numeric","text") ) %>%
-  select(Survey.date, Year, Team, Canopy, Block, Subplot, Plant.no, Survival,
-         Diam1, Diam2, DBH.1, DBH.2, Comments, Height.apex) %>%
+  select(Census, Survey.date, Year, Team, Canopy, Block, Subplot, Plant.no,
+         Survival, Diam1, Diam2, DBH.1, DBH.2, Comments, Height.apex) %>%
   janitor::clean_names()
 
 # Some data is replicated in DanumGaps_Data_* files
@@ -71,13 +71,15 @@ data_dv_pre2015 <-
   filter(year < 2015 |
            year == 2015 & team == "Malua") %>%
   select(- year, - team) %>%
-  mutate(df = "AllDataClean2018_DanumGaps.xlsx")
+  rename(census_no = census) %>%
+  mutate(census_no = as.factor(census_no))
 
 
 # Combine primary forest data sources -------------------------------------
 
 data_dv <-
-  bind_rows(data_list, .id = 'df') %>%
+  bind_rows(data_list, .id = 'census_no') %>%
+  mutate(census_no = as.factor(census_no)) %>%
   clean_names() %>%
   mutate(height_apex = NA) %>%
   bind_rows(data_dv_pre2015) %>%
@@ -112,10 +114,11 @@ data_dv <-
 
   # Making cols match the primary forest data
   mutate(line = NA, position = NA, old_new = NA,
-         planting_date = NA, height_apex = NA, forest_type = "primary") %>%
+         planting_date = NA, height_apex = NA, forest_type = "primary",
+         census_no = as.factor(census_no)) %>%
   select(forest_type, plant_id, plot, line, position, old_new, plant_no,
          genus, species, genus_species,
-         planting_date, survey_date,
+         planting_date, census_no, survey_date,
          survival, height_apex, diam1, diam2, dbh1, dbh2)
 
 rm(data_list)
@@ -131,7 +134,8 @@ data_sbe <-
   rename(old_new = o_n,
          planting_date = plantingdate,
          survey_date = surveydate,
-         height_apex = heightapex) %>%
+         height_apex = heightapex,
+         census_no = sample) %>%
 
   # Only intensively censused plots
   filter(pl %in% c(3, 5, 8, 11, 14, 17)) %>%
@@ -156,6 +160,7 @@ data_sbe <-
   mutate(
     planting_date = dmy(planting_date),
     survey_date = dmy(survey_date),
+    census_no = as.factor(census_no),
     plant_id = paste(plot, line, position, old_new, sep = "_"),
     survival = case_when(
       survival == "yes" ~ 1,
@@ -171,7 +176,7 @@ data_sbe <-
   mutate(plant_no = NA, forest_type = "secondary") %>%
   select(forest_type, plant_id, plot, line, position, old_new, plant_no,
          genus, species, genus_species,
-         planting_date, survey_date,
+         planting_date, census_no, survey_date,
          survival, height_apex, diam1, diam2, dbh1, dbh2)
 
 

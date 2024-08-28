@@ -84,12 +84,26 @@ data_comb <-
   select(- dbh1, - dbh2, - diam1, - diam2)
 
 
+# Clean census ------------------------------------------------------------
+
+data_comb <-
+  data_comb %>%
+  mutate(census_no = case_when(
+    census_no == "DanumGaps_Data_2015.xlsx" ~ "16",
+    census_no == "DanumGaps_Data_2016.xlsx" ~ "17",
+    census_no == "DanumGaps_Data_2017.xlsx" ~ "18",
+    census_no == "DanumGaps_Data_2018.xlsx" ~ "19",
+    census_no == "DanumGaps_Data_2019.xlsx" ~ "20",
+    census_no == "DanumGaps_Data_2023.xlsx" ~ "21",
+    census_no == "DanumGaps_Data_2024.xlsx" ~ "22",
+    .default = census_no
+  ))
 
 # Save --------------------------------------------------------------------
 
 data_comb <-
   data_comb %>%
-  filter(!if_all(c(survival, dbh_mean, dbase_mean), is.na)) %>%
+  filter(!if_all(c(survival, dbh_mean, dbase_mean, height_apex), is.na)) %>%
   distinct() %>%
   mutate_if(is.character, as.factor)
 

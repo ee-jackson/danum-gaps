@@ -1,0 +1,204 @@
+---
+title: "Cleaning census numbers"
+author: 'eleanorjackson'
+date: '`r format(Sys.time(), "%d %B, %Y")`' 
+format: gfm+emoji
+editor: source
+execute:
+  warning: false
+---
+
+```{r setup}
+#| include: false
+
+file_name <- knitr::current_input()
+
+knitr::opts_chunk$set(
+  fig.path =
+    paste0("figures/", sub("\\.rmarkdown$", "", basename(file_name)), "/", sep = "")
+)
+
+ggplot2::theme_set(ggplot2::theme_classic(base_size = 10))
+```
+
+```{r packages}
+#| output: false
+
+library("tidyverse")
+library("here")
+library("patchwork")
+```
+For the Danum data, 
+most of the dead trees are recorded as `survival == 0`, 
+but for the SBE, 
+there is often no entry for the individual if not found.
+
+To look at survival,
+we might need to back fill the data with dead trees,
+which means that we'll need to separate out the dates by 'census'.
+
+I'm going to try and group entries by census here.
+
+## Primary forest
+
+The older Danum data had a `census` variable already,
+and I should be able to add `census` IDs to the new datasets
+quite easily since each census was stored in a different excel file
+and censuses were done roughly once a year.
+
+```{r}
+data <- 
+  readRDS(here::here("data", "derived", "data_cleaned.rds"))
+```
+
+
+```{r}
+#| fig-height: 5
+#| fig-width: 7
+
+data %>% 
+  filter(forest_type == "primary") %>% 
+  mutate(month = lubridate::month(survey_date)) %>% 
+  group_by(survey_date) %>% 
+  slice_head() %>% 
+  ggplot(aes(y = forest_type, x = survey_date, colour = census_no)) +
+  geom_point(alpha = 0.6, shape = "|", size = 5) +
+  theme_bw() +
+  scale_x_date(minor_breaks = "year") +
+  theme(legend.position = "top") 
+```
+
+For the primary forest data
+`census_no` is currently a mix of the `census` as defined in the older
+data sheet for the older data, and for the newer data the name of the
+data sheet that the data came from.
+
+I think that the newer data will all follow on from the older data,
+but let's check.
+
+```{r}
+
+data %>% 
+  filter(forest_type == "primary") %>% 
+  group_by(census_no) %>% 
+  summarise(median_date = median(survey_date, na.rm = TRUE)) %>% 
+  arrange(median_date) %>% 
+  knitr::kable()
+```
+
+Yes - looks like that's the case.
+We can rename `DanumGaps_Data_2015.xlsx` - 
+`DanumGaps_Data_2024.xlsx` as censuses 16 through to 22.
+
+## Secondary forest
+
+Now looking at the SBE data.
+
+```{r}
+#| fig-height: 5
+#| fig-width: 7
+
+data %>% 
+  filter(forest_type == "secondary") %>% 
+  mutate(month = lubridate::month(survey_date)) %>% 
+  group_by(survey_date) %>% 
+  slice_head() %>% 
+  ggplot(aes(y = forest_type, x = survey_date, colour = census_no)) +
+  geom_point(alpha = 0.6, shape = "|", size = 5) +
+  theme_bw() +
+  scale_x_date(minor_breaks = "year") +
+  theme(legend.position = "top") 
+```
+
+```{r}
+data %>% 
+  filter(forest_type == "secondary") %>% 
+  group_by(census_no) %>% 
+  summarise(median_date = median(survey_date, na.rm = TRUE),
+            max_date = max(survey_date, na.rm = TRUE),
+            min_date = min(survey_date, na.rm = TRUE)) %>% 
+  arrange(max_date) %>% 
+  knitr::kable()
+```
+
+Strange that the census numbers are not in the same order as the survey dates.
+
+And some of the censuses cover a very large range?
+
+Look at census 1:
+
+```{r}
+data %>% 
+  filter(forest_type == "secondary" &
+           census_no == 1) %>%
+  ggplot(aes(y = forest_type, x = survey_date, colour = census_no)) +
+  geom_point(alpha = 0.6, shape = "|", size = 5) +
+  theme_bw() +
+  scale_x_date(minor_breaks = "year") +
+  theme(legend.position = "top") 
+```
+
+Perhaps the 2005 and 2014 surveys were listed as census one by mistake.
+
+```{r}
+data %>% 
+  filter(forest_type == "secondary" &
+           census_no == 1) %>%
+  group_by(plant_id) %>% 
+  summarise(n()) %>% 
+  filter(`n()` >1) %>% 
+  glimpse()
+```
+
+There are a lot of duplicates.
+
+Let's see if the duplicates are still there 
+when we remove the 2005 and 2014 surveys.
+
+```{r}
+data %>% 
+  filter(forest_type == "secondary" &
+           census_no == 1) %>%
+  filter(survey_date < ymd("2005-01-01")) %>% 
+  group_by(plant_id) %>% 
+  summarise(n()) %>% 
+  filter(`n()` >1) %>% 
+  glimpse()
+```
+
+There are still a lot of duplicates.
+Taking a look at just one plant to see what's going on.
+
+```{r}
+data %>% filter(plant_id == "003_01_032_O") %>% 
+  arrange(census_no) %>% 
+  knitr::kable()
+```
+
+There is a duplicate entry for the first census - 
+but all the size measurements are NA...
+
+Try removing all rows with NAs for all the size variables.
+
+```{r}
+data %>% 
+  filter(forest_type == "secondary" &
+           census_no == 1) %>%
+  filter(!if_all(c(height_apex, dbh_mean, dbase_mean), is.na)) %>%
+  filter(survey_date < ymd("2005-01-01")) %>% 
+  group_by(plant_id) %>% 
+  summarise(n()) %>% 
+  filter(`n()` >1) %>% 
+  glimpse()
+```
+
+That hasn't solved the problem..
+
+```{r}
+data %>% filter(plant_id == "005_15_023_O") %>% 
+  arrange(census_no) %>% 
+  knitr::kable()
+```
+
+There seem to be entries for the same tree on the same date but 
+with different size measurements ?!

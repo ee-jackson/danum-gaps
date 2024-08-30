@@ -3,6 +3,8 @@
 data/
 docs/r-veryard
 code/notebooks/*html
+code/notebooks/**/*tex
+code/notebooks/**/*pdf
 code/graveyard
 output/plots
 *.doc

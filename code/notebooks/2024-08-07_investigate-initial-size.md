@@ -1,6 +1,6 @@
 # Investigating size at planting/first survey
 eleanorjackson
-2024-08-27
+2024-08-30
 
 > Seedlings were not planted in the forest types at the same time, the
 > secondary forest of SBE was planted first then the left over seedlings
@@ -15,8 +15,8 @@ they get larger.
 
 Taking a look at this now that I’ve combined the different data sources
 and done a little simple cleaning. (see
-[00_combine-raw-data.R](code/scripts/00_combine-raw-data.R) and
-[01_clean-data.R](code/scripts/01_clean-data.R)).
+[00_combine-raw-data.R](../scripts/00_combine-raw-data.R) and
+[01_clean-data.R](../scripts/01_clean-data.R)).
 
 ``` r
 library("tidyverse")
@@ -70,7 +70,7 @@ data %>%
     # A tibble: 1 × 2
       dbase_mean dbh_mean
            <int>    <int>
-    1      11707    16941
+    1      11704    16939
 
 This is mostly happening in the SBE data.
 

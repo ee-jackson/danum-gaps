@@ -37,7 +37,7 @@ which slows as they get larger.
 
 Taking a look at this now that I've combined the different data sources
 and done a little simple cleaning.
-(see [00_combine-raw-data.R](code/scripts/00_combine-raw-data.R) and [01_clean-data.R](code/scripts/01_clean-data.R)).
+(see [00_combine-raw-data.R](../scripts/00_combine-raw-data.R) and [01_clean-data.R](../scripts/01_clean-data.R)).
 
 ```{r packages}
 #| output: false

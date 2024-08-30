@@ -61,20 +61,114 @@ data <-
 
 ``` r
 data %>% 
-  filter(survey_date == first_survey) %>% 
-  summarise_at(c("dbase_mean", "dbh_mean"), 
-               ~sum(is.na(.x))
-               )
+  filter(first_survey == survey_date) %>% 
+  filter(if_all(c(dbh_mean, dbase_mean, height_apex), is.na)) %>%
+  glimpse()
 ```
 
-    # A tibble: 1 × 2
-      dbase_mean dbh_mean
-           <int>    <int>
-    1      11704    16939
+    Rows: 11,701
+    Columns: 19
+    $ plant_id      <chr> "003_01_001_O", "003_01_001_O", "003_01_002_O", "003_01_…
+    $ first_survey  <date> 2004-01-29, 2004-01-29, 2004-01-29, 2004-01-29, 2004-01…
+    $ forest_type   <chr> "secondary", "secondary", "secondary", "secondary", "sec…
+    $ plot          <chr> "003", "003", "003", "003", "003", "003", "003", "003", …
+    $ line          <chr> "01", "01", "01", "01", "01", "01", "01", "01", "01", "0…
+    $ position      <chr> "001", "001", "002", "002", "004", "004", "005", "005", …
+    $ old_new       <chr> "O", "O", "O", "O", "O", "O", "N", NA, "O", "O", "O", "O…
+    $ plant_no      <chr> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, …
+    $ genus         <chr> "Dryobalanops", "Dryobalanops", "Shorea", "Shorea", "Sho…
+    $ species       <chr> "lanceolata", "lanceolata", "leprosula", "leprosula", "m…
+    $ genus_species <chr> "Dryobalanops_lanceolata", "Dryobalanops_lanceolata", "S…
+    $ planting_date <date> 2002-07-23, 2002-07-23, 2002-07-23, 2002-07-23, 2002-07…
+    $ census_id     <chr> "full_measurement_01", "intensive_01", "full_measurement…
+    $ survey_date   <date> 2004-01-29, 2004-01-29, 2004-01-29, 2004-01-29, 2004-01…
+    $ survival      <dbl> 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,…
+    $ height_apex   <dbl> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, …
+    $ dbh_mean      <dbl> NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, N…
+    $ dbase_mean    <dbl> NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, N…
+    $ census_no     <chr> "01", "02", "01", "02", "01", "02", "07", "08", "01", "0…
 
-This is mostly happening in the SBE data.
+There are some entries with no size information on their first survey
+date.
 
-Find the first survey without size NAs instead.
+``` r
+data %>% 
+  filter(first_survey == survey_date) %>% 
+  group_by(forest_type) %>% 
+  filter(if_all(c(dbh_mean, dbase_mean, height_apex), is.na)) %>%
+  summarise(n())
+```
+
+    # A tibble: 2 × 2
+      forest_type `n()`
+      <chr>       <int>
+    1 primary         1
+    2 secondary   11700
+
+This is only happening in the SBE data. Perhaps the trees were missed at
+the time of the census but the survival data was back-filled later?
+
+``` r
+data %>% 
+  filter(first_survey == survey_date) %>% 
+  group_by(plant_id) %>% 
+  summarise(n()) %>% 
+  filter(`n()` > 1) %>% 
+  glimpse()
+```
+
+    Rows: 7,083
+    Columns: 2
+    $ plant_id <chr> "003_01_001_O", "003_01_002_O", "003_01_004_O", "003_01_005_O…
+    $ `n()`    <int> 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2…
+
+There also seem to be many plants with two entries on their first survey
+date.
+
+``` r
+duplicates <-
+  data %>% 
+  filter(first_survey == survey_date) %>% 
+  group_by(plant_id) %>% 
+  summarise(n()) %>% 
+  filter(`n()` > 1) %>% 
+  pull(plant_id)
+
+data %>% 
+  filter(plant_id %in% duplicates) %>% 
+  arrange(plant_id) %>% 
+  head(n = 20) %>% 
+  knitr::kable()
+```
+
+| plant_id     | first_survey | forest_type | plot | line | position | old_new | plant_no | genus        | species     | genus_species           | planting_date | census_id           | survey_date | survival | height_apex | dbh_mean | dbase_mean | census_no |
+|:-------------|:-------------|:------------|:-----|:-----|:---------|:--------|:---------|:-------------|:------------|:------------------------|:--------------|:--------------------|:------------|---------:|------------:|---------:|-----------:|:----------|
+| 003_01_001_O | 2004-01-29   | secondary   | 003  | 01   | 001      | O       | NA       | Dryobalanops | lanceolata  | Dryobalanops_lanceolata | 2002-07-23    | full_measurement_01 | 2004-01-29  |        0 |          NA |      NaN |        NaN | 01        |
+| 003_01_001_O | 2004-01-29   | secondary   | 003  | 01   | 001      | O       | NA       | Dryobalanops | lanceolata  | Dryobalanops_lanceolata | 2002-07-23    | intensive_01        | 2004-01-29  |        0 |          NA |      NaN |        NaN | 02        |
+| 003_01_001_O | 2004-01-29   | secondary   | 003  | 01   | 001      | O       | NA       | Dryobalanops | lanceolata  | Dryobalanops_lanceolata | 2002-07-23    | intensive_02        | 2004-09-30  |        0 |          NA |      NaN |        NaN | 03        |
+| 003_01_001_O | 2004-01-29   | secondary   | 003  | 01   | 001      | O       | NA       | Dryobalanops | lanceolata  | Dryobalanops_lanceolata | 2002-07-23    | intensive_03        | 2005-10-01  |        0 |          NA |      NaN |        NaN | 04        |
+| 003_01_001_O | 2004-01-29   | secondary   | 003  | 01   | 001      | O       | NA       | Dryobalanops | lanceolata  | Dryobalanops_lanceolata | 2002-07-23    | intensive_04        | 2006-08-09  |        0 |          NA |      NaN |        NaN | 05        |
+| 003_01_001_O | 2004-01-29   | secondary   | 003  | 01   | 001      | O       | NA       | Dryobalanops | lanceolata  | Dryobalanops_lanceolata | 2002-07-23    | intensive_05        | 2010-06-18  |        0 |          NA |      NaN |        NaN | 06        |
+| 003_01_002_O | 2004-01-29   | secondary   | 003  | 01   | 002      | O       | NA       | Shorea       | leprosula   | Shorea_leprosula        | 2002-07-23    | full_measurement_01 | 2004-01-29  |        0 |          NA |      NaN |        NaN | 01        |
+| 003_01_002_O | 2004-01-29   | secondary   | 003  | 01   | 002      | O       | NA       | Shorea       | leprosula   | Shorea_leprosula        | 2002-07-23    | intensive_01        | 2004-01-29  |        0 |          NA |      NaN |        NaN | 02        |
+| 003_01_002_O | 2004-01-29   | secondary   | 003  | 01   | 002      | O       | NA       | Shorea       | leprosula   | Shorea_leprosula        | 2002-07-23    | intensive_02        | 2004-09-30  |        0 |          NA |      NaN |        NaN | 03        |
+| 003_01_002_O | 2004-01-29   | secondary   | 003  | 01   | 002      | O       | NA       | Shorea       | leprosula   | Shorea_leprosula        | 2002-07-23    | intensive_03        | 2005-10-01  |        0 |          NA |      NaN |        NaN | 04        |
+| 003_01_002_O | 2004-01-29   | secondary   | 003  | 01   | 002      | O       | NA       | Shorea       | leprosula   | Shorea_leprosula        | 2002-07-23    | intensive_04        | 2006-08-09  |        0 |          NA |      NaN |        NaN | 05        |
+| 003_01_002_O | 2004-01-29   | secondary   | 003  | 01   | 002      | O       | NA       | Shorea       | leprosula   | Shorea_leprosula        | 2002-07-23    | intensive_05        | 2010-06-18  |        0 |          NA |      NaN |        NaN | 06        |
+| 003_01_004_O | 2004-01-29   | secondary   | 003  | 01   | 004      | O       | NA       | Shorea       | macrophylla | Shorea_macrophylla      | 2002-07-23    | full_measurement_01 | 2004-01-29  |        0 |          NA |      NaN |        NaN | 01        |
+| 003_01_004_O | 2004-01-29   | secondary   | 003  | 01   | 004      | O       | NA       | Shorea       | macrophylla | Shorea_macrophylla      | 2002-07-23    | intensive_01        | 2004-01-29  |        0 |          NA |      NaN |        NaN | 02        |
+| 003_01_004_O | 2004-01-29   | secondary   | 003  | 01   | 004      | O       | NA       | Shorea       | macrophylla | Shorea_macrophylla      | 2002-07-23    | intensive_02        | 2004-09-30  |        0 |          NA |      NaN |        NaN | 03        |
+| 003_01_004_O | 2004-01-29   | secondary   | 003  | 01   | 004      | O       | NA       | Shorea       | macrophylla | Shorea_macrophylla      | 2002-07-23    | intensive_03        | 2005-10-01  |        0 |          NA |      NaN |        NaN | 04        |
+| 003_01_004_O | 2004-01-29   | secondary   | 003  | 01   | 004      | O       | NA       | Shorea       | macrophylla | Shorea_macrophylla      | 2002-07-23    | intensive_04        | 2006-08-09  |        0 |          NA |      NaN |        NaN | 05        |
+| 003_01_004_O | 2004-01-29   | secondary   | 003  | 01   | 004      | O       | NA       | Shorea       | macrophylla | Shorea_macrophylla      | 2002-07-23    | intensive_05        | 2010-06-18  |        0 |          NA |      NaN |        NaN | 06        |
+| 003_01_005_O | 2004-01-29   | secondary   | 003  | 01   | 005      | O       | NA       | Shorea       | gibbosa     | Shorea_gibbosa          | 2002-07-23    | full_measurement_01 | 2004-01-29  |        1 |          26 |      NaN |       4.87 | 01        |
+| 003_01_005_O | 2004-01-29   | secondary   | 003  | 01   | 005      | O       | NA       | Shorea       | gibbosa     | Shorea_gibbosa          | 2002-07-23    | intensive_01        | 2004-01-29  |        1 |          26 |      NaN |       4.87 | 02        |
+
+They have the same survey date but are from different censuses. Will
+need to do somehting about these before we start looking at survival.
+
+For now, since we are just looking at growth, we can ignore these and
+find the first survey without NAs for size.
 
 ``` r
 data <- 
@@ -114,7 +208,7 @@ data %>%
   plot_layout(ncol = 1)
 ```
 
-![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-6-1.png)
+![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-9-1.png)
 
 Looks like it’s going to be best to look at basal diameter. **Is there a
 way to estimate DBH from basal diameter or vice versa?**
@@ -138,7 +232,7 @@ data %>%
   ggtitle("Size at first survey")
 ```
 
-![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-7-1.png)
+![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-10-1.png)
 
 The secondary forest (SBE) seedlings often have a greater spread of
 sizes and a larger mean size in their first survey. They were planted
@@ -175,7 +269,7 @@ data %>%
   xlim(0, 20) 
 ```
 
-![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-8-1.png)
+![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-11-1.png)
 
 Similar for most species..
 
@@ -205,7 +299,7 @@ data %>%
   xlim(0, 20) 
 ```
 
-![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-9-1.png)
+![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-12-1.png)
 
 The old and new secondary cohorts are much closer to each other compared
 to the primary forest seedlings.
@@ -233,7 +327,7 @@ data %>%
   scale_x_date(guide = guide_axis(angle = 90)) 
 ```
 
-![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-10-1.png)
+![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-13-1.png)
 
 For some species the seedlings have similar patterns of growth -
 parallel lines.
@@ -268,7 +362,7 @@ data %>%
   facet_wrap(~genus_species, scales = "free_y")
 ```
 
-![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-12-1.png)
+![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-15-1.png)
 
 Now adding in data points.
 
@@ -289,7 +383,7 @@ data %>%
   facet_wrap(~genus_species, scales = "free_y") 
 ```
 
-![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-13-1.png)
+![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-16-1.png)
 
 I want to look at a few of the species more closely.
 
@@ -313,7 +407,7 @@ data %>%
   theme(legend.position = "top") 
 ```
 
-![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-14-1.png)
+![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-17-1.png)
 
 ## Individual growth ~ starting size
 
@@ -332,7 +426,7 @@ data <-
 ``` r
 data %>% 
   drop_na(dbase_mean, start_size) %>% 
-  filter(start_size < 10) %>% 
+  filter(start_size < 10) %>% # dropping a few v large outliers
   ggplot(aes(y = log(dbase_mean),
              x = days_since_first_survey,
              group = start_size,
@@ -343,7 +437,7 @@ data %>%
   facet_wrap(~genus_species)
 ```
 
-![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-16-1.png)
+![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-19-1.png)
 
 Steeper purple lines compared to yellow lines would mean that smaller
 seedlings have a faster rate of growth. Maybe some evidence of this in
@@ -383,7 +477,7 @@ data %>%
   plot_layout(ncol = 1, guides = "collect")
 ```
 
-![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-17-1.png)
+![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-20-1.png)
 
 Is rate of growth faster for smaller seedlings?
 
@@ -448,7 +542,7 @@ data %>%
   geom_smooth(method = "glm", method.args = list(family = "gaussian"))
 ```
 
-![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-19-1.png)
+![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-22-1.png)
 
 ``` r
 data %>% 
@@ -463,7 +557,7 @@ data %>%
   facet_wrap(~genus_species)
 ```
 
-![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-20-1.png)
+![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-23-1.png)
 
 ``` r
 data %>% 
@@ -477,7 +571,7 @@ data %>%
   facet_wrap(~genus_species, scales = "free")
 ```
 
-![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-21-1.png)
+![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-24-1.png)
 
 Negative trend for primary forest seedlings is as expected. But the
 sample size is smaller.
@@ -545,7 +639,7 @@ data %>%
   facet_wrap(~forest_type, scales = "free")
 ```
 
-![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-23-1.png)
+![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-26-1.png)
 
 ``` r
 data %>% 
@@ -559,7 +653,7 @@ data %>%
   facet_wrap(~genus_species, scales = "free")
 ```
 
-![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-24-1.png)
+![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-27-1.png)
 
 We still have that positive trend in the SBE seedlings.
 
@@ -626,7 +720,7 @@ data %>%
   xlim(0, 30)
 ```
 
-![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-26-1.png)
+![](figures/2024-08-07_investigate-initial-size/unnamed-chunk-29-1.png)
 
 It’s still there!
 

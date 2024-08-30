@@ -85,15 +85,58 @@ data <-
 
 ```{r}
 data %>% 
-  filter(survey_date == first_survey) %>% 
-  summarise_at(c("dbase_mean", "dbh_mean"), 
-               ~sum(is.na(.x))
-               )
+  filter(first_survey == survey_date) %>% 
+  filter(if_all(c(dbh_mean, dbase_mean, height_apex), is.na)) %>%
+  glimpse()
 ```
 
-This is mostly happening in the SBE data. 
+There are some entries with no size information on their first survey date.
 
-Find the first survey without size NAs instead.
+```{r}
+data %>% 
+  filter(first_survey == survey_date) %>% 
+  group_by(forest_type) %>% 
+  filter(if_all(c(dbh_mean, dbase_mean, height_apex), is.na)) %>%
+  summarise(n())
+```
+
+This is only happening in the SBE data. 
+Perhaps the trees were missed at the time of the census but the survival data
+was back-filled later?
+
+```{r}
+data %>% 
+  filter(first_survey == survey_date) %>% 
+  group_by(plant_id) %>% 
+  summarise(n()) %>% 
+  filter(`n()` > 1) %>% 
+  glimpse()
+```
+
+There also seem to be many plants with two entries on their
+first survey date.
+
+```{r}
+duplicates <-
+  data %>% 
+  filter(first_survey == survey_date) %>% 
+  group_by(plant_id) %>% 
+  summarise(n()) %>% 
+  filter(`n()` > 1) %>% 
+  pull(plant_id)
+
+data %>% 
+  filter(plant_id %in% duplicates) %>% 
+  arrange(plant_id) %>% 
+  head(n = 20) %>% 
+  knitr::kable()
+```
+
+They have the same survey date but are from different censuses.
+Will need to do somehting about these before we start looking at survival.
+
+For now, since we are just looking at growth,
+we can ignore these and find the first survey without NAs for size.
 
 ```{r}
 data <- 
@@ -336,7 +379,7 @@ data <-
 ```{r}
 data %>% 
   drop_na(dbase_mean, start_size) %>% 
-  filter(start_size < 10) %>% 
+  filter(start_size < 10) %>% # dropping a few v large outliers
   ggplot(aes(y = log(dbase_mean),
              x = days_since_first_survey,
              group = start_size,

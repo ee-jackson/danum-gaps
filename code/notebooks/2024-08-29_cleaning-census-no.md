@@ -64,8 +64,7 @@ data %>%
 | climber_14          | 25        | 2019-11-09  | 2019-11-06 | 2019-11-11 | 5 days   |
 | intensive_10        | 26        | 2020-02-24  | 2020-02-17 | 2020-03-03 | 15 days  |
 
-Some of the censuses took a long time to complete - suggests we should
-use date rather than census or year when modelling.
+Some of the censuses took a very long time to complete?
 
 ``` r
 data %>% 
@@ -177,3 +176,82 @@ data %>%
 Duplicate trees within a single census are mostly trees without a
 “position”, so they’ve ended up with the same `plant_id` as another
 individual.
+
+``` r
+data %>% 
+  janitor::get_dupes(-c(census_id, census_no)) %>% 
+  glimpse()
+```
+
+    Rows: 13,668
+    Columns: 19
+    Rowwise: 
+    $ forest_type   <chr> "primary", "primary", "primary", "primary", "primary", "…
+    $ plant_id      <chr> "13_20", "13_20", "13_20", "13_20", "13_9", "13_9", "13_…
+    $ plot          <chr> "13", "13", "13", "13", "13", "13", "13", "13", "005", "…
+    $ line          <chr> NA, NA, NA, NA, NA, NA, NA, NA, "20", "20", "20", "20", …
+    $ position      <chr> NA, NA, NA, NA, NA, NA, NA, NA, "064", "064", "064", "06…
+    $ old_new       <chr> NA, NA, NA, NA, NA, NA, NA, NA, "O", "O", "O", "O", "O",…
+    $ plant_no      <chr> "20", "20", "20", "20", "9", "9", "9", "9", NA, NA, NA, …
+    $ genus         <chr> "Shorea", "Shorea", "Shorea", "Shorea", "Shorea", "Shore…
+    $ species       <chr> "macrophylla", "macrophylla", "macrophylla", "macrophyll…
+    $ genus_species <chr> "Shorea_macrophylla", "Shorea_macrophylla", "Shorea_macr…
+    $ planting_date <date> NA, NA, NA, NA, NA, NA, NA, NA, 2002-07-22, 2002-07-22,…
+    $ survey_date   <date> NA, NA, NA, NA, NA, NA, NA, NA, 2005-10-04, 2005-10-04,…
+    $ survival      <dbl> 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,…
+    $ height_apex   <dbl> NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, …
+    $ dbh_mean      <dbl> NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, N…
+    $ dbase_mean    <dbl> NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, NaN, N…
+    $ dupe_count    <int> 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,…
+    $ census_id     <chr> "6", "7", "8", "9", "6", "7", "8", "9", "intensive_01", …
+    $ census_no     <chr> "06", "07", "08", "09", "06", "07", "08", "09", "02", "0…
+
+There are a lot of rows which are identical - only differing in
+`census_id`
+
+``` r
+data %>% 
+  janitor::get_dupes(-c(census_id, census_no)) %>% 
+  group_by(census_id) %>% 
+  summarise(n())
+```
+
+    # A tibble: 9 × 2
+      census_id           `n()`
+      <chr>               <int>
+    1 6                       2
+    2 7                       2
+    3 8                       2
+    4 9                       2
+    5 full_measurement_01  6824
+    6 intensive_01         6827
+    7 intensive_02            3
+    8 intensive_03            3
+    9 intensive_04            3
+
+Seems to be a big overlap between `full_measurement_01` and
+`intensive_01`, probably explains why the `intensive_01` survey took 620
+days.
+
+``` r
+data %>% 
+  filter(if_all(c(dbh_mean, dbase_mean, height_apex), is.na)) %>%
+  janitor::get_dupes(-c(census_id, census_no)) %>% 
+  group_by(census_id) %>% 
+  summarise(n())
+```
+
+    # A tibble: 9 × 2
+      census_id           `n()`
+      <chr>               <int>
+    1 6                       2
+    2 7                       2
+    3 8                       2
+    4 9                       2
+    5 full_measurement_01  5234
+    6 intensive_01         5237
+    7 intensive_02            3
+    8 intensive_03            3
+    9 intensive_04            3
+
+The majority have NAs for all the size measurements.

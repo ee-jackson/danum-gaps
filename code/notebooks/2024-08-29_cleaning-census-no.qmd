@@ -55,8 +55,7 @@ data %>%
   knitr::kable()
 ```
 
-Some of the censuses took a long time to complete - 
-suggests we should use date rather than census or year when modelling.
+Some of the censuses took a very long time to complete?
 
 ```{r}
 data %>% 
@@ -122,3 +121,30 @@ data %>%
 Duplicate trees within a single census are mostly trees without a "position",
 so they've ended up with the same `plant_id` as another individual.
 
+```{r}
+data %>% 
+  janitor::get_dupes(-c(census_id, census_no)) %>% 
+  glimpse()
+```
+
+There are a lot of rows which are identical - only differing in `census_id`
+
+```{r}
+data %>% 
+  janitor::get_dupes(-c(census_id, census_no)) %>% 
+  group_by(census_id) %>% 
+  summarise(n())
+```
+
+Seems to be a big overlap between `full_measurement_01` and `intensive_01`,
+probably explains why the `intensive_01` survey took 620 days.
+
+```{r}
+data %>% 
+  filter(if_all(c(dbh_mean, dbase_mean, height_apex), is.na)) %>%
+  janitor::get_dupes(-c(census_id, census_no)) %>% 
+  group_by(census_id) %>% 
+  summarise(n())
+```
+
+The majority have NAs for all the size measurements.

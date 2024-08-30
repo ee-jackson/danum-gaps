@@ -71,15 +71,15 @@ data_dv_pre2015 <-
   filter(year < 2015 |
            year == 2015 & team == "Malua") %>%
   select(- year, - team) %>%
-  rename(census_no = census) %>%
-  mutate(census_no = as.factor(census_no))
+  rename(census_id = census) %>%
+  mutate(census_id = as.factor(census_id))
 
 
 # Combine primary forest data sources -------------------------------------
 
 data_dv <-
-  bind_rows(data_list, .id = 'census_no') %>%
-  mutate(census_no = as.factor(census_no)) %>%
+  bind_rows(data_list, .id = 'census_id') %>%
+  mutate(census_id = as.factor(census_id)) %>%
   clean_names() %>%
   mutate(height_apex = NA) %>%
   bind_rows(data_dv_pre2015) %>%
@@ -115,10 +115,10 @@ data_dv <-
   # Making cols match the primary forest data
   mutate(line = NA, position = NA, old_new = NA,
          planting_date = NA, height_apex = NA, forest_type = "primary",
-         census_no = as.factor(census_no)) %>%
+         census_id = as.factor(census_id)) %>%
   select(forest_type, plant_id, plot, line, position, old_new, plant_no,
          genus, species, genus_species,
-         planting_date, census_no, survey_date,
+         planting_date, census_id, survey_date,
          survival, height_apex, diam1, diam2, dbh1, dbh2)
 
 rm(data_list)
@@ -134,8 +134,7 @@ data_sbe <-
   rename(old_new = o_n,
          planting_date = plantingdate,
          survey_date = surveydate,
-         height_apex = heightapex,
-         census_no = sample) %>%
+         height_apex = heightapex) %>%
 
   # Only intensively censused plots
   filter(pl %in% c(3, 5, 8, 11, 14, 17)) %>%
@@ -154,13 +153,18 @@ data_sbe <-
                      formatC(po,
                              width = 3,
                              format = "d",
-                             flag = "0"))
+                             flag = "0")),
+         sample = ifelse(is.na(sample), NA,
+                       formatC(sample,
+                               width = 2,
+                               format = "d",
+                               flag = "0"))
          ) %>%
 
   mutate(
     planting_date = dmy(planting_date),
     survey_date = dmy(survey_date),
-    census_no = as.factor(census_no),
+    census_id = as.factor(paste(data_origin, sample, sep = "_")),
     plant_id = paste(plot, line, position, old_new, sep = "_"),
     survival = case_when(
       survival == "yes" ~ 1,
@@ -176,7 +180,7 @@ data_sbe <-
   mutate(plant_no = NA, forest_type = "secondary") %>%
   select(forest_type, plant_id, plot, line, position, old_new, plant_no,
          genus, species, genus_species,
-         planting_date, census_no, survey_date,
+         planting_date, census_id, survey_date,
          survival, height_apex, diam1, diam2, dbh1, dbh2)
 
 

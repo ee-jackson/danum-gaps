@@ -89,23 +89,58 @@ data_comb <-
 data_comb <-
   data_comb %>%
   mutate(census_no = case_when(
-    census_no == "DanumGaps_Data_2015.xlsx" ~ "16",
-    census_no == "DanumGaps_Data_2016.xlsx" ~ "17",
-    census_no == "DanumGaps_Data_2017.xlsx" ~ "18",
-    census_no == "DanumGaps_Data_2018.xlsx" ~ "19",
-    census_no == "DanumGaps_Data_2019.xlsx" ~ "20",
-    census_no == "DanumGaps_Data_2023.xlsx" ~ "21",
-    census_no == "DanumGaps_Data_2024.xlsx" ~ "22",
-    .default = census_no
+    census_id == "1" ~ "01",
+    census_id == "2" ~ "02",
+    census_id == "3" ~ "03",
+    census_id == "4" ~ "04",
+    census_id == "5" ~ "05",
+    census_id == "6" ~ "06",
+    census_id == "7" ~ "07",
+    census_id == "8" ~ "08",
+    census_id == "9" ~ "09",
+    census_id == "DanumGaps_Data_2015.xlsx" ~ "16",
+    census_id == "DanumGaps_Data_2016.xlsx" ~ "17",
+    census_id == "DanumGaps_Data_2017.xlsx" ~ "18",
+    census_id == "DanumGaps_Data_2018.xlsx" ~ "19",
+    census_id == "DanumGaps_Data_2019.xlsx" ~ "20",
+    census_id == "DanumGaps_Data_2023.xlsx" ~ "21",
+    census_id == "DanumGaps_Data_2024.xlsx" ~ "22",
+    census_id == "full_measurement_01" ~ "01",
+    census_id == "intensive_01" ~ "02",
+    census_id == "intensive_02" ~ "03",
+    census_id == "intensive_03" ~ "04",
+    census_id == "intensive_04" ~ "05",
+    census_id == "intensive_05" ~ "06",
+    census_id == "intensive_06" ~ "07",
+    census_id == "intensive_07" ~ "08",
+    census_id == "full_measurement_02" ~ "09",
+    census_id == "climber_01" ~ "10",
+    census_id == "climber_02" ~ "11",
+    census_id == "climber_03" ~ "12",
+    census_id == "climber_04" ~ "13",
+    census_id == "climber_05" ~ "14",
+    census_id == "climber_06" ~ "15",
+    census_id == "climber_07" ~ "16",
+    census_id == "climber_08" ~ "17",
+    census_id == "climber_09" ~ "18",
+    census_id == "climber_10" ~ "19",
+    census_id == "climber_11" ~ "20",
+    census_id == "intensive_08" ~ "21",
+    census_id == "climber_12" ~ "22",
+    census_id == "intensive_09" ~ "23",
+    census_id == "climber_13" ~ "24",
+    census_id == "climber_14" ~ "25",
+    census_id == "intensive_10" ~ "26",
+    .default = census_id
   ))
+
 
 # Save --------------------------------------------------------------------
 
 data_comb <-
   data_comb %>%
-  filter(!if_all(c(survival, dbh_mean, dbase_mean, height_apex), is.na)) %>%
   distinct() %>%
-  mutate_if(is.character, as.factor)
+  filter(!if_all(c(survival, dbh_mean, dbase_mean, height_apex), is.na))
 
 saveRDS(data_comb,
         here::here("data", "derived", "data_cleaned.rds"))

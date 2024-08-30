@@ -141,7 +141,7 @@ data_sbe <-
 
   mutate(plot = ifelse(is.na(pl), NA,
                        formatC(pl,
-                               width = 3,
+                               width = 2,
                                format = "d",
                                flag = "0")),
          line = ifelse(is.na(li), NA,

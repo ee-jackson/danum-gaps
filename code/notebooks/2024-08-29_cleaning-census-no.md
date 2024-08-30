@@ -1,6 +1,6 @@
 # Cleaning census numbers
 eleanorjackson
-2024-08-29
+2024-08-30
 
 ``` r
 library("tidyverse")
@@ -9,7 +9,7 @@ library("patchwork")
 ```
 
 Following up on
-[2024-08-28_cleaning-census-no.md](code/notebooks/2024-08-28_cleaning-census-no.md).
+[2024-08-28_cleaning-census-no.md](2024-08-28_cleaning-census-no.md).
 
 I’ve realised that in the SBE data `sample` is nested within
 `data_origin`. :facepalm:

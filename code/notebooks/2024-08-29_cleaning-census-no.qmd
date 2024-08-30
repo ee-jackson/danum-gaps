@@ -1,0 +1,124 @@
+---
+title: "Cleaning census numbers"
+author: 'eleanorjackson'
+date: '`r format(Sys.time(), "%d %B, %Y")`' 
+format: gfm+emoji
+editor: source
+execute:
+  warning: false
+---
+
+```{r setup}
+#| include: false
+
+file_name <- knitr::current_input()
+
+knitr::opts_chunk$set(
+  fig.path =
+    paste0("figures/", sub("\\.rmarkdown$", "", basename(file_name)), "/", sep = "")
+)
+
+ggplot2::theme_set(ggplot2::theme_classic(base_size = 10))
+```
+
+```{r packages}
+#| output: false
+
+library("tidyverse")
+library("here")
+library("patchwork")
+```
+
+Following up on 
+[2024-08-28_cleaning-census-no.md](code/notebooks/2024-08-28_cleaning-census-no.md).
+
+I've realised that in the SBE data `sample` is nested within `data_origin`. :facepalm:
+
+```{r}
+data <- 
+  readRDS(here::here("data", "derived", "data_cleaned.rds"))
+```
+
+I've created a `census_no` variable 
+which orders the censuses by median survey date.
+
+```{r}
+data %>% 
+  filter(forest_type == "secondary") %>% 
+  group_by(census_id, census_no) %>% 
+  summarise(median_date = median(survey_date, na.rm = TRUE),
+            min_date = min(survey_date, na.rm = TRUE),
+            max_date = max(survey_date, na.rm = TRUE),
+            days = max_date - min_date
+            ) %>% 
+  arrange(max_date) %>% 
+  knitr::kable()
+```
+
+Some of the censuses took a long time to complete - 
+suggests we should use date rather than census or year when modelling.
+
+```{r}
+data %>% 
+  filter(forest_type == "secondary") %>% 
+  group_by(census_id) %>% 
+  summarise(n_distinct(plot)) %>% 
+  knitr::kable()
+```
+
+There are 6 plots. 
+Not every census surveys all 6 plots.
+
+```{r}
+data_complete_censuses <-
+  data %>% 
+  filter(forest_type == "secondary") %>% 
+  filter(str_detect(census_id, "full_measurement") |
+           str_detect(census_id, "intensive")) %>% 
+  filter(!census_id == "intensive_04") 
+```
+
+
+```{r}
+data_complete_censuses %>% 
+  filter(forest_type == "secondary") %>% 
+  mutate(month = lubridate::month(survey_date)) %>% 
+  group_by(survey_date) %>% 
+  slice_head() %>% 
+  ggplot(aes(y = forest_type, x = survey_date, colour = as.ordered(census_no))) +
+  geom_point(alpha = 0.6, shape = "|", size = 7) +
+  theme_bw() +
+  scale_x_date(minor_breaks = "year") +
+  scale_colour_viridis_d() +
+  theme(legend.position = "none") +
+  ggtitle("Complete censuses") +
+  
+  data %>% 
+  filter(forest_type == "secondary") %>% 
+  mutate(month = lubridate::month(survey_date)) %>% 
+  group_by(survey_date) %>% 
+  slice_head() %>% 
+  ggplot(aes(y = forest_type, x = survey_date, colour = as.ordered(census_no))) +
+  geom_point(alpha = 0.6, shape = "|", size = 7) +
+  theme_bw() +
+  scale_x_date(minor_breaks = "year") +
+  scale_colour_viridis_d() +
+  theme(legend.position = "none") +
+  ggtitle("All censuses") +
+  
+  patchwork::plot_layout(ncol = 1)
+  
+```
+
+```{r}
+data %>% 
+  filter(forest_type == "secondary") %>%
+  group_by(plant_id, census_no) %>% 
+  summarise(n()) %>% 
+  filter(`n()` >1) %>% 
+  knitr::kable()
+```
+
+Duplicate trees within a single census are mostly trees without a "position",
+so they've ended up with the same `plant_id` as another individual.
+

@@ -248,3 +248,36 @@ data %>%
 
 Census 8 of the SBE is a census of the intensive plots - so covers all 6
 plots. Don’t know why basal diameters were used.
+
+Update: I’ve had an idea about why basal diameters were used in census
+8, there were two cohorts!! The new cohort of seedlings would have been
+too small for DBH.
+
+``` r
+data %>% 
+  mutate(cohort = ifelse(forest_type == "secondary",
+                         paste(forest_type, old_new, sep = "_"),
+                         forest_type)) %>% 
+  filter(cohort != "secondary_NA" ) %>% 
+  pivot_longer(c(dbase_mean, dbh_mean), 
+               names_to = "measurement", 
+               values_to = "size") %>% 
+  drop_na(size) %>% 
+  group_by(cohort, plant_id, census_no) %>% 
+  summarise(n_measurements_per_plant = n()) %>% 
+  group_by(n_measurements_per_plant, cohort, census_no) %>% 
+  summarise(n_plants = n()) %>% 
+  ggplot(aes(x = census_no, y = n_plants, 
+             fill = as.ordered(n_measurements_per_plant))) +
+  geom_col(position = "fill") +
+  facet_wrap(~cohort, ncol = 1,
+             axis.labels = "all_x", axes = "all_x") +
+  guides(x =  guide_axis(angle = 90)) +
+  theme(legend.position = "top", legend.justification = "left") +
+  geom_hline(yintercept = 0.5, colour = "white", linetype = 2) +
+  geom_hline(yintercept = 0.75, colour = "white", linetype = 3)
+```
+
+![](figures/2024-08-30_diameter-conversion/unnamed-chunk-11-1.png)
+
+Hmm looks better but census 8 is still odd in the old SBE cohort.

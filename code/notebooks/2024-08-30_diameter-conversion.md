@@ -1,6 +1,6 @@
 # Diameter conversion
 eleanorjackson
-2024-09-02
+2024-09-04
 
 ``` r
 library("tidyverse")
@@ -39,7 +39,7 @@ data %>%
   plot_layout(ncol = 1)
 ```
 
-![](figures/2028-08-30_diameter-conversion/unnamed-chunk-2-1.png)
+![](figures/2024-08-30_diameter-conversion/unnamed-chunk-2-1.png)
 
 ``` r
 data %>% 
@@ -60,7 +60,7 @@ data %>%
   plot_annotation(title = "Cases where either basal or BH diameter is NA")
 ```
 
-![](figures/2028-08-30_diameter-conversion/unnamed-chunk-3-1.png)
+![](figures/2024-08-30_diameter-conversion/unnamed-chunk-3-1.png)
 
 From [Philipson *et al.* 2020](https://doi.org/10.1126/science.aay4490),
 we can calculate diameter at breast height from our `dbase_mean`
@@ -96,7 +96,7 @@ data %>%
   facet_wrap(~forest_type, scales = "free_y", ncol = 1)
 ```
 
-![](figures/2028-08-30_diameter-conversion/unnamed-chunk-4-1.png)
+![](figures/2024-08-30_diameter-conversion/unnamed-chunk-4-1.png)
 
 Let’s make the same figure but as proportions.
 
@@ -113,7 +113,7 @@ data %>%
   facet_wrap(~forest_type, scales = "free_y", ncol = 1)
 ```
 
-![](figures/2028-08-30_diameter-conversion/unnamed-chunk-5-1.png)
+![](figures/2024-08-30_diameter-conversion/unnamed-chunk-5-1.png)
 
 The SBE census 8 shows quite a big (proportional) drop in DBH
 measurements?
@@ -144,7 +144,7 @@ data %>%
   theme(legend.position = "top", legend.justification = "left")
 ```
 
-![](figures/2028-08-30_diameter-conversion/unnamed-chunk-6-1.png)
+![](figures/2024-08-30_diameter-conversion/unnamed-chunk-6-1.png)
 
 Basal diameter measurements are used for longer in *D. conformis* and
 *S. gibbosa*. They have 100% basal measurements till census 5/6, whereas
@@ -170,7 +170,31 @@ data %>%
   theme(legend.position = "top", legend.justification = "left")
 ```
 
-![](figures/2028-08-30_diameter-conversion/unnamed-chunk-7-1.png)
+![](figures/2024-08-30_diameter-conversion/unnamed-chunk-7-1.png)
 
 I’m not really seeing that same pattern in the SBE data - fairly similar
 across species?
+
+``` r
+data %>% 
+  pivot_longer(c(dbase_mean, dbh_mean), 
+               names_to = "measurement", 
+               values_to = "size") %>% 
+  drop_na(size) %>% 
+  group_by(forest_type, plant_id, census_no) %>% 
+  summarise(n_measurements_per_plant = n()) %>% 
+  group_by(n_measurements_per_plant, forest_type) %>% 
+  summarise(n())
+```
+
+    # A tibble: 7 × 3
+    # Groups:   n_measurements_per_plant [5]
+      n_measurements_per_plant forest_type `n()`
+                         <int> <chr>       <int>
+    1                        1 primary      1660
+    2                        1 secondary   12975
+    3                        2 primary      2236
+    4                        2 secondary    7332
+    5                        3 secondary       4
+    6                        4 secondary       6
+    7                        5 secondary       1

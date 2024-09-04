@@ -90,7 +90,6 @@ data %>%
                values_to = "size") %>% 
   drop_na(size) %>% 
   ggplot(aes(x = as.ordered(census_no), 
-             colour = measurement,
              fill = measurement)) +
   geom_bar() +
   facet_wrap(~forest_type, scales = "free_y", ncol = 1)
@@ -107,7 +106,6 @@ data %>%
                values_to = "size") %>% 
   drop_na(size) %>% 
   ggplot(aes(x = as.ordered(census_no), 
-             colour = measurement,
              fill = measurement)) +
   geom_bar(position = "fill") +
   facet_wrap(~forest_type, scales = "free_y", ncol = 1)
@@ -119,10 +117,7 @@ The SBE census 8 shows quite a big (proportional) drop in DBH
 measurements?
 
 From eyeballing it, from census 6 in the primary forest and census 10 in
-the secondary forest, we seem to have a ~50:50 split in measurements. We
-need to investigate whether these are duplicate measurements of the same
-individual or half of the individuals being measured by DBH and the
-other by basal diameter.
+the secondary forest, we seem to have a ~50:50 split in measurements.
 
 Species grow at different rates, so perhaps we’ll see differences there.
 
@@ -134,7 +129,6 @@ data %>%
                values_to = "size") %>% 
   drop_na(size) %>% 
   ggplot(aes(x = as.ordered(census_no), 
-             colour = measurement,
              fill = measurement)) +
   geom_bar(position = "fill") +
   facet_wrap(~genus_species, ncol = 3,
@@ -160,7 +154,6 @@ data %>%
                values_to = "size") %>% 
   drop_na(size) %>% 
   ggplot(aes(x = as.ordered(census_no), 
-             colour = measurement,
              fill = measurement)) +
   geom_bar(position = "fill") +
   facet_wrap(~genus_species, ncol = 3,
@@ -184,7 +177,7 @@ data %>%
   group_by(forest_type, plant_id, census_no) %>% 
   summarise(n_measurements_per_plant = n()) %>% 
   group_by(n_measurements_per_plant, forest_type) %>% 
-  summarise(n())
+  summarise(n()) 
 ```
 
     # A tibble: 7 × 3
@@ -198,3 +191,60 @@ data %>%
     5                        3 secondary       4
     6                        4 secondary       6
     7                        5 secondary       1
+
+``` r
+data %>% 
+  pivot_longer(c(dbase_mean, dbh_mean), 
+               names_to = "measurement", 
+               values_to = "size") %>% 
+  drop_na(size) %>% 
+  group_by(forest_type, plant_id, census_no) %>% 
+  summarise(n_measurements_per_plant = n()) %>% 
+  group_by(n_measurements_per_plant, forest_type, census_no) %>% 
+  summarise(n_plants = n()) %>% 
+  ggplot(aes(x = census_no, y = n_plants, 
+             fill = as.ordered(n_measurements_per_plant))) +
+  geom_col(position = "fill") +
+  facet_wrap(~forest_type, ncol = 1,
+             axis.labels = "all_x", axes = "all_x") +
+  guides(x =  guide_axis(angle = 90)) +
+  theme(legend.position = "top", legend.justification = "left") +
+  geom_hline(yintercept = 0.5, colour = "white", linetype = 2) +
+  geom_hline(yintercept = 0.75, colour = "white", linetype = 3)
+```
+
+![](figures/2024-08-30_diameter-conversion/unnamed-chunk-9-1.png)
+
+This figure shows us how many plants have *both* a DBH and basal
+diameter measurement in each survey.
+
+Looking at this, I want to say from census 6 onwards we should use DBH,
+but there is that dip in the SBE data with censuses 7, 8, 9, having many
+trees with only a basal diameter measurement.
+
+We also don’t yet how we’re going to line up the 2 forest types in terms
+of dates / size, since the SBE seedlings were planted & surveyed earlier
+and were larger at the time of their first survey (see
+[2024-08-07_investigate-initial-size.md](2024-08-07_investigate-initial-size.md)).
+
+``` r
+data %>% 
+  filter(forest_type == "secondary" &
+           census_no == "08") %>% 
+  group_by(census_id, plot) %>% 
+  summarise(n_distinct(plant_id))
+```
+
+    # A tibble: 6 × 3
+    # Groups:   census_id [1]
+      census_id    plot  `n_distinct(plant_id)`
+      <chr>        <chr>                  <int>
+    1 intensive_07 03                       562
+    2 intensive_07 05                       805
+    3 intensive_07 08                       786
+    4 intensive_07 11                       603
+    5 intensive_07 14                       802
+    6 intensive_07 17                       505
+
+Census 8 of the SBE is a census of the intensive plots - so covers all 6
+plots. Don’t know why basal diameters were used.

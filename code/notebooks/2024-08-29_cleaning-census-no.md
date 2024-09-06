@@ -1,6 +1,6 @@
 # Cleaning census numbers
 eleanorjackson
-2024-08-30
+2024-09-06
 
 ``` r
 library("tidyverse")
@@ -155,23 +155,23 @@ data %>%
   knitr::kable()
 ```
 
-| plant_id                | census_no | n() |
-|:------------------------|:----------|----:|
-| 014_14_011_N            | 08        |   2 |
-| 014_14_NA_O_ovalis      | 21        |   2 |
-| 014_14_NA_O_ovalis      | 23        |   2 |
-| 014_14_NA_O_ovalis      | 26        |   2 |
-| 014_17_NA_O_johorensis  | 21        |   3 |
-| 014_17_NA_O_johorensis  | 23        |   2 |
-| 014_17_NA_O_johorensis  | 26        |   3 |
-| 014_17_NA_O_sangal      | 21        |   3 |
-| 014_17_NA_O_sangal      | 23        |   3 |
-| 014_17_NA_O_sangal      | 26        |   3 |
-| 017_02_NA_N_tomentella  | 23        |   2 |
-| 017_11_NA_O_sangal      | 21        |   2 |
-| 017_11_NA_O_sangal      | 23        |   2 |
-| 017_11_NA_O_sangal      | 26        |   2 |
-| 017_16_NA_NA_beccariana | 21        |   2 |
+| plant_id               | census_no | n() |
+|:-----------------------|:----------|----:|
+| 14_14_011_N            | 08        |   2 |
+| 14_14_NA_O_ovalis      | 21        |   2 |
+| 14_14_NA_O_ovalis      | 23        |   2 |
+| 14_14_NA_O_ovalis      | 26        |   2 |
+| 14_17_NA_O_johorensis  | 21        |   3 |
+| 14_17_NA_O_johorensis  | 23        |   2 |
+| 14_17_NA_O_johorensis  | 26        |   3 |
+| 14_17_NA_O_sangal      | 21        |   3 |
+| 14_17_NA_O_sangal      | 23        |   3 |
+| 14_17_NA_O_sangal      | 26        |   3 |
+| 17_02_NA_N_tomentella  | 23        |   2 |
+| 17_11_NA_O_sangal      | 21        |   2 |
+| 17_11_NA_O_sangal      | 23        |   2 |
+| 17_11_NA_O_sangal      | 26        |   2 |
+| 17_16_NA_NA_beccariana | 21        |   2 |
 
 Duplicate trees within a single census are mostly trees without a
 “position”, so they’ve ended up with the same `plant_id` as another
@@ -188,7 +188,7 @@ data %>%
     Rowwise: 
     $ forest_type   <chr> "primary", "primary", "primary", "primary", "primary", "…
     $ plant_id      <chr> "13_20", "13_20", "13_20", "13_20", "13_9", "13_9", "13_…
-    $ plot          <chr> "13", "13", "13", "13", "13", "13", "13", "13", "005", "…
+    $ plot          <chr> "13", "13", "13", "13", "13", "13", "13", "13", "05", "0…
     $ line          <chr> NA, NA, NA, NA, NA, NA, NA, NA, "20", "20", "20", "20", …
     $ position      <chr> NA, NA, NA, NA, NA, NA, NA, NA, "064", "064", "064", "06…
     $ old_new       <chr> NA, NA, NA, NA, NA, NA, NA, NA, "O", "O", "O", "O", "O",…
@@ -235,23 +235,33 @@ days.
 
 ``` r
 data %>% 
+  filter(survival == 1) %>% 
   filter(if_all(c(dbh_mean, dbase_mean, height_apex), is.na)) %>%
   janitor::get_dupes(-c(census_id, census_no)) %>% 
   group_by(census_id) %>% 
   summarise(n())
 ```
 
-    # A tibble: 9 × 2
+    # A tibble: 6 × 2
       census_id           `n()`
       <chr>               <int>
-    1 6                       2
-    2 7                       2
-    3 8                       2
-    4 9                       2
-    5 full_measurement_01  5234
-    6 intensive_01         5237
-    7 intensive_02            3
-    8 intensive_03            3
-    9 intensive_04            3
+    1 6                       1
+    2 7                       1
+    3 8                       1
+    4 9                       1
+    5 full_measurement_01   248
+    6 intensive_01          248
 
-The majority have NAs for all the size measurements.
+A fair chunk of NAs.
+
+``` r
+data %>% 
+  select(census_no, plot, forest_type) %>%
+  distinct() %>% 
+  ggplot(aes(x = census_no, y = plot)) +
+  geom_point() +
+  facet_wrap(~forest_type, scales = "free_x") +
+  guides(x =  guide_axis(angle = 90)) 
+```
+
+![](figures/2024-08-29_cleaning-census-no/unnamed-chunk-10-1.png)

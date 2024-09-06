@@ -141,10 +141,23 @@ probably explains why the `intensive_01` survey took 620 days.
 
 ```{r}
 data %>% 
+  filter(survival == 1) %>% 
   filter(if_all(c(dbh_mean, dbase_mean, height_apex), is.na)) %>%
   janitor::get_dupes(-c(census_id, census_no)) %>% 
   group_by(census_id) %>% 
   summarise(n())
 ```
 
-The majority have NAs for all the size measurements.
+A fair chunk of NAs.
+
+```{r}
+data %>% 
+  select(census_no, plot, forest_type) %>%
+  distinct() %>% 
+  ggplot(aes(x = census_no, y = plot)) +
+  geom_point() +
+  facet_wrap(~forest_type, scales = "free_x") +
+  guides(x =  guide_axis(angle = 90)) 
+  
+```
+

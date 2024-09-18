@@ -1,0 +1,501 @@
+---
+title: "Cleaning"
+author: 'eleanorjackson'
+date: '`r format(Sys.time(), "%d %B, %Y")`' 
+format: gfm+emoji
+editor: source
+execute:
+  warning: false
+---
+
+```{r setup}
+#| include: false
+
+file_name <- knitr::current_input()
+
+knitr::opts_chunk$set(
+  fig.path =
+    paste0("figures/", sub("\\.rmarkdown$", "", basename(file_name)), "/", sep = "")
+)
+
+ggplot2::theme_set(ggplot2::theme_classic(base_size = 10))
+```
+
+There are a few things that still need to be cleaned-up in the data. 
+Primarily,
+
+- missing survey dates
+- missing dead trees
+
+```{r packages}
+#| output: false
+
+library("tidyverse")
+library("here")
+library("patchwork")
+library("janitor")
+```
+
+```{r}
+data <- 
+  readRDS(here::here("data", "derived", "data_cleaned.rds")) %>% 
+  drop_na(survival) # there are 35 trees with survival as NA?
+```
+
+## Missing survey dates
+
+**When adding to the cleaning script, we need to do this step before cleaning Lazarus trees.**
+
+```{r}
+data %>% 
+  filter(is.na(survey_date)) %>% glimpse
+```
+
+There are only 79 trees with missing survey dates, 
+which doesn't seem so bad.
+
+```{r}
+data %>% 
+  filter(is.na(survey_date)) %>% 
+  filter(census_id == "full_measurement_02") %>% glimpse
+```
+
+ Most of the missing survey dates are in the `full_measurement_02` census.
+ 
+```{r}
+#| fig-width: 7
+#| fig-height: 3
+
+med_date <-
+  data %>% 
+  filter(census_id == "full_measurement_02") %>% 
+  pull(survey_date) %>% 
+  median(na.rm = TRUE)
+  
+data %>% 
+  filter(census_id == "full_measurement_02") %>% 
+  ggplot(aes(x = survey_date, y = census_id)) +
+  geom_point(alpha = 0.8, shape = "|", size = 5) +
+  geom_vline(xintercept = med_date, linetype = 2)
+```
+ 
+The `full_measurement_02` is a long census, 
+but I think we should still be ok to use the median survey date per census to fill in 
+the missing survey dates.
+
+```{r}
+all_med_dates <-
+  data %>% 
+  group_by(census_id, census_no) %>% 
+  summarise(median_date = median(survey_date, na.rm = TRUE)) 
+```
+
+```{r}
+data <- 
+  data %>% 
+  right_join(all_med_dates) %>% 
+  mutate(survey_date = case_when(
+    is.na(survey_date) ~ median_date,
+    .default = survey_date
+  )) %>% 
+  select(-median_date)
+```
+
+## Backfill dead trees
+
+We don't want a record of every tree to be in every census, 
+as not all plots were visited in every census.
+
+I only want to add a dead tree if it was visited not but recorded.
+
+```{r}
+data %>% 
+  filter(! str_detect(plant_id, "NA")) %>% 
+  select(census_no, plot, forest_type) %>%
+  distinct() %>% 
+  glimpse()
+```
+
+There are 509 unique census/plot/forest type combinations.
+
+..also for the "climber" surveys, only 2 lines of each plot were measured..
+
+```{r}
+data %>% 
+  filter(forest_type == "secondary" ) %>%
+  group_by(census_no, census_id, plot) %>%  
+  summarise(n_distinct(line)) %>%
+  knitr::kable()
+```
+
+And strangely for the 4th intensive survey only 16 out of 20 lines were surveyed?
+
+I'm going to add line to the plot id for the SBE plots - 
+so that we can get a list of plant ids per line.
+
+```{r}
+data <- 
+  data %>% 
+  mutate(plot_line = case_when(
+    forest_type == "secondary" ~ paste(plot, line, sep = "_"),
+    .default = plot
+  ))
+```
+
+
+```{r}
+data %>% 
+  filter(! str_detect(plant_id, "NA")) %>% 
+  select(census_id, census_no, plot_line, forest_type) %>%
+  distinct() %>% 
+  glimpse()
+```
+
+There are 1,772 unique census/plot/forest type/line combinations.
+
+First let's get list of every unique tree in each plot/line 
+(not including trees which are missing location data - 
+there are some SBE trees with NAs for position/line).
+
+```{r}
+plants_in_plots <- 
+  data %>% 
+  filter(! str_detect(plant_id, "NA")) %>% 
+  select(forest_type, plot_line, plant_id) %>% 
+  distinct() %>% 
+  group_by(forest_type, plot_line) %>% 
+  nest(.key = "id_list") %>% 
+  ungroup()
+```
+
+Then, get those 1,772 unique census/plot/forest type/line combinations to use as an index.
+
+```{r}
+keys <- data %>% 
+  select(census_id, census_no, plot_line, forest_type) %>%
+  distinct() %>% 
+  left_join(plants_in_plots, by = c("plot_line", "forest_type"))
+```
+
+Then, create a function that will add in any missing plant_ids and record them as "dead"
+
+```{r}
+backfill_trees <- function(census_name, census, plot_no, site,
+                           tree_ids, data) {
+  data %>% 
+    filter(census_id == census_name,
+           census_no == census,
+           plot_line == plot_no,
+           forest_type == site) %>% 
+    full_join(tree_ids, by = "plant_id") %>% 
+    mutate(survival = replace_na(survival, 0)) %>% 
+    ungroup() %>% 
+    tidyr::fill(forest_type, plot, census_id, census_no, plot_line)
+}
+```
+
+Test the function with a single census/plot/forest type combination
+
+```{r}
+backfill_trees(census_name = keys$census_id[[1]], 
+               census = keys$census_no[[1]], 
+               plot_no = keys$plot_line[[1]], 
+               site = keys$forest_type[[1]], 
+               tree_ids = keys$id_list[[1]], 
+               data = data) %>% 
+  glimpse
+```
+
+Now map the function across all 1,772 unique census/plot/forest type/line combinations. 
+This might take a while to run..
+```{r}
+data_backfilled <-
+  pmap(
+    .f = backfill_trees,
+    .l = list(
+      census_name = keys$census_id,
+      census = keys$census_no,
+      plot_no = keys$plot_line,
+      site = keys$forest_type,
+      tree_ids = keys$id_list
+    ),
+      data = data
+  ) %>%
+  bind_rows()
+```
+
+
+```{r}
+data %>% ungroup() %>% count() 
+
+data_backfilled %>% ungroup() %>% count() 
+```
+
+We have massively increased the size of the data
+
+```{r}
+data_backfilled %>% filter(survival == 1) %>% ungroup() %>% count() 
+
+data %>% filter(survival == 1) %>% ungroup() %>% count() 
+```
+
+But we still have the same number of alive trees, which is good.
+
+To fill in the plant-level data (which is missing for the dead trees we've just added),
+I want to check if any plants switch species ID.
+
+```{r}
+sp_switch_plants <- 
+  data_backfilled %>% 
+  group_by(plant_id) %>% 
+  summarise(n_distinct(genus_species, na.rm = TRUE)) %>% 
+  filter(`n_distinct(genus_species, na.rm = TRUE)` > 1) %>% 
+  pull(plant_id)
+
+length(sp_switch_plants)
+```
+
+There are 10 plants which switch species, which is not too bad
+
+```{r}
+data_backfilled %>% 
+  filter(! is.na(genus_species)) %>% 
+  filter(plant_id %in% sp_switch_plants) %>% 
+  arrange(plant_id) %>% 
+  knitr::kable()
+```
+
+Let's assume that the most recent ID is the most accurate.
+
+```{r}
+sp_index <- 
+  data_backfilled %>% 
+  filter(! is.na(genus_species)) %>% 
+  filter(plant_id %in% sp_switch_plants) %>% 
+  group_by(plant_id) %>% 
+  slice_max(survey_date) %>% 
+  select(plant_id, genus, species, genus_species)
+  
+data_backfilled <-
+  data_backfilled %>%
+  rows_update(sp_index, by = "plant_id", unmatched = "ignore")
+```
+
+Ok, now we can fill in all the data that is missing from the dead trees that we just added
+
+```{r}
+data_backfilled <-
+  data_backfilled %>% 
+  dplyr::group_by(plant_id) %>% 
+  arrange(survey_date, .by_group = TRUE) %>% 
+  tidyr::fill(line:planting_date, .direction = "updown") %>% 
+  ungroup()
+```
+
+Want to check that the number of plants is now consistent for each plot across censuses.
+
+```{r}
+data_backfilled %>% 
+  filter(! str_detect(plant_id, "NA")) %>% 
+  group_by(census_no, plot, forest_type) %>% 
+  summarise(n = n_distinct(plant_id)) %>%
+  pivot_wider(names_from = census_no, values_from = n) %>% 
+  arrange(forest_type) %>% 
+  knitr::kable()
+```
+
+OK, I've noticed a problem.. 
+
+The new cohort of trees in the SBE were planted from census 6 onwards,
+but we've just put them into previous censuses!
+
+Should be an easy fix to just filter them out.
+
+```{r}
+data_backfilled_f <-
+  data_backfilled %>% 
+  filter(!
+    (forest_type == "secondary" & 
+       old_new == "N" & 
+       census_no %in% c("01", "02", "03", "04", "05") )
+  ) 
+  
+```
+
+```{r}
+data_backfilled_f %>% 
+  filter(! str_detect(plant_id, "NA")) %>% 
+  group_by(census_no, plot, forest_type) %>% 
+  summarise(n = n_distinct(plant_id)) %>%
+  pivot_wider(names_from = census_no, values_from = n) %>% 
+  arrange(forest_type) %>% 
+  knitr::kable()
+```
+
+## Add survey dates again
+
+The dead trees we added won't have survey dates - 
+we can use the median for the census.
+
+```{r}
+data_backfilled_f <- 
+  data_backfilled_f %>% 
+  right_join(all_med_dates) %>% 
+  mutate(survey_date = case_when(
+    is.na(survey_date) ~ median_date,
+    .default = survey_date
+  )) %>% 
+  select(-median_date)
+```
+
+## Lazarus trees
+
+```{r}
+
+lazarus_ids <- data_backfilled_f %>%
+  group_by(plant_id) %>%
+  filter(survival == "1" & lag(survival, order_by = survey_date) == "0") %>%
+  pull(plant_id) %>%
+  unique()
+
+paste("There are", length(lazarus_ids), "Lazarus trees", sep = " ")
+
+last_alive_dates <-
+  data_backfilled_f %>%
+  filter(survival == "1") %>%
+  group_by(plant_id) %>%
+  slice_max(lubridate::ymd(survey_date), with_ties = FALSE) %>%
+  select(plant_id, survey_date) %>%
+  rename(last_alive = survey_date)
+
+# Assuming that the most recent time a tree was found alive was correct
+# and previous records of survival == 0 were incorrect
+data_backfilled_f <-
+  data_backfilled_f %>%
+  filter(plant_id %in% lazarus_ids) %>%
+  left_join(last_alive_dates,
+            by = "plant_id") %>%
+  mutate(
+    survival = case_when(
+      survey_date <= last_alive ~ 1,
+
+      survey_date > last_alive ~ 0,
+
+      is.na(survey_date) ~ NA
+      )
+    ) %>%
+  select(- last_alive) %>%
+  bind_rows(filter(data_backfilled_f, ! plant_id %in% lazarus_ids))
+```
+
+## Visual check
+
+```{r}
+data %>% 
+  filter(! str_detect(plant_id, "NA")) %>% 
+  ggplot(aes(x = census_no, fill = plot)) +
+  geom_bar() +
+  facet_wrap(~forest_type, ncol = 1, scales = "free_y") +
+  theme(legend.position = "bottom") +
+  guides(fill = guide_legend(nrow = 2)) +
+  ggtitle("Before back-filling")
+
+data_backfilled_f %>% 
+  filter(! str_detect(plant_id, "NA")) %>% 
+  ggplot(aes(x = census_no, fill = plot)) +
+  geom_bar() +
+  facet_wrap(~forest_type, ncol = 1, scales = "free_y") +
+  theme(legend.position = "bottom") +
+  guides(fill = guide_legend(nrow = 2)) +
+  ggtitle("After back-filling")
+
+```
+
+```{r}
+data_backfilled_f %>% 
+  group_by(plant_id) %>% 
+  arrange(survey_date, .by_group = TRUE) %>% 
+    ungroup() %>% 
+    mutate(cohort = ifelse(forest_type == "secondary",
+                           paste(forest_type, old_new, sep = "_"),
+                           forest_type)) %>% 
+    filter(cohort != "secondary_NA" ) %>% 
+    ggplot(aes(x = census_no, group = survival, 
+               fill = survival)) +
+    geom_bar(position = "fill") +
+    facet_wrap(~cohort, ncol = 1,
+               axis.labels = "all_x", axes = "all_x") +
+    guides(x =  guide_axis(angle = 90)) +
+    theme(legend.position = "top", legend.justification = "left") +
+  ggtitle("After back-filling, split by cohort")
+```
+
+```{r}
+data %>% 
+  group_by(plant_id) %>% 
+  arrange(survey_date, .by_group = TRUE) %>% 
+    ungroup() %>% 
+    ggplot(aes(x = census_no, group = survival, 
+               fill = survival)) +
+    geom_bar(position = "fill") +
+    facet_wrap(~forest_type, ncol = 1,
+               axis.labels = "all_x", axes = "all_x") +
+    guides(x =  guide_axis(angle = 90)) +
+    theme(legend.position = "top", legend.justification = "left") +
+    ggtitle("Before back-filling")
+
+data_backfilled_f %>% 
+  group_by(plant_id) %>% 
+  arrange(survey_date, .by_group = TRUE) %>% 
+    ungroup() %>% 
+    ggplot(aes(x = census_no, group = survival, 
+               fill = survival)) +
+    geom_bar(position = "fill") +
+    facet_wrap(~forest_type, ncol = 1,
+               axis.labels = "all_x", axes = "all_x") +
+    guides(x =  guide_axis(angle = 90)) +
+    theme(legend.position = "top", legend.justification = "left")+
+    ggtitle("After back-filling")
+```
+
+```{r}
+data_backfilled_f %>% 
+  filter(!is.na(old_new)) %>% 
+  filter(!str_detect(census_id, "climber")) %>%
+  filter(forest_type == "secondary") %>% 
+  ggplot(aes(x = census_no, group = survival, 
+               fill = survival)) +
+    geom_bar(position = "fill") +
+    facet_grid(old_new~plot) +
+    guides(x =  guide_axis(angle = 90)) +
+    theme(legend.position = "top", legend.justification = "left") +
+  ggtitle("full SBE censuses, by plot and cohort")
+```
+
+```{r}
+data_backfilled_f %>% 
+  filter(!is.na(old_new)) %>% filter(str_detect(census_id, "climber")) %>%
+  filter(forest_type == "secondary") %>% 
+  ggplot(aes(x = census_no, group = survival, 
+               fill = survival)) +
+    geom_bar(position = "fill") +
+    facet_grid(old_new~plot) +
+    guides(x =  guide_axis(angle = 90)) +
+    theme(legend.position = "top", legend.justification = "left") +
+  ggtitle("climber SBE censuses, by plot and cohort")
+```
+
+```{r}
+data_backfilled_f %>% 
+  filter(forest_type == "primary") %>% 
+  ggplot(aes(x = census_no, group = survival, 
+               fill = survival)) +
+    geom_bar(position = "fill") +
+    facet_wrap(~plot) +
+    guides(x =  guide_axis(angle = 90)) +
+    theme(legend.position = "top", legend.justification = "left") +
+  ggtitle("Danum censuses, by plot")
+```
+
+Looks good! 
+I'll incorporate this into the [01_clean-data.R](../scripts/01_clean-data.R) script.

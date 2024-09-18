@@ -135,6 +135,7 @@ data_sbe <-
          planting_date = plantingdate,
          survey_date = surveydate,
          height_apex = heightapex) %>%
+  mutate(across(c(old_new, survival), str_trim)) %>%
 
   # Only intensively censused plots
   filter(pl %in% c(3, 5, 8, 11, 14, 17)) %>%
@@ -187,6 +188,13 @@ data_sbe <-
 # Combine secondary and primary forest data -------------------------------
 
 data_comb <-
-  bind_rows(data_dv, data_sbe)
+  bind_rows(data_dv, data_sbe) %>%
+  distinct() %>%
+  filter(!if_all(c(survival,
+                   diam1,
+                   diam2,
+                   dbh1,
+                   dbh2,
+                   height_apex), is.na))
 
 write_csv(data_comb, here::here("data", "derived", "data_combined.csv"))

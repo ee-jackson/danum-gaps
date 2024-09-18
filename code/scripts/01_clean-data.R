@@ -33,55 +33,26 @@ data_comb <-
   data_comb %>%
   filter(genus_species %in% both_forest_sp)
 
-
-# Clean survival ----------------------------------------------------------
-
-lazarus_ids <- data_comb %>%
-  group_by(plant_id) %>%
-  filter(survival == "1" & lag(survival, order_by = survey_date) == "0") %>%
-  pull(plant_id) %>%
-  unique()
-
-paste("There are", length(lazarus_ids), "Lazarus trees", sep = " ")
-
-last_alive_dates <-
+# Some plants switch species
+sp_switch_plants <-
   data_comb %>%
-  filter(survival == "1") %>%
   group_by(plant_id) %>%
-  slice_max(lubridate::ymd(survey_date), with_ties = FALSE) %>%
-  select(plant_id, survey_date) %>%
-  rename(last_alive = survey_date)
+  summarise(n_distinct(genus_species, na.rm = TRUE)) %>%
+  filter(`n_distinct(genus_species, na.rm = TRUE)` > 1) %>%
+  pull(plant_id)
 
-# Assuming that the most recent time a tree was found alive was correct
-# and previous records of survival == 0 were incorrect
-data_comb <-
+# Assume most recent species ID is accurate
+sp_index <-
   data_comb %>%
-  filter(plant_id %in% lazarus_ids) %>%
-  left_join(last_alive_dates,
-            by = "plant_id") %>%
-  mutate(
-    survival = case_when(
-      survey_date <= last_alive ~ 1,
-
-      survey_date > last_alive ~ 0,
-
-      is.na(survey_date) ~ NA
-      )
-    ) %>%
-  select(- last_alive) %>%
-  bind_rows(filter(data_comb, ! plant_id %in% lazarus_ids))
-
-
-# Clean growth ------------------------------------------------------------
+  filter(! is.na(genus_species)) %>%
+  filter(plant_id %in% sp_switch_plants) %>%
+  group_by(plant_id) %>%
+  slice_max(survey_date) %>%
+  select(plant_id, genus, species, genus_species)
 
 data_comb <-
   data_comb %>%
-  rowwise() %>%
-  mutate(
-    dbh_mean = mean(c(dbh1, dbh2), na.rm = TRUE),
-    dbase_mean = mean(c(diam1, diam2), na.rm = TRUE)
-  ) %>%
-  select(- dbh1, - dbh2, - diam1, - diam2)
+  rows_update(sp_index, by = "plant_id", unmatched = "ignore")
 
 
 # Clean census ------------------------------------------------------------
@@ -135,12 +106,195 @@ data_comb <-
   ))
 
 
-# Save --------------------------------------------------------------------
+# Clean survey date -------------------------------------------------------
 
+# get median survey dates for each census + plot
+all_med_dates_pl <-
+  data_comb %>%
+  group_by(census_id, census_no, forest_type, plot) %>%
+  summarise(median_date = median(survey_date, na.rm = TRUE))
+
+# also get median survey dates for each census
+# as plot 13 consistently has no survey date
+all_med_dates_cen <-
+  data_comb %>%
+  group_by(census_id, census_no, forest_type) %>%
+  summarise(median_date = median(survey_date, na.rm = TRUE))
+
+# replace NAs with median
 data_comb <-
   data_comb %>%
+  left_join(all_med_dates_pl,
+             by = c("census_id", "census_no",
+                    "forest_type", "plot")) %>%
+  mutate(survey_date = case_when(
+    is.na(survey_date) ~ median_date,
+    .default = survey_date
+  )) %>%
+  select(-median_date) %>%
+  left_join(all_med_dates_cen,
+            by = c("census_id", "census_no",
+                   "forest_type")) %>%
+  mutate(survey_date = case_when(
+    is.na(survey_date) ~ median_date,
+    .default = survey_date
+  )) %>%
+  select(-median_date)
+
+
+# Backfill dead plants ----------------------------------------------------
+
+# concatenate plot and line as not complete cases in each census
+data_comb <-
+  data_comb %>%
+  mutate(plot_line = case_when(
+    forest_type == "secondary" ~ paste(plot, line, sep = "_"),
+    .default = plot
+  ))
+
+# get unique plant ids found in each plot and line
+plants_in_plots <-
+  data_comb %>%
+  filter(! str_detect(plant_id, "NA")) %>%
+  select(forest_type, plot_line, plant_id) %>%
+  distinct() %>%
+  group_by(forest_type, plot_line) %>%
+  nest(.key = "id_list") %>%
+  ungroup()
+
+# key to pass to backfilling function
+keys <-
+  data_comb %>%
+  select(census_id, census_no, plot_line, forest_type) %>%
+  distinct() %>%
+  left_join(plants_in_plots, by = c("plot_line", "forest_type"))
+
+# function to backfill missing trees as dead
+backfill_trees <- function(census_name, census, plot_no, site,
+                           tree_ids, data) {
+  data %>%
+    filter(census_id == census_name,
+           census_no == census,
+           plot_line == plot_no,
+           forest_type == site) %>%
+    full_join(tree_ids, by = "plant_id") %>%
+    mutate(survival = replace_na(survival, 0)) %>%
+    ungroup() %>%
+    tidyr::fill(forest_type, plot, census_id, census_no, plot_line)
+}
+
+# run function over all keys
+data_backfilled <-
+  pmap(
+    .f = backfill_trees,
+    .l = list(
+      census_name = keys$census_id,
+      census = keys$census_no,
+      plot_no = keys$plot_line,
+      site = keys$forest_type,
+      tree_ids = keys$id_list
+    ),
+    data = data_comb
+  ) %>%
+  bind_rows()
+
+# fill missing plant level data for backfilled plants
+data_backfilled <-
+  data_backfilled %>%
+  dplyr::group_by(plant_id) %>%
+  arrange(survey_date, .by_group = TRUE) %>%
+  tidyr::fill(line:planting_date, .direction = "updown") %>%
+  ungroup()
+
+# "new" cohort of plants were first surveyed in census "06"
+data_backfilled <-
+  data_backfilled %>%
+  filter(!
+           (forest_type == "secondary" &
+              old_new == "N" &
+              census_no %in% c("01", "02", "03", "04", "05") )
+  )
+
+# add survey dates for for backfilled plants
+data_backfilled <-
+  data_backfilled %>%
+  left_join(all_med_dates_pl,
+            by = c("census_id", "census_no",
+                   "forest_type", "plot")) %>%
+  mutate(survey_date = case_when(
+    is.na(survey_date) ~ median_date,
+    .default = survey_date
+  )) %>%
+  select(-median_date) %>%
+  left_join(all_med_dates_cen,
+            by = c("census_id", "census_no",
+                   "forest_type")) %>%
+  mutate(survey_date = case_when(
+    is.na(survey_date) ~ median_date,
+    .default = survey_date
+  )) %>%
+  select(-median_date)
+
+
+# Clean Lazarus trees -----------------------------------------------------
+
+lazarus_ids <- data_backfilled %>%
+  group_by(plant_id) %>%
+  filter(survival == "1" & lag(survival, order_by = survey_date) == "0") %>%
+  pull(plant_id) %>%
+  unique()
+
+paste("There are", length(lazarus_ids), "Lazarus trees", sep = " ")
+
+last_alive_dates <-
+  data_backfilled %>%
+  filter(survival == "1") %>%
+  group_by(plant_id) %>%
+  slice_max(lubridate::ymd(survey_date), with_ties = FALSE) %>%
+  select(plant_id, survey_date) %>%
+  rename(last_alive = survey_date)
+
+# Assuming that the most recent time a tree was found alive was correct
+# and previous records of survival == 0 were incorrect
+data_backfilled <-
+  data_backfilled %>%
+  filter(plant_id %in% lazarus_ids) %>%
+  left_join(last_alive_dates,
+            by = "plant_id") %>%
+  mutate(
+    survival = case_when(
+      survey_date <= last_alive ~ 1,
+
+      survey_date > last_alive ~ 0,
+
+      is.na(survey_date) ~ NA
+      )
+    ) %>%
+  select(- last_alive) %>%
+  bind_rows(filter(data_backfilled, ! plant_id %in% lazarus_ids))
+
+
+# Clean growth ------------------------------------------------------------
+
+data_backfilled <-
+  data_backfilled %>%
+  rowwise() %>%
+  mutate(
+    dbh_mean = mean(c(dbh1, dbh2), na.rm = TRUE),
+    dbase_mean = mean(c(diam1, diam2), na.rm = TRUE)
+  )
+
+
+# Save --------------------------------------------------------------------
+
+data_backfilled <-
+  data_backfilled %>%
+  select(forest_type, plant_id, plot, line, position, old_new, plant_no,
+         genus, species, genus_species,
+         planting_date, census_no, census_id, survey_date,
+         survival, height_apex, dbh_mean, dbase_mean) %>%
   distinct() %>%
   filter(!if_all(c(survival, dbh_mean, dbase_mean, height_apex), is.na))
 
-saveRDS(data_comb,
+saveRDS(data_backfilled,
         here::here("data", "derived", "data_cleaned.rds"))

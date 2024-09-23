@@ -1,0 +1,521 @@
+---
+title: "Continuous-Time Event Occurrence models"
+author: 'eleanorjackson'
+date: '`r format(Sys.time(), "%d %B, %Y")`' 
+format: gfm+emoji
+editor: source
+execute:
+  warning: false
+---
+
+```{r setup}
+#| include: false
+
+file_name <- knitr::current_input()
+
+knitr::opts_chunk$set(
+  fig.path =
+    paste0("figures/", sub("\\.rmarkdown$", "", basename(file_name)), "/", sep = "")
+)
+
+ggplot2::theme_set(ggplot2::theme_classic(base_size = 10))
+```
+
+Now that we have clean data :tada: I want to have a stab at some survival models.
+
+Some useful resources:
+- [Intro to survival analysis in R](https://www.emilyzabor.com/tutorials/survival_analysis_in_r_tutorial.html)
+- [Applied longitudinal data analysis: Modeling change and event occurrence.](https://doi.org/10.1093/acprof:oso/9780195152968.001.0001)
+- [brms + tidyverse translation of above book](https://bookdown.org/content/4253/)
+- [Survival model section of the Stan user guide](https://mc-stan.org/docs/stan-users-guide/survival.html)
+- [Fully flexible analysis of behavioural sequences based on parametric survival models with frailties—A tutorial](https://doi.org/10.1111/eth.13225)
+
+```{r packages}
+#| output: false
+
+library("tidyverse")
+library("here")
+library("patchwork")
+library("survival")
+library("ggsurvfit")
+library("brms")
+library("tidybayes")
+```
+
+For now, I'm going to split the data into primary forest, 
+secondary forest 1st cohort, and secondary forest 2nd cohort.
+
+Eventually I'd want to have forest type and cohort as separate covariates (plus species, plot, etc.) - 
+but keeping it simple to start with just 1 covariate.
+
+```{r}
+data <- 
+  readRDS(here::here("data", "derived", "data_cleaned.rds")) %>% 
+  mutate(census_no = as.ordered(census_no)) %>% 
+  mutate(cohort = paste(forest_type, old_new, sep = "_")) %>% 
+  filter(! cohort == "secondary_NA") %>% 
+  filter(! str_detect(plant_id, "NA")) 
+```
+
+The 1st secondary cohort have planting dates. 
+I'm going to add these as a "first survey" as at this point we know that the seedlings were alive.
+
+Some of the planting dates are missing - 
+so I'll fill those in with the median planting date for that plot.
+
+I think that any seedling which was already dead by the first survey 
+(and for which we don't have a planting date) will have to be removed as
+we don't have any information on how long it survived.
+
+```{r}
+median_planting <-
+  data %>% 
+  filter(forest_type == "secondary" &
+           old_new == "O") %>% 
+  group_by(plot, line, old_new) %>% 
+  summarise(med_plant = median(planting_date, na.rm = TRUE)) 
+
+census_00 <- 
+  data %>% 
+  filter(forest_type == "secondary" &
+           old_new == "O") %>% 
+  select(forest_type:planting_date) %>% 
+  distinct() %>% 
+  mutate(census_no = "00",
+         census_id = "planting",
+         survey_date = planting_date,
+         survival = 1,
+         height_apex = NA,
+         dbh_mean = NA,
+         dbase_mean = NA
+         ) %>% 
+  left_join(median_planting) %>% 
+  mutate(survey_date = case_when(
+    is.na(survey_date) ~ med_plant,
+    .default = survey_date
+  )) %>% 
+  select(- med_plant)
+
+data <-
+  data %>%
+  bind_rows(census_00)
+  
+```
+
+Now creating a "time" variable.
+I'm using days since first survey at the individual plant level.
+I'll also create a column which has the units in years rather than days, 
+as it might be easier to read 
+(years will still be continuous though e.g. 627 days = 1.717808 years).
+
+```{r}
+data <-
+  data %>%
+  group_by(plant_id) %>%
+  slice_min(survey_date, with_ties = FALSE) %>%
+  select(plant_id, survey_date) %>%
+  rename(first_survey = survey_date) %>%
+  ungroup() %>% 
+  right_join(data)
+
+data <-
+  data %>%
+  rowwise() %>% 
+  mutate(
+    days =
+      survey_date - first_survey) %>% 
+  ungroup() %>% 
+  mutate(years = as.numeric(days, units= "weeks")/52.25,
+         days_num = as.numeric(days))
+```
+
+## Censoring
+
+A common problem with continuous time to event data is that 
+we often don't know when exactly an event happened - 
+a seedling was alive in one census and dead in the next but 
+could have died at any point between those two censuses.
+
+This is what we call interval censored data. 
+You can also get right censored data 
+(e.g. seedling still alive at the end of the study), 
+and left censored data (seedling already planted/germinated at the start of the study).
+
+We can't do any left censoring as we don't know how old any of the seedlings are.
+We'll be looking at time from planting to the end of the study.
+
+Some useful info on how to format censored data for `brms` [here.](https://discourse.mc-stan.org/t/survival-analysis-with-right-censored-and-interval-censored-data-with-brms/24668)
+
+```{r}
+interval_censored <-
+  data %>% 
+  filter(survival == 0) %>% 
+  group_by(plant_id) %>% 
+  slice_min(survey_date, with_ties = FALSE) %>% 
+  ungroup() %>% 
+  rename(time_to_dead = years) %>% 
+  select(plant_id, genus_species, plot, cohort, time_to_dead) %>% 
+  mutate(censor = "interval")
+
+
+interval_censored <-
+  data %>% 
+  filter(plant_id %in% interval_censored$plant_id) %>% 
+  filter(survival == 1) %>% 
+  group_by(plant_id) %>% 
+  slice_max(survey_date, with_ties = FALSE) %>% 
+  ungroup() %>% 
+  rename(time_to_last_alive = years) %>% 
+  select(plant_id, time_to_last_alive) %>% 
+  right_join(interval_censored) 
+  
+  
+right_censored <- 
+  data %>% 
+  filter(!plant_id %in% interval_censored$plant_id) %>% 
+  group_by(plant_id) %>% 
+  slice_max(survey_date, with_ties = FALSE) %>% 
+  ungroup() %>% 
+  rename(time_to_last_alive = years) %>% 
+  select(plant_id, genus_species, plot, cohort, time_to_last_alive) %>% 
+  mutate(censor = "right")
+
+data_aggregated <- 
+  bind_rows(interval_censored, right_censored) %>% 
+  mutate(plot_id = as.factor(paste(cohort, plot, sep = "_")))
+
+data_aggregated <- 
+  data_aggregated %>% 
+  mutate(censor_2 = case_when(
+         censor == "right" ~ "right",
+         censor == "interval" ~ "none")) %>% 
+  mutate(time_to_dead = case_when(
+    censor == "right" ~ time_to_last_alive,
+    .default = time_to_dead
+  )) %>% 
+  mutate(censor = case_when(
+    is.na(time_to_last_alive) ~ "left",
+    .default = censor
+  ))
+
+```
+
+
+```{r}
+#| fig-height: 7
+#| fig-width: 5
+
+data_aggregated %>% 
+  slice_sample(n = 30) %>%
+  pivot_longer(cols = c(time_to_last_alive, time_to_dead)) %>% 
+  ggplot(aes(y = plant_id, x = value, colour = name, group = plant_id)) +
+  geom_path(colour = "lightgrey") +
+  geom_point(alpha = 0.5, size = 2) +
+  theme(legend.position = "top")
+```
+
+Seedlings  with only one data point are right censored and 
+seedlings with two data points are interval censored.
+
+
+## Survival
+
+Censoring is built into survival models by incorporating it into the 
+likelihood function underlying the analysis.
+
+The survival probability at a certain time, 
+is a conditional probability of surviving beyond that time, 
+given that an individual has survived just prior to that time.
+
+The [Kaplan-Meier estimate](https://en.wikipedia.org/wiki/Kaplan–Meier_estimator) 
+of survival probability at a given time is 
+the product of these conditional probabilities up until that given time.
+
+We can fit a survival curve and create a K-M plot using the `{survival}` package.
+
+```{r}
+data_surv <- 
+  data_aggregated %>% 
+  mutate(event = recode(censor, "interval" = 3, "right" = 0, "left" = 2)) %>% 
+  mutate(time_to_dead = case_when(
+    censor == "right" ~ NA,
+    .default = time_to_dead
+  ))
+
+fit_surv <- 
+  survfit(data = data_surv,
+          Surv(time = time_to_last_alive, 
+               time2 = time_to_dead,
+               type = "interval2") ~ cohort)
+```
+
+```{r}
+fit_surv %>% 
+  ggsurvfit::ggsurvfit(theme = theme_classic(base_size = 10)) +
+  labs(
+    x = "Years",
+    y = "Survival probability"
+  ) + 
+  add_confidence_interval() +
+  ggtitle("Kaplan-Meier plot")
+```
+
+```{r}
+fit_surv %>% 
+  ggsurvfit::ggsurvfit(theme = theme_classic(base_size = 10), type = "cumhaz") +
+  labs(
+    x = "Years",
+    y = "Cumulative hazard"
+  ) + 
+  add_confidence_interval() +
+  ggtitle("Cumulative hazard plot")
+```
+
+## Models
+
+>In principle, in continuous time, we would like to estimate a value for the survivor and hazard functions at every possible instant when an event could >occur. In practice, we can do so only if we are willing to adopt constraining parametric assumptions about the distribution of event times. To support >this approach, statisticians have identified dozens of different distributions–Weibull, Gompertz, gamma, and log-logistic, to name a few–that event times >might follow, and in some fields—industrial product testing, for example–parametric estimation is the dominant mode of analysis (see, e.g., Lawless, >1982).
+
+>In many other fields, including most of the social, behavioral, and medical sciences, nonparametric methods are more popular. The fundamental advantage >of nonparametric methods is that we need not make constraining assumptions about the distribution of event times. This flexibility is important because: >(1) few researchers have a sound basis for preferring one distribution over another; and (2) adopting an incorrect assumption can lead to erroneous >conclusions. With a nonparametric approach, you essentially trade the possibility of a minor increase in efficiency if a particular assumption holds for >the guarantee of doing nearly as well for most data sets, regardless of its tenability.
+
+>For decades, in a kind of mathematic irony, statisticians obtained nonparametric estimates of the continuous-time survivor and hazard functions by >grouping event times into a small number of intervals, constructing a life table, and applying the discrete-time strategies of chapter 10 (with some >minor revisions noted below). In this section we describe two of the most popular of these grouped strategies: the discrete-time method (section 13.2.1) >and the actuarial method (section 13.2.2). 
+
+([Applied longitudinal data analysis: Modeling change and event occurrence.](https://doi.org/10.1093/acprof:oso/9780195152968.001.0001) pp. 475–476)
+
+The [Cox proportional hazards](https://en.wikipedia.org/wiki/Proportional_hazards_model) model
+is a popular nonparametric method *however* [they can't handle interval censored data,](https://www.mdpi.com/2227-7099/10/9/218#sec3-economies-10-00218)
+which is a bit of a bummer because the vast majority of our data are interval censored.
+
+Some of our alternatives could be:
+- use a Cox model but use the mid point of the interval as the event time
+- use a parametric model
+
+In `brms`, families `Gamma`, `weibull`, `exponential`, `lognormal`, `frechet`, `inverse.gaussian`, 
+and `cox` (Cox proportional hazards model) can be used (among others) for time-to-event/survival regression.
+
+In our data it looks like hazard is a bit higher at the start and then gradually is levelling off.
+
+I'm taking a bit of code from [here](https://bookdown.org/content/4253/describing-continuous-time-event-occurrence-data.html#understanding-the-meaning-of-cumulative-hazard.) 
+to understand how the cumulative distribution function might look. 
+It should help us to think about which `brms` family to try.
+
+```{r}
+#| code-fold: true
+
+# two custom geoms to simplify our subplot code 
+
+geom_h <- function(subtitle, ...) {
+  
+  list(
+    geom_line(...),
+    scale_y_continuous("Hazard",
+                       breaks = 0:5 * 0.02),
+    labs(subtitle = subtitle),
+    coord_cartesian(ylim = c(0, .1))
+  )
+  
+}
+
+geom_H <- function(y_ul, ...) {
+  
+  list(
+    geom_line(...),
+    ylab("Cumulative hazard"),
+    coord_cartesian(ylim = c(0, y_ul))
+  )
+  
+}
+
+```
+
+
+```{r}
+#| code-fold: true
+#| fig-height: 5
+#| fig-width: 9
+
+# a: constant hazard
+d <-
+  tibble(time = seq(from = 0, to = 100, by = 1)) %>% 
+  mutate(h = 0.05) %>%  
+  mutate(H = cumsum(h))
+
+p1 <- d %>% 
+  ggplot(aes(x = time, y = h)) +
+  geom_h(subtitle = "A: Constant hazard")
+
+p2 <- d %>% 
+  ggplot(aes(x = time, y = H)) +
+  geom_H(y_ul = 6)
+
+# b: increasing hazard
+d <-
+  tibble(time = seq(from = 0, to = 100, by = 1)) %>% 
+  mutate(h = 0.001 * time) %>%  
+  mutate(H = cumsum(h))
+
+p3 <- d %>% 
+  ggplot(aes(x = time, y = h)) + 
+  geom_h(subtitle = "B: Increasing hazard")
+  
+p4 <- d %>% 
+  ggplot(aes(x = time, y = H)) +
+  geom_H(y_ul = 5)
+
+# decreasing hazard
+d <-
+  tibble(time = seq(from = .2, to = 100, by = .1)) %>% 
+  # note out use of the gamma distribution (see )
+  mutate(h = dgamma(time, shape = .02, rate = .001)) %>%  
+  mutate(H = cumsum(h))
+
+p5 <- d %>% 
+  ggplot(aes(x = time, y = h)) +
+  geom_h(subtitle = "C: Decreasing hazard")
+
+p6 <- d %>% 
+  ggplot(aes(x = time, y = H)) +
+  geom_H(y_ul = 1.2)
+
+# increasing & decreasing hazard
+d <-
+  tibble(time = seq(from = 1, to = 100, by = 1)) %>% 
+  # note our use of the Fréchet distribution
+  mutate(h = dfrechet(time, loc = 0, scale = 250, shape = .5) * 25) %>%  
+  mutate(H = cumsum(h))
+
+p7 <- d %>% 
+  ggplot(aes(x = time, y = h)) +
+  geom_h(subtitle = "D: Increasing &\n decreasing hazard")
+
+p8 <- d %>% 
+  ggplot(aes(x = time, y = H)) +
+  geom_H(y_ul = 5)
+
+# combine with patchwork and plot!
+((p1 / p2) | (p3 / p4) | (p5 / p6) | (p7 / p8)) &
+  theme(panel.grid = element_blank())
+```
+
+I'm thinking that C looks most likely? That's the Gamma distribution.
+
+## Fitting
+
+For fun, let's fit 2 models and compare them.
+
+One of them a nonparametric (cox) model and the other one parametric (Gamma distribution).
+
+The Cox model won't be able to use the interval censored data, 
+so for now we'll just say that the `time_to_dead` is exact (in future I'll try the midpoint).
+
+The parametric survival model will take the interval censored data.
+
+### parametric survival model
+
+```{r}
+#| output: false
+
+fit_1 <- 
+  brm(time_to_last_alive|cens(x = censor, y2 = time_to_dead) ~ 0 + cohort, 
+      data = data_aggregated,
+      family = brmsfamily("Gamma"), 
+      chains = 4, init = 0,
+      seed = 123,
+      file = here::here("code", "notebooks", "models",
+                        "2024-09-19_continuous-survival-models", 
+                        "fit_1.rds"))
+```
+
+```{r}
+plot(fit_1)
+```
+
+```{r}
+print(fit_1)
+```
+
+Rhat value for shape is a bit high suggesting the chains didn't mix well,
+but our trace plot looks ok - warrants further investigation in the future.
+
+### non-parametric survival model
+
+```{r}
+#| output: false
+
+fit_2 <- 
+  brm(time_to_last_alive|cens(x = censor_2, y2 = time_to_dead) ~ 0 + cohort, 
+      data = data_aggregated,
+      family = brmsfamily("cox"), 
+      chains = 4,
+      seed = 123,
+      file = here::here("code", "notebooks", "models",
+                        "2024-09-19_continuous-survival-models", 
+                        "fit_2.rds"))
+```
+
+
+```{r}
+plot(fit_2)
+```
+
+```{r}
+print(fit_2)
+```
+
+### Compare models
+
+Compare the 2 models using leave-one-out cross validation.
+
+```{r}
+fit_1 <- add_criterion(fit_1, "loo")
+fit_2 <- add_criterion(fit_2, "loo")
+
+loo_compare(fit_1, fit_2)
+
+```
+
+This suggests that our nonparametric model is a better fit.
+
+I'm not going to go too in depth interpreting the models, 
+but we can take a quick look at the posterior of `fit_1`.
+
+On the response scale:
+
+```{r}
+data_aggregated %>%
+  group_by(cohort) %>%
+  add_epred_draws(fit_1) %>%
+  ggplot(aes(x = .epred, group = cohort, colour = cohort)) +
+  geom_density() +
+  xlab("Estimated median time till dead (years)")
+
+```
+
+On the linear (?) scale:
+
+```{r}
+bayesplot::mcmc_areas(fit_1, regex_pars = "b_")
+```
+
+```{r}
+# ppc_km_overlay can't do interval censored data
+
+data_aggregated <- 
+  data_aggregated %>% 
+  mutate(censor_3 = case_when(
+         censor == "right" ~ 0,
+         censor == "interval" ~ 1)) %>% 
+  mutate()
+
+
+pp <- posterior_predict(fit_1, draw_ids = 1:10)
+bayesplot::ppc_km_overlay_grouped(y = data_aggregated$time_to_last_alive, 
+                                  yrep = pp, 
+                                  status_y = data_aggregated$censor_3, 
+                                  group = data_aggregated$cohort) +
+  xlim(0,20)
+
+```
+
+*y* is the data ad *y_rep* are draws from the posterior predictive distribution.
+The fit for the primary data looks quite good but for the secondary forest seedlings
+the drop off in survival doesn't seem as sharp as it should be.

@@ -24,6 +24,7 @@ ggplot2::theme_set(ggplot2::theme_classic(base_size = 10))
 Now that we have clean data :tada: I want to have a stab at some survival models.
 
 Some useful resources:
+
 - [Intro to survival analysis in R](https://www.emilyzabor.com/tutorials/survival_analysis_in_r_tutorial.html)
 - [Applied longitudinal data analysis: Modeling change and event occurrence.](https://doi.org/10.1093/acprof:oso/9780195152968.001.0001)
 - [brms + tidyverse translation of above book](https://bookdown.org/content/4253/)
@@ -55,51 +56,6 @@ data <-
   mutate(cohort = paste(forest_type, old_new, sep = "_")) %>% 
   filter(! cohort == "secondary_NA") %>% 
   filter(! str_detect(plant_id, "NA")) 
-```
-
-The 1st secondary cohort have planting dates. 
-I'm going to add these as a "first survey" as at this point we know that the seedlings were alive.
-
-Some of the planting dates are missing - 
-so I'll fill those in with the median planting date for that plot.
-
-I think that any seedling which was already dead by the first survey 
-(and for which we don't have a planting date) will have to be removed as
-we don't have any information on how long it survived.
-
-```{r}
-median_planting <-
-  data %>% 
-  filter(forest_type == "secondary" &
-           old_new == "O") %>% 
-  group_by(plot, line, old_new) %>% 
-  summarise(med_plant = median(planting_date, na.rm = TRUE)) 
-
-census_00 <- 
-  data %>% 
-  filter(forest_type == "secondary" &
-           old_new == "O") %>% 
-  select(forest_type:planting_date) %>% 
-  distinct() %>% 
-  mutate(census_no = "00",
-         census_id = "planting",
-         survey_date = planting_date,
-         survival = 1,
-         height_apex = NA,
-         dbh_mean = NA,
-         dbase_mean = NA
-         ) %>% 
-  left_join(median_planting) %>% 
-  mutate(survey_date = case_when(
-    is.na(survey_date) ~ med_plant,
-    .default = survey_date
-  )) %>% 
-  select(- med_plant)
-
-data <-
-  data %>%
-  bind_rows(census_00)
-  
 ```
 
 Now creating a "time" variable.
@@ -139,12 +95,14 @@ could have died at any point between those two censuses.
 This is what we call interval censored data. 
 You can also get right censored data 
 (e.g. seedling still alive at the end of the study), 
-and left censored data (seedling already planted/germinated at the start of the study).
+and left censored data (seedling already dead at the start of the study).
 
-We can't do any left censoring as we don't know how old any of the seedlings are.
-We'll be looking at time from planting to the end of the study.
+For now I'm going to remove seedlings which were already dead by the first survey,
+I've read that left-censoring can be tricky and it is common to remove them.
 
 Some useful info on how to format censored data for `brms` [here.](https://discourse.mc-stan.org/t/survival-analysis-with-right-censored-and-interval-censored-data-with-brms/24668)
+But you'll also see that I have to reformat the censor column for other packages, 
+there seems to be no consensus!
 
 ```{r}
 interval_censored <-
@@ -182,6 +140,7 @@ right_censored <-
 
 data_aggregated <- 
   bind_rows(interval_censored, right_censored) %>% 
+  filter(time_to_last_alive > 0) %>% 
   mutate(plot_id = as.factor(paste(cohort, plot, sep = "_")))
 
 data_aggregated <- 
@@ -192,11 +151,7 @@ data_aggregated <-
   mutate(time_to_dead = case_when(
     censor == "right" ~ time_to_last_alive,
     .default = time_to_dead
-  )) %>% 
-  mutate(censor = case_when(
-    is.na(time_to_last_alive) ~ "left",
-    .default = censor
-  ))
+  )) 
 
 ```
 
@@ -273,13 +228,13 @@ fit_surv %>%
 
 ## Models
 
->In principle, in continuous time, we would like to estimate a value for the survivor and hazard functions at every possible instant when an event could >occur. In practice, we can do so only if we are willing to adopt constraining parametric assumptions about the distribution of event times. To support >this approach, statisticians have identified dozens of different distributions–Weibull, Gompertz, gamma, and log-logistic, to name a few–that event times >might follow, and in some fields—industrial product testing, for example–parametric estimation is the dominant mode of analysis (see, e.g., Lawless, >1982).
+>In principle, in continuous time, we would like to estimate a value for the survivor and hazard functions at every possible instant when an event could occur. In practice, we can do so only if we are willing to adopt constraining parametric assumptions about the distribution of event times. To support this approach, statisticians have identified dozens of different distributions–Weibull, Gompertz, gamma, and log-logistic, to name a few–that event times might follow, and in some fields—industrial product testing, for example–parametric estimation is the dominant mode of analysis (see, e.g., Lawless, 1982).
 
->In many other fields, including most of the social, behavioral, and medical sciences, nonparametric methods are more popular. The fundamental advantage >of nonparametric methods is that we need not make constraining assumptions about the distribution of event times. This flexibility is important because: >(1) few researchers have a sound basis for preferring one distribution over another; and (2) adopting an incorrect assumption can lead to erroneous >conclusions. With a nonparametric approach, you essentially trade the possibility of a minor increase in efficiency if a particular assumption holds for >the guarantee of doing nearly as well for most data sets, regardless of its tenability.
+>In many other fields, including most of the social, behavioral, and medical sciences, nonparametric methods are more popular. The fundamental advantage of nonparametric methods is that we need not make constraining assumptions about the distribution of event times. This flexibility is important because: (1) few researchers have a sound basis for preferring one distribution over another; and (2) adopting an incorrect assumption can lead to erroneous conclusions. With a nonparametric approach, you essentially trade the possibility of a minor increase in efficiency if a particular assumption holds for the guarantee of doing nearly as well for most data sets, regardless of its tenability.
 
->For decades, in a kind of mathematic irony, statisticians obtained nonparametric estimates of the continuous-time survivor and hazard functions by >grouping event times into a small number of intervals, constructing a life table, and applying the discrete-time strategies of chapter 10 (with some >minor revisions noted below). In this section we describe two of the most popular of these grouped strategies: the discrete-time method (section 13.2.1) >and the actuarial method (section 13.2.2). 
+>For decades, in a kind of mathematic irony, statisticians obtained nonparametric estimates of the continuous-time survivor and hazard functions by grouping event times into a small number of intervals, constructing a life table, and applying the discrete-time strategies of chapter 10 (with some minor revisions noted below). 
 
-([Applied longitudinal data analysis: Modeling change and event occurrence.](https://doi.org/10.1093/acprof:oso/9780195152968.001.0001) pp. 475–476)
+**From [Applied longitudinal data analysis: Modeling change and event occurrence.](https://doi.org/10.1093/acprof:oso/9780195152968.001.0001) pp. 475–476**
 
 The [Cox proportional hazards](https://en.wikipedia.org/wiki/Proportional_hazards_model) model
 is a popular nonparametric method *however* [they can't handle interval censored data,](https://www.mdpi.com/2227-7099/10/9/218#sec3-economies-10-00218)
@@ -422,7 +377,8 @@ fit_1 <-
       seed = 123,
       file = here::here("code", "notebooks", "models",
                         "2024-09-19_continuous-survival-models", 
-                        "fit_1.rds"))
+                        "fit_1.rds"),
+      file_refit = "on_change")
 ```
 
 ```{r}
@@ -449,7 +405,8 @@ fit_2 <-
       seed = 123,
       file = here::here("code", "notebooks", "models",
                         "2024-09-19_continuous-survival-models", 
-                        "fit_2.rds"))
+                        "fit_2.rds"),
+      file_refit = "on_change")
 ```
 
 
@@ -461,7 +418,7 @@ plot(fit_2)
 print(fit_2)
 ```
 
-### Compare models
+## Compare models
 
 Compare the 2 models using leave-one-out cross validation.
 
@@ -498,6 +455,7 @@ bayesplot::mcmc_areas(fit_1, regex_pars = "b_")
 
 ```{r}
 # ppc_km_overlay can't do interval censored data
+# 0 = right censored, 1 = event
 
 data_aggregated <- 
   data_aggregated %>% 
@@ -506,16 +464,16 @@ data_aggregated <-
          censor == "interval" ~ 1)) %>% 
   mutate()
 
-
 pp <- posterior_predict(fit_1, draw_ids = 1:10)
+
 bayesplot::ppc_km_overlay_grouped(y = data_aggregated$time_to_last_alive, 
                                   yrep = pp, 
                                   status_y = data_aggregated$censor_3, 
                                   group = data_aggregated$cohort) +
-  xlim(0,20)
+  xlim(0, 20)
 
 ```
 
-*y* is the data ad *y_rep* are draws from the posterior predictive distribution.
+*y* is the data and *y_rep* are draws from the posterior predictive distribution.
 The fit for the primary data looks quite good but for the secondary forest seedlings
 the drop off in survival doesn't seem as sharp as it should be.

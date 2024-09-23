@@ -282,7 +282,8 @@ data_backfilled <-
   mutate(
     dbh_mean = mean(c(dbh1, dbh2), na.rm = TRUE),
     dbase_mean = mean(c(diam1, diam2), na.rm = TRUE)
-  )
+  ) %>%
+  ungroup()
 
 
 # Save --------------------------------------------------------------------

@@ -1,0 +1,192 @@
+---
+title: "A summary of the data"
+author: 'eleanorjackson'
+date: '`r format(Sys.time(), "%d %B, %Y")`' 
+format: gfm+emoji
+editor: source
+execute:
+  warning: false
+---
+
+```{r setup}
+#| include: false
+
+file_name <- knitr::current_input()
+
+knitr::opts_chunk$set(
+  fig.path =
+    paste0("figures/", sub("\\.rmarkdown$", "", basename(file_name)), "/", sep = "")
+)
+
+ggplot2::theme_set(ggplot2::theme_classic(base_size = 10))
+```
+
+```{r packages}
+#| output: false
+
+library("tidyverse")
+library("here")
+library("patchwork")
+library("survival")
+library("ggsurvfit")
+```
+
+# Basics
+
+```{r}
+# reading in data and adding a column distinguishing cohorts 1 & 2 from
+# the primary forest seedlings
+data <- 
+  readRDS(here::here("data", "derived", "data_cleaned.rds")) %>% 
+  mutate(census_no = as.ordered(census_no)) %>% 
+  mutate(cohort = paste(forest_type, old_new, sep = "_")) %>% 
+  filter(! cohort == "secondary_NA") %>% 
+  filter(! str_detect(plant_id, "NA")) 
+```
+
+```{r}
+glimpse(data)
+```
+
+
+```{r}
+data %>% 
+  group_by(cohort, genus_species) %>% 
+  summarise(n_individuals = n_distinct(plant_id)) %>% 
+  pivot_wider(names_from = cohort, 
+              values_from = n_individuals) %>% 
+  rowwise() %>% 
+  mutate(total = sum(primary_NA, 
+                     secondary_N, 
+                     secondary_O, 
+                     na.rm = TRUE)) %>% 
+  arrange(-total) %>% 
+  janitor::adorn_totals() %>% 
+  knitr::kable(col.names = c("Species", 
+                             "Primary", 
+                             "Secondary, 2nd cohort",
+                             "Secondary, 1st cohort",
+                             "Total # of individuals"))
+```
+
+There are `r length(unique(data$plant_id))` 
+individual plants in the data from 
+`r length(unique(data$genus_species))` species. 
+
+`r length(unique(filter(data, forest_type == "primary")$plant_id))` 
+in the Primary forest, and 
+`r length(unique(filter(data, forest_type == "secondary")$plant_id))` 
+in the Secondary forest.
+
+```{r}
+data %>% 
+  group_by(forest_type, plot) %>% 
+  summarise(n_species = n_distinct(genus_species)) %>% 
+  pivot_wider(names_from = forest_type, 
+              values_from = n_species) %>% 
+  knitr::kable()
+```
+
+Plots contain either 14 or 15 different species.
+
+```{r}
+data %>% 
+  group_by(forest_type) %>% 
+  summarise(n_plots = n_distinct(plot))
+```
+
+There are __20__ plots in the primary forest (plots `01:20`) and 
+__6__ in the secondary forest (plots `03, 05, 08, 11, 14, 17`).
+
+```{r}
+data %>% 
+  filter(forest_type=="secondary") %>% 
+  group_by(plot) %>% 
+  summarise(n_lines = n_distinct(line))
+```
+
+In the secondary forest there are 20 planting lines in each of the 6 plots.
+
+```{r}
+data %>% 
+  filter(forest_type=="secondary") %>% 
+  group_by(plot) %>% 
+  summarise(n_positions = n_distinct(position))
+```
+
+Each of the planting lines has 66 positions where a seedling was planted.
+There are more individual plants than positions as those that died
+very early in the experiment were replaced by a new cohort.
+
+_Plot `14` has 10 extra planting positions?_
+
+```{r}
+data %>% 
+  select(census_no, plot, forest_type) %>%
+  distinct() %>% 
+  ggplot(aes(x = census_no, y = plot)) +
+  geom_point() +
+  facet_wrap(~forest_type, scales = "free_x") +
+  guides(x =  guide_axis(angle = 90)) 
+```
+
+There have been 22 censuses of the primary forest seedlings,
+and 25 censuses of the secondary forest seedlings.
+
+Not all the censuses were complete.
+
+```{r}
+data %>% 
+  group_by(forest_type, census_no) %>% 
+  summarise(n_distinct(plot)) %>% 
+  pivot_wider(names_from = forest_type, 
+              values_from = `n_distinct(plot)`) %>% 
+  mutate(primary = (primary/20)*100,
+         secondary = (secondary/6)*100) %>% 
+  rename(`% of primary plots censused` = primary,
+         `% of secondary plots censused` = secondary) %>% 
+  knitr::kable(digits = 1)
+
+```
+
+Within the secondary forest, 
+not every planting line was surveyed when the rest of the plot was censused.
+
+Three of the secondary forest plots received a climber cutting treatment
+(plots `05`, `11` and `14`) 
+(see [O'Brien _et al_ 2019](https://doi.org/10.1111/1365-2664.13335)). 
+When data was collected for this study only two lines from each of the
+climber cut and control plots (plots `03`, `08` and `17`) were surveyed.
+
+```{r}
+data %>% 
+  mutate(month = lubridate::month(survey_date)) %>% 
+  group_by(survey_date) %>% 
+  slice_head() %>% 
+  ggplot(aes(y = forest_type, x = survey_date, 
+             colour = census_no)) +
+  geom_point(alpha = 0.6, shape = "|", size = 10) +
+  theme_bw() +
+  scale_x_date(minor_breaks = "year") +
+  scale_colour_viridis_d() +
+  theme(legend.position = "none")
+```
+
+## to do group by census id
+```{r}
+data %>% 
+  filter(forest_type == "secondary")
+  mutate(month = lubridate::month(survey_date)) %>% 
+  group_by(survey_date) %>% 
+  slice_head() %>% 
+  ggplot(aes(y = forest_type, x = survey_date, 
+             colour = census_no)) +
+  geom_point(alpha = 0.6, shape = "|", size = 10) +
+  theme_bw() +
+  scale_x_date(minor_breaks = "year") +
+  scale_colour_viridis_d() +
+  theme(legend.position = "none")
+```
+
+The censuses were not evenly spaced through time.
+

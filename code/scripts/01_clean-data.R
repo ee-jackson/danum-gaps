@@ -102,6 +102,7 @@ data_comb <-
     census_id == "climber_13" ~ "23",
     census_id == "climber_14" ~ "24",
     census_id == "intensive_10" ~ "25",
+    census_id == "full_measurement_03" ~ "26",
     .default = census_id
   ))
 

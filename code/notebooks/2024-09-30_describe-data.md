@@ -1,6 +1,6 @@
 # A summary of the data
 eleanorjackson
-2024-10-09
+2024-10-10
 
 I’m creating a document to summarise the clean dataset which we are
 working with for the current manuscript.
@@ -244,10 +244,14 @@ data %>%
 | 14   |          86 |
 | 17   |          69 |
 
-Each of the planting lines initially had 66 positions where a seedling
-was planted. There are more individual plants than positions as those
-that died very early in the experiment were replaced by a new cohort of
-seedlings.
+The SBE was set up with the idea that each of the planting lines would
+have 66 positions where a seedling was planted. However, due to some
+positions being un-plantable (i.e. obstructed by rock or stream), and
+due to undulating topography (seedling was planted every *x*m) there are
+often more or less than 66 planting positions.
+
+There are more individual plants than positions as those that died very
+early in the experiment were replaced by a new cohort of seedlings.
 
 ## Censuses
 

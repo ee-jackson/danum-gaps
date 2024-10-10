@@ -1,0 +1,509 @@
+---
+title: "A summary of growth"
+author: 'eleanorjackson'
+date: '`r format(Sys.time(), "%d %B, %Y")`' 
+format: gfm+emoji
+editor: source
+knitr:
+  opts_chunk: 
+    code-fold: true
+execute:
+  warning: false
+---
+
+```{r setup}
+#| include: false
+
+file_name <- knitr::current_input()
+
+knitr::opts_chunk$set(
+  fig.path =
+    paste0("figures/", sub("\\.rmarkdown$", "", basename(file_name)), "/", sep = "")
+)
+
+ggplot2::theme_set(ggplot2::theme_classic(base_size = 10))
+```
+
+Here we will look at:
+
+- Size of seedlings at their first survey
+- Diameter measurements at BH vs basal 
+- Overall growth rates
+- Growth between forest types
+- Growth between species
+- Interactions of species & forest types
+
+```{r packages}
+#| output: false
+
+library("tidyverse")
+library("here")
+library("patchwork")
+library("formattable")
+```
+
+```{r}
+# reading in data and adding a column distinguishing cohorts 1 & 2 from
+# the primary forest seedlings
+data <- 
+  readRDS(here::here("data", "derived", "data_cleaned.rds")) %>% 
+  mutate(census_no = as.ordered(census_no)) %>% 
+  mutate(cohort = paste(forest_type, old_new, sep = "_")) %>% 
+  filter(! cohort == "secondary_NA") %>% 
+  filter(! str_detect(plant_id, "NA")) 
+```
+
+## Size of seedlings at their first survey
+
+```{r}
+data %>% 
+  filter(survival == 1) %>% 
+  group_by(plant_id) %>% 
+  slice_min(survey_date, with_ties = FALSE) %>% 
+  ggplot(aes(x = dbase_mean, 
+             fill = cohort,
+             colour = cohort)) +
+  geom_density(alpha = 0.3) +
+  facet_wrap(~genus_species, ncol = 5) +
+  stat_summary(aes(xintercept = after_stat(x), y = 0), 
+               fun = median, 
+               geom = "vline", 
+               orientation = "y",
+               linetype = 2) +
+  xlim(0, 20) +
+  theme(legend.position = "top") +
+  ylab("density") +
+  xlab("basal diameter at first survey")
+```
+
+Dashed line shows the median value.
+
+Seedlings in the primary forest are usually smaller at the time of their first measurement.
+
+The secondary forest of SBE was planted first then 
+the left over seedlings in the nursery were planted in the primary old growth forest of Danum Valley.
+
+Data suggests that the seedlings grew slower when kept in pots for longer and 
+some species were more affected than others. 
+The table below quantifies the difference in medians between forest types for each species.
+
+```{r}
+data %>% 
+  filter(survival == 1) %>% 
+  group_by(plant_id) %>% 
+  slice_min(survey_date, with_ties = FALSE) %>% 
+  group_by(genus_species, cohort) %>% 
+  summarise(med = median(dbase_mean, na.rm = TRUE)) %>% 
+  pivot_wider(names_from = cohort, values_from = med) %>% 
+  select(-secondary_N) %>% 
+  rowwise() %>% 
+  mutate(difference_in_median_basal_diameter  = secondary_O - primary_NA) %>% 
+  arrange(desc(difference_in_median_basal_diameter)) %>% 
+  knitr::kable(digits = 2)
+```
+
+## Diameter measurements at BH vs basal
+
+```{r}
+data %>% 
+  filter(survival == 1) %>% 
+  group_by(cohort, census_no) %>% 
+  summarise(n_dbh_only = sum(!is.na(dbh_mean) & is.na(dbase_mean)),
+            n_basal_only = sum(!is.na(dbase_mean) & is.na(dbh_mean)),
+            n_dbh_and_basal = sum(!is.na(dbh_mean) & !is.na(dbase_mean)) ) %>% 
+  pivot_longer(cols = c(n_dbh_only, n_basal_only, n_dbh_and_basal), 
+               names_to = "measurement",
+               values_to = "n_plants") %>% 
+  ggplot(aes(x = census_no, y = n_plants, 
+             fill = measurement)) +
+  geom_col(position = "fill") +
+  facet_wrap(~cohort, ncol = 1,
+             axis.labels = "all_x", axes = "all_x") +
+  guides(x =  guide_axis(angle = 90)) +
+  theme(legend.position = "top", legend.justification = "left") +
+  geom_hline(yintercept = 0.5, colour = "white", linetype = 2) +
+  geom_hline(yintercept = 0.75, colour = "white", linetype = 3)
+
+```
+
+At least 75% of seedlings have both DBH and basal diameter measurements by:
+
+- Census 6 in the primary forest (2009) 
+- Census 8 in the secondary forest (1^st^ cohort) (2012)
+
+It takes longer before both diameter measurements are recorded for 
+75% of the secondary forest's *2^nd^ cohort* of seedlings.
+
+```{r}
+data <-
+  data %>%
+  group_by(plant_id) %>%
+  slice_min(survey_date, with_ties = FALSE) %>%
+  select(plant_id, survey_date) %>%
+  rename(first_survey = survey_date) %>%
+  ungroup() %>% 
+  right_join(data)
+
+
+data <-
+  data %>%
+  rowwise() %>% 
+  mutate(
+    days =
+      survey_date - first_survey) %>% 
+  ungroup() %>% 
+  mutate(years = as.numeric(days, units = "weeks")/52.25,
+         days_num = as.numeric(days))
+```
+
+## Growth by forest type / cohort
+
+```{r}
+all_gr <- 
+  data %>% 
+  group_by(plant_id, genus_species, forest_type) %>%
+  summarise(dbh_diff = max(dbh_mean, na.rm = TRUE) - min(dbh_mean, na.rm = TRUE),
+            basal_diff = max(dbase_mean, na.rm = TRUE) - min(dbase_mean, na.rm = TRUE),
+            max_years = max(years, na.rm = TRUE), 
+            .groups = "keep") %>% 
+  filter_if(~is.numeric(.), all_vars(!is.infinite(.))) %>% 
+  summarise(yearly_growth_rate_dbh = dbh_diff/max_years,
+            yearly_growth_rate_basal = basal_diff/max_years)  
+
+all_gr %>% 
+  group_by(forest_type) %>% 
+  summarise(median(yearly_growth_rate_basal),
+            median(yearly_growth_rate_dbh)) %>% 
+  knitr::kable(digits = 2)
+  
+```
+
+```{r}
+all_gr %>% 
+  group_by(forest_type) %>% 
+  ggplot(aes(x = forest_type, y = yearly_growth_rate_basal)) +
+  geom_jitter(alpha = 0.2, shape = 16) +
+  geom_boxplot(aes(colour = forest_type), 
+               outliers = FALSE, 
+               linewidth = 0.8,
+               fill = "transparent") +
+  coord_cartesian(ylim = c(0, 10)) +
+  theme(legend.position = "none") +
+  
+  all_gr %>% 
+  group_by(forest_type) %>% 
+  ggplot(aes(x = forest_type, y = yearly_growth_rate_dbh)) +
+  geom_jitter(alpha = 0.2, shape = 16) +
+  geom_boxplot(aes(colour = forest_type),
+               outliers = FALSE, 
+               linewidth = 0.8,
+               fill = "transparent") +
+  coord_cartesian(ylim = c(0, 10)) +
+  theme(legend.position = "none")
+```
+
+Yearly growth rate is generally slower in the secondary forest.
+
+```{r}
+fit_basal <- 
+  lme4::glmer(log(dbase_mean) ~ days_num + cohort + (1|plant_id), data = data)
+
+fit_dbh <- 
+  lme4::glmer(log(dbh_mean) ~ days_num + cohort + (1|plant_id), data = data)
+
+data %>% 
+  drop_na(dbase_mean) %>% 
+  ggplot(aes(x = years, y = log(dbase_mean), colour = cohort)) +
+  geom_point(alpha = 0.3, size = 0.5, shape = 16) +
+  geom_smooth(aes(y = predict(fit_basal), colour = cohort),
+              method = "glm", method.args = list(family = "gaussian")) +
+  ggtitle("log basal diameter") +
+  
+  data %>% 
+  drop_na(dbh_mean) %>% 
+  ggplot(aes(x = years, y = log(dbh_mean), colour = cohort)) +
+  geom_point(alpha = 0.3, size = 0.5, shape = 16) +
+  geom_smooth(aes(y = predict(fit_dbh)),
+              method = "glm", method.args = list(family = "gaussian")) +
+  ggtitle("log DBH") +
+  
+  patchwork::plot_layout(guides = "collect") +
+  patchwork::plot_annotation(title = "geom_smooth(method = `glm`)") &
+  theme(legend.position = "bottom")
+```
+
+```{r}
+data %>% 
+  drop_na(dbase_mean) %>% 
+  ggplot(aes(x = years, y = log(dbase_mean), colour = cohort)) +
+  geom_point(alpha = 0.3, size = 0.5, shape = 16) +
+  geom_smooth(method = "gam") +
+  ggtitle("log basal diameter") +
+  
+  data %>% 
+  drop_na(dbh_mean) %>% 
+  ggplot(aes(x = years, y = log(dbh_mean), colour = cohort)) +
+  geom_point(alpha = 0.3, size = 0.5, shape = 16) +
+  geom_smooth(method = "gam") +
+  ggtitle("log DBH") +
+  
+  patchwork::plot_layout(guides = "collect") +
+  patchwork::plot_annotation(title = "geom_smooth(method = `gam`)") &
+  theme(legend.position = "bottom")
+```
+
+1^st^ cohort and 2^nd^ cohort of the secondary forest seedlings look very similar.
+Perhaps some evidence for primary forest seedlings having initial higher growth rate?
+
+## Growth by species
+
+```{r}
+all_gr %>% 
+  group_by(genus_species) %>% 
+  summarise(median(yearly_growth_rate_dbh),
+            median(yearly_growth_rate_basal)) %>% 
+  arrange(desc(`median(yearly_growth_rate_dbh)`)) %>% 
+  formattable::formattable(
+    list(`median(yearly_growth_rate_dbh)` = 
+           formattable::color_tile("transparent", "lightpink"),
+         `median(yearly_growth_rate_basal)` = 
+           formattable::color_tile("transparent", "lightpink"))
+  )
+```
+
+```{r}
+#| fig-width: 7
+#| fig-height: 7
+
+all_gr %>% 
+  group_by(genus_species) %>% 
+  mutate(`median(yearly_growth_rate_basal)` = median(yearly_growth_rate_basal)) %>% 
+  ggplot(aes(x = genus_species,
+             y = yearly_growth_rate_basal,
+             group = genus_species)) +
+  geom_jitter(alpha = 0.2, shape = 16) +
+  geom_boxplot(aes(colour = `median(yearly_growth_rate_basal)`), 
+               outliers = FALSE, 
+               linewidth = 0.8,
+               fill = "transparent") +
+  coord_cartesian(ylim = c(0, 10)) +
+  scale_colour_viridis_c() +
+  theme(axis.title.x = element_blank()) +
+  guides(x =  guide_axis(angle = 90)) +
+  
+  all_gr %>% 
+  group_by(genus_species) %>% 
+  mutate(`median(yearly_growth_rate_dbh)` = median(yearly_growth_rate_dbh)) %>% 
+  ggplot(aes(x = genus_species, 
+             y = yearly_growth_rate_dbh)) +
+  geom_jitter(alpha = 0.2, shape = 16) +
+  geom_boxplot(aes(colour = `median(yearly_growth_rate_dbh)`),
+               outliers = FALSE, 
+               linewidth = 0.8,
+               fill = "transparent") +
+  coord_cartesian(ylim = c(0, 10)) +
+  scale_colour_viridis_c() +
+  theme(axis.title.x = element_blank()) +
+  guides(x = guide_axis(angle = 90)) +
+  
+  plot_layout(guides = "collect", ncol = 2) &
+  theme(legend.position = "bottom") 
+  
+```
+
+```{r}
+#| fig-width: 7
+#| fig-height: 10
+
+all_gr %>% 
+  group_by(genus_species) %>% 
+  summarise(median(yearly_growth_rate_basal)) %>%
+  right_join(data) %>% 
+  drop_na(dbase_mean) %>% 
+  ggplot(aes(x = years, y = log(dbase_mean), 
+             group = genus_species)) +
+  geom_point(alpha = 0.3, size = 0.5, shape = 16) +
+  geom_smooth(aes(colour = `median(yearly_growth_rate_basal)`),
+              size = 1, method = "gam") +
+  facet_wrap(~genus_species, ncol = 5) +
+  scale_colour_viridis_c() +
+  theme(legend.position = "none") +
+  ggtitle("log basal diameter") +
+  
+  all_gr %>% 
+  group_by(genus_species) %>% 
+  summarise(median(yearly_growth_rate_dbh)) %>%
+  right_join(data) %>% 
+  drop_na(dbh_mean) %>% 
+  ggplot(aes(x = years, y = log(dbh_mean),
+         group = genus_species)) +
+  geom_point(alpha = 0.3, size = 0.5, shape = 16) +
+  geom_smooth(aes(colour = `median(yearly_growth_rate_dbh)`),
+              size = 1, method = "gam") +
+  facet_wrap(~genus_species, ncol = 5) +
+  scale_colour_viridis_c() +
+  theme(legend.position = "none") +
+  ggtitle("log DBH") +
+  
+  plot_layout(ncol = 1) &
+  theme(legend.position = "bottom") 
+```
+
+A fast basal diameter growth rate doesn't always correlate to a fast DBH growth rate.
+
+## Growth by species & forest type
+
+Table of median yearly DBH growth rate in different forest types:
+
+```{r}
+all_gr %>% 
+  group_by(genus_species, forest_type) %>% 
+  summarise(yearly_growth_rate_dbh = median(yearly_growth_rate_dbh)) %>% 
+  pivot_wider(names_from = forest_type, values_from = yearly_growth_rate_dbh) %>% 
+  arrange(desc(primary)) %>% 
+  formattable::formattable(
+    list(formattable::area(col = primary:secondary) ~ 
+           formattable::color_tile("transparent", "lightpink"))
+  )
+```
+
+Most species seem to grow faster in the primary forest.
+
+```{r}
+#| fig-width: 7
+#| fig-height: 10
+
+data %>% 
+  drop_na(dbase_mean) %>% 
+  ggplot(aes(x = years, y = log(dbase_mean), colour = cohort)) +
+  geom_point(alpha = 0.3, size = 0.5, shape = 16) +
+  geom_smooth(method = "gam") +
+  facet_wrap(~genus_species, ncol = 5) +
+  xlim(0, 18) +
+  ggtitle("log basal diameter") +
+  
+  data %>% 
+  drop_na(dbh_mean) %>% 
+  ggplot(aes(x = years, y = log(dbh_mean), colour = cohort)) +
+  geom_point(alpha = 0.3, size = 0.5, shape = 16) +
+  geom_smooth(method = "gam") +
+  facet_wrap(~genus_species, ncol = 5) +
+  ggtitle("log DBH") +
+  
+  plot_layout(guides = "collect", ncol = 1) &
+  theme(legend.position = "bottom") 
+  
+```
+
+## Climber-cut vs non-climber cut plots
+
+Three of the secondary forest plots received a climber cutting treatment
+(plots `05`, `11` and `14`) 
+(see [O'Brien _et al_ 2019](https://doi.org/10.1111/1365-2664.13335)). 
+Table of median yearly DBH growth rate:
+
+```{r}
+all_gr_pl <- 
+  data %>% 
+  filter(forest_type == "secondary") %>% 
+  mutate(climber_cut = ifelse(
+    plot %in% c("05", "11", "14"),
+    TRUE, FALSE
+  )) %>% 
+  group_by(plant_id, genus_species, climber_cut) %>%
+  summarise(dbh_diff = max(dbh_mean, na.rm = TRUE) - min(dbh_mean, na.rm = TRUE),
+            basal_diff = max(dbase_mean, na.rm = TRUE) - min(dbase_mean, na.rm = TRUE),
+            max_years = max(years, na.rm = TRUE), 
+            .groups = "keep") %>% 
+  filter_if(~is.numeric(.), all_vars(!is.infinite(.))) %>% 
+  summarise(yearly_growth_rate_dbh = dbh_diff/max_years,
+            yearly_growth_rate_basal = basal_diff/max_years)  
+
+all_gr_pl %>% 
+  group_by(genus_species, climber_cut) %>% 
+  summarise(yearly_growth_rate_dbh = median(yearly_growth_rate_dbh)) %>% 
+  pivot_wider(names_from = climber_cut, values_from = yearly_growth_rate_dbh) %>% 
+  rename(climbers_cut = `TRUE`, climbers_not_cut = `FALSE`) %>% 
+  arrange(desc(climbers_not_cut)) %>% 
+  formattable::formattable(
+    list(formattable::area(col = climbers_not_cut:climbers_cut) ~ 
+           formattable::color_tile("transparent", "lightpink"))
+  )
+```
+
+The effect of climber cutting on growth seems to vary by species.
+
+```{r}
+#| fig-width: 7
+#| fig-height: 10
+
+all_gr_pl %>% 
+  ggplot(aes(x = genus_species, 
+             y = yearly_growth_rate_dbh,
+             colour = climber_cut)) +
+  geom_jitter(alpha = 0.2, shape = 16) +
+  geom_boxplot(outliers = FALSE, 
+               linewidth = 0.8,
+               fill = "transparent") +
+  coord_cartesian(ylim = c(0, 10)) +
+  theme(axis.title.x = element_blank()) +
+  guides(x = guide_axis(angle = 90))+
+  
+  all_gr_pl %>% 
+  ggplot(aes(x = genus_species, 
+             y = yearly_growth_rate_dbh,
+             colour = climber_cut)) +
+  geom_jitter(alpha = 0.2, shape = 16) +
+  geom_boxplot(outliers = FALSE, 
+               linewidth = 0.8,
+               fill = "transparent") +
+  coord_cartesian(ylim = c(0, 10)) +
+  theme(axis.title.x = element_blank()) +
+  guides(x = guide_axis(angle = 90)) +
+  
+  plot_layout(guides = "collect",
+              ncol = 1) &
+  theme(legend.position = "bottom") 
+  
+```
+
+Effect of climber cutting seems not so apparent when looking at the full distribution of the data. 
+Perhaps more variation in growth rate in climber cut plots?
+
+```{r}
+#| fig-width: 7
+#| fig-height: 10
+
+data %>% 
+  filter(forest_type == "secondary") %>% 
+  mutate(climber_cut = ifelse(
+    plot %in% c("05", "11", "14"),
+    TRUE, FALSE
+  )) %>% 
+  drop_na(dbase_mean) %>% 
+  ggplot(aes(x = years, y = log(dbase_mean))) +
+  geom_point(alpha = 0.3, size = 0.5, shape = 16) +
+  geom_smooth(aes(colour = climber_cut), size = 1, method = "gam") +
+  facet_wrap(~plot, ncol = 3) +
+  ggtitle("log basal diameter") +
+  
+  data %>% 
+  filter(forest_type == "secondary") %>% 
+  mutate(climber_cut = ifelse(
+    plot %in% c("05", "11", "14"),
+    TRUE, FALSE
+  )) %>% 
+  drop_na(dbase_mean) %>% 
+  ggplot(aes(x = years, y = log(dbh_mean))) +
+  geom_point(alpha = 0.3, size = 0.5, shape = 16) +
+  geom_smooth(aes(colour = climber_cut), size = 1, method = "gam") +
+  facet_wrap(~plot, ncol = 3) +
+  ggtitle("log dbh")  +
+  
+  plot_layout(guides = "collect", ncol = 1) +
+  plot_annotation(title = "Secondary forest seedlings by plot") &
+  theme(legend.position = "bottom") 
+  
+```
+
+

@@ -263,7 +263,8 @@ all_gr %>%
   summarise(median(yearly_growth_rate_dbh),
             median(yearly_growth_rate_basal)) %>% 
   arrange(desc(`median(yearly_growth_rate_dbh)`)) %>% 
-  formattable::formattable(
+  formattable::format_table(
+    format = "markdown",
     list(`median(yearly_growth_rate_dbh)` = 
            formattable::color_tile("transparent", "lightpink"),
          `median(yearly_growth_rate_basal)` = 
@@ -361,7 +362,8 @@ all_gr %>%
   summarise(yearly_growth_rate_dbh = median(yearly_growth_rate_dbh)) %>% 
   pivot_wider(names_from = forest_type, values_from = yearly_growth_rate_dbh) %>% 
   arrange(desc(primary)) %>% 
-  formattable::formattable(
+  formattable::format_table(
+    format = "markdown",
     list(formattable::area(col = primary:secondary) ~ 
            formattable::color_tile("transparent", "lightpink"))
   )
@@ -425,7 +427,8 @@ all_gr_pl %>%
   pivot_wider(names_from = climber_cut, values_from = yearly_growth_rate_dbh) %>% 
   rename(climbers_cut = `TRUE`, climbers_not_cut = `FALSE`) %>% 
   arrange(desc(climbers_not_cut)) %>% 
-  formattable::formattable(
+  formattable::format_table(
+    format = "markdown",
     list(formattable::area(col = climbers_not_cut:climbers_cut) ~ 
            formattable::color_tile("transparent", "lightpink"))
   )

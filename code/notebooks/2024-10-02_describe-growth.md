@@ -327,7 +327,8 @@ all_gr %>%
   summarise(median(yearly_growth_rate_dbh),
             median(yearly_growth_rate_basal)) %>% 
   arrange(desc(`median(yearly_growth_rate_dbh)`)) %>% 
-  formattable::formattable(
+  formattable::format_table(
+    format = "markdown",
     list(`median(yearly_growth_rate_dbh)` = 
            formattable::color_tile("transparent", "lightpink"),
          `median(yearly_growth_rate_basal)` = 
@@ -336,188 +337,25 @@ all_gr %>%
 ```
 
 </details>
-<table class="table table-condensed">
-<thead>
-<tr>
-<th style="text-align:right;">
-genus_species
-</th>
-<th style="text-align:right;">
-median(yearly_growth_rate_dbh)
-</th>
-<th style="text-align:right;">
-median(yearly_growth_rate_basal)
-</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:right;">
-Hopea_sangal
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffb6c1">0.8777313</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffd5dc">1.3714987</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Shorea_faguetiana
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffbfc8">0.8122026</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffcbd3">1.4996433</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Shorea_parvifolia
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffbfc9">0.8095226</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffdde2">1.2799965</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Shorea_johorensis
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffbfc9">0.8063137</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffb6c1">1.7778392</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Shorea_beccariana
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffc1ca">0.7956631</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffd3da">1.3958946</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Shorea_ovalis
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffc4cd">0.7758657</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffd1d8">1.4266975</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Shorea_gibbosa
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffc4cd">0.7715733</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffdfe4">1.2434883</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Shorea_argentifolia
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffced5">0.7052285</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffdae0">1.3111613</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Dipterocarpus_conformis
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffe3e7">0.5519547</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffeef1">1.0562331</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Shorea_macrophylla
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffe4e8">0.5418077</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffffff">0.8470135</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Shorea_macroptera
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffe8ec">0.5140814</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffccd3">1.4955490</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Shorea_leprosula
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffe9ec">0.5102539</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff2f4">1.0099127</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Parashorea_malaanonan
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff4f6">0.4281544</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffecef">1.0801106</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Dryobalanops_lanceolata
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff9fa">0.3922794</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffecef">1.0838832</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Parashorea_tomentella
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffffff">0.3552766</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff5f6">0.9681749</span>
-</td>
-</tr>
-</tbody>
-</table>
+
+| genus_species | median(yearly_growth_rate_dbh) | median(yearly_growth_rate_basal) |
+|---:|---:|---:|
+| Hopea_sangal | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffb6c1">0.8777313</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffd5dc">1.3714987</span> |
+| Shorea_faguetiana | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffbfc8">0.8122026</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffcbd3">1.4996433</span> |
+| Shorea_parvifolia | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffbfc9">0.8095226</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffdde2">1.2799965</span> |
+| Shorea_johorensis | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffbfc9">0.8063137</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffb6c1">1.7778392</span> |
+| Shorea_beccariana | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffc1ca">0.7956631</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffd3da">1.3958946</span> |
+| Shorea_ovalis | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffc4cd">0.7758657</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffd1d8">1.4266975</span> |
+| Shorea_gibbosa | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffc4cd">0.7715733</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffdfe4">1.2434883</span> |
+| Shorea_argentifolia | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffced5">0.7052285</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffdae0">1.3111613</span> |
+| Dipterocarpus_conformis | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffe3e7">0.5519547</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffeef1">1.0562331</span> |
+| Shorea_macrophylla | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffe4e8">0.5418077</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffffff">0.8470135</span> |
+| Shorea_macroptera | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffe8ec">0.5140814</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffccd3">1.4955490</span> |
+| Shorea_leprosula | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffe9ec">0.5102539</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff2f4">1.0099127</span> |
+| Parashorea_malaanonan | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff4f6">0.4281544</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffecef">1.0801106</span> |
+| Dryobalanops_lanceolata | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff9fa">0.3922794</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffecef">1.0838832</span> |
+| Parashorea_tomentella | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffffff">0.3552766</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff5f6">0.9681749</span> |
+
 <details class="code-fold">
 <summary>Code</summary>
 
@@ -619,195 +457,32 @@ all_gr %>%
   summarise(yearly_growth_rate_dbh = median(yearly_growth_rate_dbh)) %>% 
   pivot_wider(names_from = forest_type, values_from = yearly_growth_rate_dbh) %>% 
   arrange(desc(primary)) %>% 
-  formattable::formattable(
+  formattable::format_table(
+    format = "markdown",
     list(formattable::area(col = primary:secondary) ~ 
            formattable::color_tile("transparent", "lightpink"))
   )
 ```
 
 </details>
-<table class="table table-condensed">
-<thead>
-<tr>
-<th style="text-align:right;">
-genus_species
-</th>
-<th style="text-align:right;">
-primary
-</th>
-<th style="text-align:right;">
-secondary
-</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:right;">
-Shorea_argentifolia
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffb6c1">2.5093877</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff5f6">0.6227941</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Hopea_sangal
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffcad2">1.8832168</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffeef0">0.8240888</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Dryobalanops_lanceolata
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffd1d8">1.6933022</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fffefe">0.3313978</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Shorea_johorensis
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffd2d9">1.6621914</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff0f3">0.7502433</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Shorea_parvifolia
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffdce1">1.3697917</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff6f7">0.5904950</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Shorea_macroptera
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffdde2">1.3224169</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fffafb">0.4625638</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Shorea_beccariana
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffdee3">1.3132255</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff0f2">0.7683498</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Shorea_macrophylla
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffe2e6">1.1884695</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffffff">0.3286637</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Shorea_ovalis
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffecef">0.8668181</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff0f2">0.7683824</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Parashorea_malaanonan
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffeff1">0.7878109</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fffcfc">0.4120444</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Shorea_leprosula
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff3f5">0.6668924</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fffafa">0.4770209</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Dipterocarpus_conformis
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff5f7">0.6003643</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff9fa">0.5001186</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Shorea_faguetiana
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff9fa">0.4923892</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffebee">0.9225144</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Shorea_gibbosa
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fffcfc">0.4137560</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffecef">0.8889196</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Parashorea_tomentella
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fffdfd">0.3832014</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fffefe">0.3552766</span>
-</td>
-</tr>
-</tbody>
-</table>
+
+| genus_species | primary | secondary |
+|---:|---:|---:|
+| Shorea_argentifolia | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffb6c1">2.5093877</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff5f6">0.6227941</span> |
+| Hopea_sangal | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffcad2">1.8832168</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffeef0">0.8240888</span> |
+| Dryobalanops_lanceolata | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffd1d8">1.6933022</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fffefe">0.3313978</span> |
+| Shorea_johorensis | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffd2d9">1.6621914</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff0f3">0.7502433</span> |
+| Shorea_parvifolia | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffdce1">1.3697917</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff6f7">0.5904950</span> |
+| Shorea_macroptera | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffdde2">1.3224169</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fffafb">0.4625638</span> |
+| Shorea_beccariana | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffdee3">1.3132255</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff0f2">0.7683498</span> |
+| Shorea_macrophylla | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffe2e6">1.1884695</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffffff">0.3286637</span> |
+| Shorea_ovalis | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffecef">0.8668181</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff0f2">0.7683824</span> |
+| Parashorea_malaanonan | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffeff1">0.7878109</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fffcfc">0.4120444</span> |
+| Shorea_leprosula | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff3f5">0.6668924</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fffafa">0.4770209</span> |
+| Dipterocarpus_conformis | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff5f7">0.6003643</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff9fa">0.5001186</span> |
+| Shorea_faguetiana | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff9fa">0.4923892</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffebee">0.9225144</span> |
+| Shorea_gibbosa | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fffcfc">0.4137560</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffecef">0.8889196</span> |
+| Parashorea_tomentella | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fffdfd">0.3832014</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fffefe">0.3552766</span> |
 
 Most species seem to grow faster in the primary forest.
 
@@ -873,195 +548,32 @@ all_gr_pl %>%
   pivot_wider(names_from = climber_cut, values_from = yearly_growth_rate_dbh) %>% 
   rename(climbers_cut = `TRUE`, climbers_not_cut = `FALSE`) %>% 
   arrange(desc(climbers_not_cut)) %>% 
-  formattable::formattable(
+  formattable::format_table(
+    format = "markdown",
     list(formattable::area(col = climbers_not_cut:climbers_cut) ~ 
            formattable::color_tile("transparent", "lightpink"))
   )
 ```
 
 </details>
-<table class="table table-condensed">
-<thead>
-<tr>
-<th style="text-align:right;">
-genus_species
-</th>
-<th style="text-align:right;">
-climbers_not_cut
-</th>
-<th style="text-align:right;">
-climbers_cut
-</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:right;">
-Shorea_gibbosa
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffc6ce">0.9612346</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffd4da">0.7715733</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Hopea_sangal
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffc7cf">0.9428565</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffd8de">0.7143555</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Shorea_ovalis
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffcbd3">0.8932058</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffd8de">0.7119035</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Shorea_faguetiana
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffd0d7">0.8189575</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffc1ca">1.0260713</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Shorea_johorensis
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffd5db">0.7626713</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffd7dd">0.7295613</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Shorea_beccariana
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffdde2">0.6502905</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffb6c1">1.1761353</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Dipterocarpus_conformis
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffe9ed">0.4865059</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffe8eb">0.5074674</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Shorea_macroptera
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffebee">0.4625638</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffecef">0.4522904</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Parashorea_tomentella
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffeef0">0.4283923</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff9fa">0.2806788</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Parashorea_malaanonan
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffeff1">0.4139647</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff0f2">0.4019453</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Dryobalanops_lanceolata
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffeff1">0.4100673</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fffafa">0.2709559</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Shorea_parvifolia
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffeff2">0.4056519</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffcdd5">0.8622034</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Shorea_leprosula
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff3f5">0.3552126</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffe2e6">0.5887759</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Shorea_argentifolia
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff4f6">0.3410917</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffd8dd">0.7237370</span>
-</td>
-</tr>
-<tr>
-<td style="text-align:right;">
-Shorea_macrophylla
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffffff">0.2049783</span>
-</td>
-<td style="text-align:right;">
-<span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffd1d8">0.8045275</span>
-</td>
-</tr>
-</tbody>
-</table>
+
+| genus_species | climbers_not_cut | climbers_cut |
+|---:|---:|---:|
+| Shorea_gibbosa | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffc6ce">0.9612346</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffd4da">0.7715733</span> |
+| Hopea_sangal | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffc7cf">0.9428565</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffd8de">0.7143555</span> |
+| Shorea_ovalis | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffcbd3">0.8932058</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffd8de">0.7119035</span> |
+| Shorea_faguetiana | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffd0d7">0.8189575</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffc1ca">1.0260713</span> |
+| Shorea_johorensis | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffd5db">0.7626713</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffd7dd">0.7295613</span> |
+| Shorea_beccariana | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffdde2">0.6502905</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffb6c1">1.1761353</span> |
+| Dipterocarpus_conformis | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffe9ed">0.4865059</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffe8eb">0.5074674</span> |
+| Shorea_macroptera | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffebee">0.4625638</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffecef">0.4522904</span> |
+| Parashorea_tomentella | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffeef0">0.4283923</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff9fa">0.2806788</span> |
+| Parashorea_malaanonan | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffeff1">0.4139647</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff0f2">0.4019453</span> |
+| Dryobalanops_lanceolata | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffeff1">0.4100673</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fffafa">0.2709559</span> |
+| Shorea_parvifolia | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffeff2">0.4056519</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffcdd5">0.8622034</span> |
+| Shorea_leprosula | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff3f5">0.3552126</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffe2e6">0.5887759</span> |
+| Shorea_argentifolia | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #fff4f6">0.3410917</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffd8dd">0.7237370</span> |
+| Shorea_macrophylla | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffffff">0.2049783</span> | <span style="display: block; padding: 0 4px; border-radius: 4px; background-color: #ffd1d8">0.8045275</span> |
 
 The effect of climber cutting on growth seems to vary by species.
 

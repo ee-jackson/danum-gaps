@@ -28,10 +28,10 @@ Here we will look at:
 
 - Size of seedlings at their first survey
 - Diameter measurements at BH vs basal 
-- Overall growth rates
 - Growth between forest types
 - Growth between species
 - Interactions of species & forest types
+- Effect of climber cutting on growth
 
 ```{r packages}
 #| output: false
@@ -206,10 +206,12 @@ Yearly growth rate is generally slower in the secondary forest.
 
 ```{r}
 fit_basal <- 
-  lme4::glmer(log(dbase_mean) ~ days_num + cohort + (1|plant_id), data = data)
+  lme4::glmer(log(dbase_mean) ~ days_num + cohort + (1|plant_id), 
+             data = data)
 
 fit_dbh <- 
-  lme4::glmer(log(dbh_mean) ~ days_num + cohort + (1|plant_id), data = data)
+  lme4::glmer(log(dbh_mean) ~ days_num + cohort + (1|plant_id), 
+             data = data)
 
 data %>% 
   drop_na(dbase_mean) %>% 
@@ -265,6 +267,7 @@ all_gr %>%
   arrange(desc(`median(yearly_growth_rate_dbh)`)) %>% 
   formattable::format_table(
     format = "html",
+    digits = 2,
     list(`median(yearly_growth_rate_dbh)` = 
            formattable::color_tile("transparent", "lightpink"),
          `median(yearly_growth_rate_basal)` = 
@@ -325,7 +328,7 @@ all_gr %>%
              group = genus_species)) +
   geom_point(alpha = 0.3, size = 0.5, shape = 16) +
   geom_smooth(aes(colour = `median(yearly_growth_rate_basal)`),
-              size = 1, method = "gam") +
+              linewidth = 1, method = "gam") +
   facet_wrap(~genus_species, ncol = 5) +
   scale_colour_viridis_c() +
   theme(legend.position = "none") +
@@ -340,7 +343,7 @@ all_gr %>%
          group = genus_species)) +
   geom_point(alpha = 0.3, size = 0.5, shape = 16) +
   geom_smooth(aes(colour = `median(yearly_growth_rate_dbh)`),
-              size = 1, method = "gam") +
+              linewidth = 1, method = "gam") +
   facet_wrap(~genus_species, ncol = 5) +
   scale_colour_viridis_c() +
   theme(legend.position = "none") +
@@ -362,11 +365,13 @@ all_gr %>%
   summarise(yearly_growth_rate_dbh = median(yearly_growth_rate_dbh)) %>% 
   pivot_wider(names_from = forest_type, values_from = yearly_growth_rate_dbh) %>% 
   arrange(desc(primary)) %>% 
+  mutate(diff = primary - secondary) %>% 
   formattable::format_table(
     format = "html",
+    digits = 2,
     list(formattable::area(col = primary:secondary) ~ 
            formattable::color_tile("transparent", "lightpink"))
-  )
+  ) 
 ```
 
 Most species seem to grow faster in the primary forest.
@@ -427,8 +432,10 @@ all_gr_pl %>%
   pivot_wider(names_from = climber_cut, values_from = yearly_growth_rate_dbh) %>% 
   rename(climbers_cut = `TRUE`, climbers_not_cut = `FALSE`) %>% 
   arrange(desc(climbers_not_cut)) %>% 
+  mutate(diff = climbers_not_cut - climbers_cut) %>% 
   formattable::format_table(
     format = "html",
+    digits = 2,
     list(formattable::area(col = climbers_not_cut:climbers_cut) ~ 
            formattable::color_tile("transparent", "lightpink"))
   )

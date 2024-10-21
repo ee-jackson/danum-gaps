@@ -1,6 +1,6 @@
 # A summary of growth
 eleanorjackson
-2024-10-14
+2024-10-21
 
 Here we will look at:
 
@@ -61,12 +61,41 @@ data %>%
   xlim(0, 20) +
   theme(legend.position = "top") +
   ylab("density") +
-  xlab("basal diameter at first survey")
+  xlab("basal diameter at first survey") 
 ```
 
 </details>
 
 ![](figures/2024-10-02_describe-growth/unnamed-chunk-2-1.png)
+
+<details class="code-fold">
+<summary>Code</summary>
+
+``` r
+data %>% 
+  filter(survival == 1 & 
+           cohort != "secondary_N") %>% 
+  group_by(plant_id) %>% 
+  slice_min(survey_date, with_ties = FALSE) %>% 
+  ggplot(aes(x = dbase_mean, 
+             fill = cohort,
+             colour = cohort)) +
+  geom_density(alpha = 0.3) +
+  facet_wrap(~genus_species, ncol = 5) +
+  stat_summary(aes(xintercept = after_stat(x), y = 0), 
+               fun = median, 
+               geom = "vline", 
+               orientation = "y",
+               linetype = 2) +
+  xlim(0, 20) +
+  theme(legend.position = "top") +
+  ylab("density") +
+  xlab("basal diameter at first survey") 
+```
+
+</details>
+
+![](figures/2024-10-02_describe-growth/unnamed-chunk-3-1.png)
 
 Dashed line shows the median value.
 
@@ -77,10 +106,10 @@ The secondary forest of SBE was planted first then the left over
 seedlings in the nursery were planted in the primary old growth forest
 of Danum Valley.
 
-Data suggests that the seedlings grew slower when kept in pots for
-longer and some species were more affected than others. The table below
-quantifies the difference in medians between forest types for each
-species.
+Data suggests that the seedlings grew slower in the nursery than when
+planted out in the field and some species were more affected than
+others. The table below quantifies the difference in medians between
+forest types for each species.
 
 <details class="code-fold">
 <summary>Code</summary>
@@ -148,7 +177,7 @@ data %>%
 
 </details>
 
-![](figures/2024-10-02_describe-growth/unnamed-chunk-4-1.png)
+![](figures/2024-10-02_describe-growth/unnamed-chunk-5-1.png)
 
 At least 75% of seedlings have both DBH and basal diameter measurements
 by:
@@ -195,8 +224,10 @@ data <-
 all_gr <- 
   data %>% 
   group_by(plant_id, genus_species, forest_type) %>%
-  summarise(dbh_diff = max(dbh_mean, na.rm = TRUE) - min(dbh_mean, na.rm = TRUE),
-            basal_diff = max(dbase_mean, na.rm = TRUE) - min(dbase_mean, na.rm = TRUE),
+  summarise(dbh_diff = max(dbh_mean, na.rm = TRUE) - 
+              min(dbh_mean, na.rm = TRUE),
+            basal_diff = max(dbase_mean, na.rm = TRUE) - 
+              min(dbase_mean, na.rm = TRUE),
             max_years = max(years, na.rm = TRUE), 
             .groups = "keep") %>% 
   filter_if(~is.numeric(.), all_vars(!is.infinite(.))) %>% 
@@ -231,6 +262,7 @@ all_gr %>%
                fill = "transparent") +
   coord_cartesian(ylim = c(0, 10)) +
   theme(legend.position = "none") +
+  ggtitle("Basal diameter") +
   
   all_gr %>% 
   group_by(forest_type) %>% 
@@ -241,12 +273,13 @@ all_gr %>%
                linewidth = 0.8,
                fill = "transparent") +
   coord_cartesian(ylim = c(0, 10)) +
-  theme(legend.position = "none")
+  theme(legend.position = "none") +
+  ggtitle("DBH")
 ```
 
 </details>
 
-![](figures/2024-10-02_describe-growth/unnamed-chunk-7-1.png)
+![](figures/2024-10-02_describe-growth/unnamed-chunk-8-1.png)
 
 Yearly growth rate is generally slower in the secondary forest.
 
@@ -255,11 +288,11 @@ Yearly growth rate is generally slower in the secondary forest.
 
 ``` r
 fit_basal <- 
-  lme4::glmer(log(dbase_mean) ~ days_num + cohort + (1|plant_id), 
+  lme4::lmer(log(dbase_mean) ~ days_num + cohort + (1|plant_id), 
              data = data)
 
 fit_dbh <- 
-  lme4::glmer(log(dbh_mean) ~ days_num + cohort + (1|plant_id), 
+  lme4::lmer(log(dbh_mean) ~ days_num + cohort + (1|plant_id), 
              data = data)
 
 data %>% 
@@ -267,7 +300,7 @@ data %>%
   ggplot(aes(x = years, y = log(dbase_mean), colour = cohort)) +
   geom_point(alpha = 0.3, size = 0.5, shape = 16) +
   geom_smooth(aes(y = predict(fit_basal), colour = cohort),
-              method = "glm", method.args = list(family = "gaussian")) +
+              method = "lm") +
   ggtitle("log basal diameter") +
   
   data %>% 
@@ -275,17 +308,17 @@ data %>%
   ggplot(aes(x = years, y = log(dbh_mean), colour = cohort)) +
   geom_point(alpha = 0.3, size = 0.5, shape = 16) +
   geom_smooth(aes(y = predict(fit_dbh)),
-              method = "glm", method.args = list(family = "gaussian")) +
+              method = "lm") +
   ggtitle("log DBH") +
   
   patchwork::plot_layout(guides = "collect") +
-  patchwork::plot_annotation(title = "geom_smooth(method = `glm`)") &
+  patchwork::plot_annotation(title = "geom_smooth(method = `lm`)") &
   theme(legend.position = "bottom")
 ```
 
 </details>
 
-![](figures/2024-10-02_describe-growth/unnamed-chunk-8-1.png)
+![](figures/2024-10-02_describe-growth/unnamed-chunk-9-1.png)
 
 <details class="code-fold">
 <summary>Code</summary>
@@ -312,11 +345,16 @@ data %>%
 
 </details>
 
-![](figures/2024-10-02_describe-growth/unnamed-chunk-9-1.png)
+![](figures/2024-10-02_describe-growth/unnamed-chunk-10-1.png)
 
 1<sup>st</sup> cohort and 2<sup>nd</sup> cohort of the secondary forest
 seedlings look very similar. Perhaps some evidence for primary forest
 seedlings having initial higher growth rate?
+
+We are seeing that drop in basal diameter for primary forest seedlings
+simply because we stopped taking basal measurements for the last 2
+surveys - there are few data points, and those that do exist are likely
+there because the seedling was too short to record DBH.
 
 ## Growth by species
 
@@ -365,7 +403,8 @@ all_gr %>%
 ``` r
 all_gr %>% 
   group_by(genus_species) %>% 
-  mutate(`median(yearly_growth_rate_basal)` = median(yearly_growth_rate_basal)) %>% 
+  mutate(`median(yearly_growth_rate_basal)` = 
+           median(yearly_growth_rate_basal)) %>% 
   ggplot(aes(x = genus_species,
              y = yearly_growth_rate_basal,
              group = genus_species)) +
@@ -378,10 +417,12 @@ all_gr %>%
   scale_colour_viridis_c() +
   theme(axis.title.x = element_blank()) +
   guides(x =  guide_axis(angle = 90)) +
+  ggtitle("Basal diameter") +
   
   all_gr %>% 
   group_by(genus_species) %>% 
-  mutate(`median(yearly_growth_rate_dbh)` = median(yearly_growth_rate_dbh)) %>% 
+  mutate(`median(yearly_growth_rate_dbh)` = 
+           median(yearly_growth_rate_dbh)) %>% 
   ggplot(aes(x = genus_species, 
              y = yearly_growth_rate_dbh)) +
   geom_jitter(alpha = 0.2, shape = 16) +
@@ -393,6 +434,7 @@ all_gr %>%
   scale_colour_viridis_c() +
   theme(axis.title.x = element_blank()) +
   guides(x = guide_axis(angle = 90)) +
+  ggtitle("DBH") +
   
   plot_layout(guides = "collect", ncol = 2) &
   theme(legend.position = "bottom") 
@@ -400,7 +442,7 @@ all_gr %>%
 
 </details>
 
-![](figures/2024-10-02_describe-growth/unnamed-chunk-11-1.png)
+![](figures/2024-10-02_describe-growth/unnamed-chunk-12-1.png)
 
 <details class="code-fold">
 <summary>Code</summary>
@@ -442,7 +484,7 @@ all_gr %>%
 
 </details>
 
-![](figures/2024-10-02_describe-growth/unnamed-chunk-12-1.png)
+![](figures/2024-10-02_describe-growth/unnamed-chunk-13-1.png)
 
 A fast basal diameter growth rate doesn’t always correlate to a fast DBH
 growth rate.
@@ -518,9 +560,9 @@ data %>%
 
 </details>
 
-![](figures/2024-10-02_describe-growth/unnamed-chunk-14-1.png)
+![](figures/2024-10-02_describe-growth/unnamed-chunk-15-1.png)
 
-## Climber-cut vs non-climber cut plots
+## Climber-cut vs non-climber cut intensively sampled plots
 
 Three of the secondary forest plots received a climber cutting treatment
 (plots `05`, `11` and `14`) (see [O’Brien *et al*
@@ -539,8 +581,10 @@ all_gr_pl <-
     TRUE, FALSE
   )) %>% 
   group_by(plant_id, genus_species, climber_cut) %>%
-  summarise(dbh_diff = max(dbh_mean, na.rm = TRUE) - min(dbh_mean, na.rm = TRUE),
-            basal_diff = max(dbase_mean, na.rm = TRUE) - min(dbase_mean, na.rm = TRUE),
+  summarise(dbh_diff = max(dbh_mean, na.rm = TRUE) - 
+              min(dbh_mean, na.rm = TRUE),
+            basal_diff = max(dbase_mean, na.rm = TRUE) - 
+              min(dbase_mean, na.rm = TRUE),
             max_years = max(years, na.rm = TRUE), 
             .groups = "keep") %>% 
   filter_if(~is.numeric(.), all_vars(!is.infinite(.))) %>% 
@@ -550,7 +594,8 @@ all_gr_pl <-
 all_gr_pl %>% 
   group_by(genus_species, climber_cut) %>% 
   summarise(yearly_growth_rate_dbh = median(yearly_growth_rate_dbh)) %>% 
-  pivot_wider(names_from = climber_cut, values_from = yearly_growth_rate_dbh) %>% 
+  pivot_wider(names_from = climber_cut, 
+              values_from = yearly_growth_rate_dbh) %>% 
   rename(climbers_cut = `TRUE`, climbers_not_cut = `FALSE`) %>% 
   arrange(desc(climbers_not_cut)) %>% 
   mutate(diff = climbers_not_cut - climbers_cut) %>% 
@@ -590,7 +635,7 @@ The effect of climber cutting on growth seems to vary by species.
 ``` r
 all_gr_pl %>% 
   ggplot(aes(x = genus_species, 
-             y = yearly_growth_rate_dbh,
+             y = yearly_growth_rate_basal,
              colour = climber_cut)) +
   geom_jitter(alpha = 0.2, shape = 16) +
   geom_boxplot(outliers = FALSE, 
@@ -598,7 +643,8 @@ all_gr_pl %>%
                fill = "transparent") +
   coord_cartesian(ylim = c(0, 10)) +
   theme(axis.title.x = element_blank()) +
-  guides(x = guide_axis(angle = 90))+
+  guides(x = guide_axis(angle = 90)) +
+  ggtitle("Basal diameter") +
   
   all_gr_pl %>% 
   ggplot(aes(x = genus_species, 
@@ -611,6 +657,7 @@ all_gr_pl %>%
   coord_cartesian(ylim = c(0, 10)) +
   theme(axis.title.x = element_blank()) +
   guides(x = guide_axis(angle = 90)) +
+  ggtitle("DBH") +
   
   plot_layout(guides = "collect",
               ncol = 1) &
@@ -619,7 +666,7 @@ all_gr_pl %>%
 
 </details>
 
-![](figures/2024-10-02_describe-growth/unnamed-chunk-16-1.png)
+![](figures/2024-10-02_describe-growth/unnamed-chunk-17-1.png)
 
 Effect of climber cutting seems not so apparent when looking at the full
 distribution of the data. Perhaps more variation in growth rate in
@@ -662,4 +709,4 @@ data %>%
 
 </details>
 
-![](figures/2024-10-02_describe-growth/unnamed-chunk-17-1.png)
+![](figures/2024-10-02_describe-growth/unnamed-chunk-18-1.png)

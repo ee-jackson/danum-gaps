@@ -1,6 +1,6 @@
 # A summary of the data
 eleanorjackson
-2024-10-10
+2024-10-21
 
 I’m creating a document to summarise the clean dataset which we are
 working with for the current manuscript.
@@ -170,6 +170,73 @@ primary forest plots were planted with 23-25 species each. Species were
 only included in this data if they occur in both the primary and
 secondary forest.
 
+<details class="code-fold">
+<summary>Code</summary>
+
+``` r
+sp_lists <- 
+  read_csv(here::here("data", "derived", "data_combined.csv")) %>% 
+  select(forest_type, genus_species) %>% 
+  distinct() %>% 
+  drop_na(genus_species) %>% 
+  group_by(forest_type) %>% 
+  {setNames(group_split(., .keep = FALSE), group_keys(.)[[1]])}
+```
+
+</details>
+
+Species in **both** the primary and secondary forest:
+
+<details class="code-fold">
+<summary>Code</summary>
+
+``` r
+intersect(sp_lists$secondary$genus_species, 
+          sp_lists$primary$genus_species)
+```
+
+</details>
+
+     [1] "Dryobalanops_lanceolata" "Shorea_leprosula"       
+     [3] "Shorea_macrophylla"      "Shorea_gibbosa"         
+     [5] "Parashorea_tomentella"   "Parashorea_malaanonan"  
+     [7] "Dipterocarpus_conformis" "Shorea_beccariana"      
+     [9] "Hopea_sangal"            "Shorea_argentifolia"    
+    [11] "Shorea_macroptera"       "Shorea_parvifolia"      
+    [13] "Shorea_ovalis"           "Shorea_johorensis"      
+    [15] "Shorea_faguetiana"      
+
+Species in the secondary forest which aren’t in the primary forest:
+
+<details class="code-fold">
+<summary>Code</summary>
+
+``` r
+setdiff(sp_lists$secondary$genus_species, 
+        sp_lists$primary$genus_species)
+```
+
+</details>
+
+    [1] "Hopea_ferruginea"
+
+Species in the primary forest which aren’t in the secondary forest:
+
+<details class="code-fold">
+<summary>Code</summary>
+
+``` r
+setdiff(sp_lists$primary$genus_species, 
+        sp_lists$secondary$genus_species)
+```
+
+</details>
+
+     [1] "Shorea_acuminatissima" "Shorea_superba"        "Shorea_oleosa"        
+     [4] "Shorea_parvistipulata" "Shorea_smithiana"      "Durian_graveolens"    
+     [7] "Dryobalanops_beccarii" "Shorea_mecistopteryx"  "Shorea_pinanga"       
+    [10] "Shorea_guiso"         
+
 ## Plots
 
 <details class="code-fold">
@@ -194,7 +261,7 @@ secondary forest (plots `03, 05, 08, 11, 14, 17`).
 
 Only intensively sampled plots from the SBE (secondary forest) were
 included in this data, and of the Danum plots (primary forest) only
-plots in treefall gaps and those without drought treatments were
+(sub-)plots in treefall gaps and those without drought treatments were
 included.
 
 <details class="code-fold">
@@ -220,7 +287,7 @@ data %>%
 | 17   |      20 |
 
 In the secondary forest there are 20 planting lines in each of the 6
-plots.
+intensively sampled plots.
 
 <details class="code-fold">
 <summary>Code</summary>
@@ -244,11 +311,11 @@ data %>%
 | 14   |          86 |
 | 17   |          69 |
 
-The SBE was set up with the idea that each of the planting lines would
-have 66 positions where a seedling was planted. However, due to some
-positions being un-plantable (i.e. obstructed by rock or stream), and
-due to undulating topography (seedling was planted every *x*m) there are
-often more or less than 66 planting positions.
+The SBE was set up with the implicit assumption that each of the
+planting lines would have 66 positions where a seedling was planted.
+However, due to some positions being un-plantable (i.e. obstructed by
+rock or stream), and due to undulating topography (seedling was planted
+every 3m) there are often more or less than 66 planting positions.
 
 There are more individual plants than positions as those that died very
 early in the experiment were replaced by a new cohort of seedlings.
@@ -270,10 +337,14 @@ data %>%
 
 </details>
 
-![](figures/2024-09-30_describe-data/unnamed-chunk-8-1.png)
+![](figures/2024-09-30_describe-data/unnamed-chunk-12-1.png)
 
 There have been 22 censuses of the primary forest seedlings, and 26
 censuses of the secondary forest seedlings.
+
+Plot 17 in the secondary forest was not sampled as frequently as the
+other secondary forest plots as it wasn’t included in surveys for the
+climber cutting study (explained further below).
 
 Not all the censuses were complete.
 
@@ -330,8 +401,9 @@ the rest of the plot was censused.
 Three of the secondary forest plots received a climber cutting treatment
 (plots `05`, `11` and `14`) (see [O’Brien *et al*
 2019](https://doi.org/10.1111/1365-2664.13335)). When data was collected
-for this study only two lines from each of the climber cut and control
-plots (plots `03` and `08`) were surveyed.
+for this study only two planting lines from each of the climber cut
+(plots `05`, `11` and `14`) and control plots (plots `03` and `08`) were
+surveyed since a full census would take too long.
 
 <details class="code-fold">
 <summary>Code</summary>
@@ -352,7 +424,7 @@ data %>%
 
 </details>
 
-![](figures/2024-09-30_describe-data/unnamed-chunk-10-1.png)
+![](figures/2024-09-30_describe-data/unnamed-chunk-14-1.png)
 
 The censuses were not evenly spaced through time.
 
@@ -375,7 +447,7 @@ data %>%
 
 </details>
 
-![](figures/2024-09-30_describe-data/unnamed-chunk-11-1.png)
+![](figures/2024-09-30_describe-data/unnamed-chunk-15-1.png)
 
 Secondary forest plots which were included in each census type:
 
@@ -397,3 +469,10 @@ data %>%
 | full                   | intensive              | climber            |
 |:-----------------------|:-----------------------|:-------------------|
 | 03, 05, 08, 11, 14, 17 | 03, 05, 08, 11, 14, 17 | 03, 05, 08, 11, 14 |
+
+Plots `05`, `11` and `14` received a climber cutting treatment.
+
+- In the **full** surveys every individual in every plot was surveyed
+- In the **intensive** surveys every individual in 6 of the plots were
+  surveyed (all plots included in this data)
+- In the **climber** surveys 2 planting lines of 5 plots were surveyed

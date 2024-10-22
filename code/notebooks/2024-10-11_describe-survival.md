@@ -1,6 +1,13 @@
 # A summary of survival
 eleanorjackson
-2024-10-14
+2024-10-22
+
+Here we will look at:
+
+- Compare survival between forest types
+- Compare survival between species
+- Interactions of species & forest types
+- Effect of climber cutting on survival
 
 <details class="code-fold">
 <summary>Code</summary>
@@ -11,7 +18,6 @@ library("here")
 library("patchwork")
 library("survival")
 library("ggsurvfit")
-set.seed(123)
 ```
 
 </details>
@@ -53,7 +59,7 @@ I think we need to remove seedlings that were already dead at the time
 of their first census. These seedlings are “left-censored”. Accounting
 for left-censored data in models is tricky and it’s common to remove
 them. Also - not sure how biologically relevant these points are -
-likely it was moving from pot to ground that killed them?
+likely it was moving from nursery to field that killed them?
 
 First creating a “time” variable. I’m using days since first survey at
 the individual plant level. I’ll also create a column which has the
@@ -114,12 +120,45 @@ data %>%
 
 ![](figures/2024-10-11_describe-survival/unnamed-chunk-4-1.png)
 
+Above is plotted by census, but we can also plot by year. Note though
+that some censuses stretch across year boundaries and not every plot was
+surveyed every year, so I expect proportion surviving to bounce around a
+bit due to the denominator not being constant.
+
+I’ll also remove “climber” surveys for this figure since these only
+surveyed two planting lines out of 20 for five of the SBE plots.
+
 <details class="code-fold">
 <summary>Code</summary>
 
 ``` r
 data %>% 
   filter(!plant_id %in% left_censored$plant_id) %>% 
+  filter(!str_detect(census_id, "climber")) %>% 
+  mutate(survival = as.factor(survival)) %>% 
+  mutate(year = year(survey_date)) %>% 
+  ggplot(aes(x = year, group = survival, 
+             fill = survival)) +
+  geom_bar(position = "fill") +
+  facet_wrap(~cohort, ncol = 1,
+             axis.labels = "all_x", axes = "all_x") +
+  theme(legend.position = "top", legend.justification = "left") +
+  geom_hline(yintercept = 0.5, colour = "white", linetype = 2) +
+  geom_hline(yintercept = 0.75, colour = "white", linetype = 3) +
+  geom_hline(yintercept = 0.25, colour = "white", linetype = 3)
+```
+
+</details>
+
+![](figures/2024-10-11_describe-survival/unnamed-chunk-5-1.png)
+
+<details class="code-fold">
+<summary>Code</summary>
+
+``` r
+data %>% 
+  filter(!plant_id %in% left_censored$plant_id) %>% 
+  filter(!str_detect(census_id, "climber")) %>% 
   filter(survival == "0") %>%
   group_by(plant_id) %>%
   slice_min(lubridate::ymd(survey_date), with_ties = FALSE) %>%
@@ -133,15 +172,90 @@ data %>%
 
 </details>
 
-![](figures/2024-10-11_describe-survival/unnamed-chunk-5-1.png)
+![](figures/2024-10-11_describe-survival/unnamed-chunk-6-1.png)
 
 Seedling deaths seem to happen fairly gradually over time in the primary
 forest, for the secondary forest we see big spikes in deaths over time -
-likely due to sampling effort?
+but only due to sampling effort.
 
 Also looks like after 15 years, there are no deaths in the
 2<sup>nd</sup> cohort of secondary forest seedlings, but this is because
 we have no data past this point - it’s in the future!
+
+Perhaps we can visualise events (deaths) a little differently:
+
+<details class="code-fold">
+<summary>Code</summary>
+
+``` r
+data %>% 
+  filter(!plant_id %in% left_censored$plant_id) %>% 
+  filter(!str_detect(census_id, "climber")) %>% 
+  filter(survival == "0") %>%
+  group_by(plant_id) %>%
+  slice_min(lubridate::ymd(survey_date), with_ties = FALSE) %>%
+  ungroup() %>% 
+  mutate(year = year(survey_date)) %>% 
+  ggplot(aes(x = year, 
+             fill = cohort,
+             group = cohort)) +
+  geom_bar() +
+  facet_wrap(~cohort, ncol = 1, scales = "free_y") +
+  labs(y = "# of new deaths")
+```
+
+</details>
+
+![](figures/2024-10-11_describe-survival/unnamed-chunk-7-1.png)
+
+Patterns still obscured by *when* the surveys took place, i.e. spike in
+mortality in 2010 in the secondary forest probably just because
+seedlings hadn’t been censused for four years.
+
+<details class="code-fold">
+<summary>Code</summary>
+
+``` r
+data %>% 
+  filter(!plant_id %in% left_censored$plant_id) %>% 
+  filter(case_when(
+    forest_type == "primary" & census_no == 22 ~ TRUE,
+    forest_type == "secondary" & census_no == 26 ~ TRUE
+  )) %>% 
+  group_by(cohort, genus_species) %>% 
+  summarise(n_dead = sum(survival == "0"), 
+            n_alive = sum(survival == "1")) %>% 
+  mutate(prop_alive = n_alive / (n_dead + n_alive)) %>% 
+  select(- n_dead, - n_alive) %>% 
+  pivot_wider(names_from = cohort, values_from = prop_alive) %>% 
+  arrange(desc(primary_NA)) %>% 
+  knitr::kable(digits = 2)
+```
+
+</details>
+
+| genus_species           | primary_NA | secondary_N | secondary_O |
+|:------------------------|-----------:|------------:|------------:|
+| Hopea_sangal            |       0.79 |        0.39 |        0.35 |
+| Dryobalanops_lanceolata |       0.71 |        0.31 |        0.19 |
+| Shorea_beccariana       |       0.71 |        0.33 |        0.27 |
+| Parashorea_malaanonan   |       0.67 |        0.30 |        0.22 |
+| Shorea_macroptera       |       0.62 |        0.32 |        0.10 |
+| Shorea_gibbosa          |       0.57 |        0.21 |        0.16 |
+| Dipterocarpus_conformis |       0.50 |          NA |        0.29 |
+| Shorea_macrophylla      |       0.43 |        0.23 |        0.17 |
+| Parashorea_tomentella   |       0.40 |        0.35 |        0.19 |
+| Shorea_johorensis       |       0.36 |        0.39 |        0.19 |
+| Shorea_ovalis           |       0.36 |        0.27 |        0.28 |
+| Shorea_argentifolia     |       0.29 |        0.13 |        0.02 |
+| Shorea_faguetiana       |       0.29 |        0.07 |        0.10 |
+| Shorea_parvifolia       |       0.25 |        0.16 |        0.11 |
+| Shorea_leprosula        |       0.08 |        0.16 |        0.10 |
+
+Table shows proportion alive in the most recent census by species and
+forest type.
+
+## Survival curves
 
 I want to fit some survival curves - to do this we need to sort out the
 censoring.
@@ -213,8 +327,9 @@ data_aggregated <-
 ``` r
 data_aggregated %>% 
   slice_sample(n = 30) %>%
-  pivot_longer(cols = c(time_to_last_alive, time_to_dead)) %>% 
-  ggplot(aes(y = plant_id, x = value, colour = name, group = plant_id)) +
+  pivot_longer(cols = c(time_to_last_alive, time_to_dead),
+               values_to = "years") %>% 
+  ggplot(aes(y = plant_id, x = years, colour = name, group = plant_id)) +
   geom_path(colour = "lightgrey") +
   geom_point(alpha = 0.5, size = 2) +
   theme(legend.position = "top")
@@ -222,7 +337,7 @@ data_aggregated %>%
 
 </details>
 
-![](figures/2024-10-11_describe-survival/unnamed-chunk-7-1.png)
+![](figures/2024-10-11_describe-survival/unnamed-chunk-10-1.png)
 
 Seedlings with only one data point are right censored and seedlings with
 two data points are interval censored.
@@ -230,7 +345,7 @@ two data points are interval censored.
 Censoring is built into survival models by incorporating it into the
 likelihood function underlying the analysis.
 
-The survival probability at a certain time, is a conditional probability
+The survival probability at a certain time is a conditional probability
 of surviving beyond that time, given that an individual has survived
 just prior to that time.
 
@@ -279,7 +394,7 @@ fit_surv %>%
 
 </details>
 
-![](figures/2024-10-11_describe-survival/unnamed-chunk-9-1.png)
+![](figures/2024-10-11_describe-survival/unnamed-chunk-12-1.png)
 
 <details class="code-fold">
 <summary>Code</summary>
@@ -312,7 +427,7 @@ fit_surv_sp %>%
 
 </details>
 
-![](figures/2024-10-11_describe-survival/unnamed-chunk-11-1.png)
+![](figures/2024-10-11_describe-survival/unnamed-chunk-14-1.png)
 
 <details class="code-fold">
 <summary>Code</summary>
@@ -359,9 +474,11 @@ fit_surv_sp_p %>%
 
 </details>
 
-![](figures/2024-10-11_describe-survival/unnamed-chunk-13-1.png)
+![](figures/2024-10-11_describe-survival/unnamed-chunk-16-1.png)
 
 It’s hard to see what’s going on with so many colours.
+
+## Binomial survival
 
 We can also plot survival as a binomial.
 
@@ -385,10 +502,25 @@ p +
 
 </details>
 
-![](figures/2024-10-11_describe-survival/unnamed-chunk-14-1.png)
+![](figures/2024-10-11_describe-survival/unnamed-chunk-17-1.png)
 
-Survival looks similar in the two forest types, but perhaps survival is
-slightly higher for primary forest seedlings in the first 5 years or so.
+<details class="code-fold">
+<summary>Code</summary>
+
+``` r
+ggplot(data = filter(data, !plant_id %in% left_censored$plant_id)) +
+  geom_smooth(aes(x = years, 
+                  y = survival, 
+                  colour = cohort), 
+              method = "glm", method.args = list(family = "binomial")) 
+```
+
+</details>
+
+![](figures/2024-10-11_describe-survival/unnamed-chunk-18-1.png)
+
+The shape of survival looks similar in the two forest types, but higher
+for primary forest seedlings.
 
 <details class="code-fold">
 <summary>Code</summary>
@@ -407,7 +539,7 @@ data %>%
 
 </details>
 
-![](figures/2024-10-11_describe-survival/unnamed-chunk-15-1.png)
+![](figures/2024-10-11_describe-survival/unnamed-chunk-19-1.png)
 
 <details class="code-fold">
 <summary>Code</summary>
@@ -437,7 +569,79 @@ data %>%
 
 </details>
 
-![](figures/2024-10-11_describe-survival/unnamed-chunk-16-1.png)
+![](figures/2024-10-11_describe-survival/unnamed-chunk-20-1.png)
 
 This is quite interesting, survival always higher for primary forest
 seedlings.
+
+## Climber-cut vs non-climber cut intensively sampled plots
+
+<details class="code-fold">
+<summary>Code</summary>
+
+``` r
+data %>% 
+  filter(forest_type == "secondary") %>% 
+  mutate(climber_cut = ifelse(
+    plot %in% c("05", "11", "14"),
+    TRUE, FALSE
+  )) %>% 
+  filter(!plant_id %in% left_censored$plant_id) %>% 
+  filter(census_no == 26) %>% 
+  group_by(climber_cut, genus_species) %>% 
+  summarise(n_dead = sum(survival == "0"), 
+            n_alive = sum(survival == "1")) %>%  
+  mutate(prop_alive = n_alive / (n_dead + n_alive)) %>% 
+  select(- n_dead, - n_alive) %>% 
+  pivot_wider(names_from = climber_cut, values_from = prop_alive) %>% 
+  rename(climbers_cut = `TRUE`, climbers_not_cut = `FALSE`) %>% 
+  arrange(desc(climbers_cut)) %>% 
+  knitr::kable(digits = 2)
+```
+
+</details>
+
+| genus_species           | climbers_not_cut | climbers_cut |
+|:------------------------|-----------------:|-------------:|
+| Hopea_sangal            |             0.36 |         0.36 |
+| Shorea_johorensis       |             0.29 |         0.32 |
+| Dipterocarpus_conformis |             0.26 |         0.32 |
+| Dryobalanops_lanceolata |             0.27 |         0.28 |
+| Parashorea_tomentella   |             0.29 |         0.28 |
+| Shorea_beccariana       |             0.28 |         0.28 |
+| Shorea_ovalis           |             0.29 |         0.27 |
+| Parashorea_malaanonan   |             0.29 |         0.25 |
+| Shorea_macroptera       |             0.24 |         0.23 |
+| Shorea_macrophylla      |             0.17 |         0.21 |
+| Shorea_gibbosa          |             0.18 |         0.18 |
+| Shorea_leprosula        |             0.09 |         0.17 |
+| Shorea_parvifolia       |             0.12 |         0.15 |
+| Shorea_faguetiana       |             0.06 |         0.12 |
+| Shorea_argentifolia     |             0.04 |         0.12 |
+
+Table shows proportion alive in the most recent census in the secondary
+forest.
+
+<details class="code-fold">
+<summary>Code</summary>
+
+``` r
+data %>%  
+  filter(forest_type == "secondary") %>% 
+  mutate(climber_cut = ifelse(
+    plot %in% c("05", "11", "14"),
+    TRUE, FALSE
+  )) %>% 
+  filter(!plant_id %in% left_censored$plant_id) %>% 
+  ggplot() +
+  geom_smooth(aes(survival, x = years, 
+                  colour = climber_cut), 
+              linewidth = 0.7,
+              method = "glm", method.args = list(family = "binomial")) +
+  facet_wrap(~genus_species, ncol = 5) +
+  theme(legend.position = "bottom")
+```
+
+</details>
+
+![](figures/2024-10-11_describe-survival/unnamed-chunk-22-1.png)

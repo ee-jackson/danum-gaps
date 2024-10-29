@@ -287,11 +287,22 @@ data_backfilled <-
   ungroup()
 
 
+# Clean cohort ------------------------------------------------------------
+
+data_backfilled <-
+  data_backfilled %>%
+  mutate(cohort = case_when(
+         forest_type == "primary" ~ 1,
+         forest_type == "secondary" & old_new == "O" ~ 1,
+         forest_type == "secondary" & old_new == "N" ~ 2
+  )) %>%
+  mutate(cohort = as.factor(cohort))
+
 # Save --------------------------------------------------------------------
 
 data_backfilled <-
   data_backfilled %>%
-  select(forest_type, plant_id, plot, line, position, old_new, plant_no,
+  select(forest_type, plant_id, plot, line, position, cohort, plant_no,
          genus, species, genus_species,
          planting_date, census_no, census_id, survey_date,
          survival, height_apex, dbh_mean, dbase_mean) %>%

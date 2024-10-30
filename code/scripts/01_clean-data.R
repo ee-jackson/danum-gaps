@@ -295,8 +295,7 @@ data_backfilled <-
          forest_type == "primary" ~ 1,
          forest_type == "secondary" & old_new == "O" ~ 1,
          forest_type == "secondary" & old_new == "N" ~ 2
-  )) %>%
-  mutate(cohort = as.factor(cohort))
+  ))
 
 # Save --------------------------------------------------------------------
 
@@ -307,7 +306,10 @@ data_backfilled <-
          planting_date, census_no, census_id, survey_date,
          survival, height_apex, dbh_mean, dbase_mean) %>%
   distinct() %>%
-  filter(!if_all(c(survival, dbh_mean, dbase_mean, height_apex), is.na))
+  filter(! if_all(c(survival, dbh_mean, dbase_mean, height_apex), is.na)) %>%
+  filter(! str_detect(plant_id, "NA")) %>%
+  mutate(across(c(forest_type, plant_id, plot, cohort, genus_species,
+                  line, position, plant_no, census_no), as.factor))
 
 saveRDS(data_backfilled,
         here::here("data", "derived", "data_cleaned.rds"))

@@ -1,6 +1,6 @@
 # A summary of growth
 eleanorjackson
-2024-10-21
+2024-11-05
 
 Here we will look at:
 
@@ -31,9 +31,8 @@ library("formattable")
 data <- 
   readRDS(here::here("data", "derived", "data_cleaned.rds")) %>% 
   mutate(census_no = as.ordered(census_no)) %>% 
-  mutate(cohort = paste(forest_type, old_new, sep = "_")) %>% 
-  filter(! cohort == "secondary_NA") %>% 
-  filter(! str_detect(plant_id, "NA")) 
+  mutate(cohort = paste(forest_type, cohort, sep = "_")) %>% 
+  filter(! cohort == "secondary_NA") 
 ```
 
 </details>
@@ -74,7 +73,7 @@ data %>%
 ``` r
 data %>% 
   filter(survival == 1 & 
-           cohort != "secondary_N") %>% 
+           cohort != "secondary_2") %>% 
   group_by(plant_id) %>% 
   slice_min(survey_date, with_ties = FALSE) %>% 
   ggplot(aes(x = dbase_mean, 
@@ -122,16 +121,16 @@ data %>%
   group_by(genus_species, cohort) %>% 
   summarise(med = median(dbase_mean, na.rm = TRUE)) %>% 
   pivot_wider(names_from = cohort, values_from = med) %>% 
-  select(-secondary_N) %>% 
+  select(-secondary_2) %>% 
   rowwise() %>% 
-  mutate(difference_in_median_basal_diameter  = secondary_O - primary_NA) %>% 
+  mutate(difference_in_median_basal_diameter  = secondary_1 - primary_1) %>% 
   arrange(desc(difference_in_median_basal_diameter)) %>% 
   knitr::kable(digits = 2)
 ```
 
 </details>
 
-| genus_species | primary_NA | secondary_O | difference_in_median_basal_diameter |
+| genus_species | primary_1 | secondary_1 | difference_in_median_basal_diameter |
 |:---|---:|---:|---:|
 | Shorea_macrophylla | 6.35 | 9.38 | 3.03 |
 | Shorea_leprosula | 3.40 | 6.16 | 2.76 |
@@ -537,6 +536,40 @@ Most species seem to grow faster in the primary forest.
 <summary>Code</summary>
 
 ``` r
+all_gr %>% 
+  group_by(genus_species, forest_type) %>% 
+  summarise(median(yearly_growth_rate_dbh)) %>%
+  pivot_wider(names_from = "forest_type", 
+              values_from = `median(yearly_growth_rate_dbh)`,
+              id_cols = genus_species) %>% 
+  ggplot(aes(y = primary, x = secondary, colour = genus_species)) +
+  geom_point() +
+  ggtitle("DBH - yearly growth rate") +
+  
+  all_gr %>% 
+  group_by(genus_species, forest_type) %>% 
+  summarise(median(yearly_growth_rate_basal)) %>%
+  pivot_wider(names_from = "forest_type", 
+              values_from = `median(yearly_growth_rate_basal)`,
+              id_cols = genus_species) %>% 
+  ggplot(aes(y = primary, x = secondary, colour = genus_species)) +
+  geom_point() +
+  ggtitle("basal diameter - yearly growth rate") +
+  
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+```
+
+</details>
+
+![](figures/2024-10-02_describe-growth/unnamed-chunk-15-1.png)
+
+Growth rate in primary and secondary forest don’t correlate!
+
+<details class="code-fold">
+<summary>Code</summary>
+
+``` r
 data %>% 
   drop_na(dbase_mean) %>% 
   ggplot(aes(x = years, y = log(dbase_mean), colour = cohort)) +
@@ -560,7 +593,7 @@ data %>%
 
 </details>
 
-![](figures/2024-10-02_describe-growth/unnamed-chunk-15-1.png)
+![](figures/2024-10-02_describe-growth/unnamed-chunk-16-1.png)
 
 ## Climber-cut vs non-climber cut intensively sampled plots
 
@@ -666,7 +699,7 @@ all_gr_pl %>%
 
 </details>
 
-![](figures/2024-10-02_describe-growth/unnamed-chunk-17-1.png)
+![](figures/2024-10-02_describe-growth/unnamed-chunk-18-1.png)
 
 Effect of climber cutting seems not so apparent when looking at the full
 distribution of the data. Perhaps more variation in growth rate in
@@ -709,4 +742,4 @@ data %>%
 
 </details>
 
-![](figures/2024-10-02_describe-growth/unnamed-chunk-18-1.png)
+![](figures/2024-10-02_describe-growth/unnamed-chunk-19-1.png)

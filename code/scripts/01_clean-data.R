@@ -298,13 +298,36 @@ data_backfilled <-
          forest_type == "secondary" & old_new == "N" ~ 2
   ))
 
+
+# Add time variable -------------------------------------------------------
+
+data_backfilled <-
+  data_backfilled %>%
+  group_by(plant_id) %>%
+  slice_min(survey_date, with_ties = FALSE) %>%
+  select(plant_id, survey_date) %>%
+  rename(first_survey = survey_date) %>%
+  ungroup() %>%
+  right_join(data_backfilled)
+
+data_backfilled <-
+  data_backfilled %>%
+  rowwise() %>%
+  mutate(
+    days =
+      survey_date - first_survey) %>%
+  ungroup() %>%
+  mutate(years = as.numeric(days, units = "weeks")/52.25,
+         days_num = as.numeric(days))
+
 # Save --------------------------------------------------------------------
 
 data_backfilled <-
   data_backfilled %>%
   select(forest_type, plant_id, plot, line, position, cohort, plant_no,
-         genus, species, genus_species,
+         genus, species, genus_species, first_survey,
          planting_date, census_no, census_id, survey_date,
+         days, years, days_num,
          survival, height_apex, dbh_mean, dbase_mean) %>%
   distinct() %>%
   filter(! if_all(c(survival, dbh_mean, dbase_mean, height_apex), is.na)) %>%

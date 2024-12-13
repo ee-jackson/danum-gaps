@@ -204,8 +204,9 @@ data_backfilled <-
   data_backfilled %>%
   dplyr::group_by(plant_id) %>%
   arrange(survey_date, .by_group = TRUE) %>%
-  tidyr::fill(line:planting_date, .direction = "updown") %>%
-  ungroup()
+  ungroup() %>%
+  tidyr::fill(line:planting_date, .direction = "updown")
+
 
 # "new" cohort of plants were first surveyed in census "06"
 data_backfilled <-

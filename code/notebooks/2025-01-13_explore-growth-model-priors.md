@@ -1,6 +1,6 @@
 # Explore priors for the growth models
 eleanorjackson
-2025-01-15
+2025-01-16
 
 ``` r
 library("tidyverse")
@@ -42,7 +42,7 @@ data_sample <-
 ## Define model formula
 
 ``` r
-gompertz1 <- bf(dbh_mean ~ A * exp( -exp( -(k * (years - delay) ) ) ),
+gompertz1 <- bf(dbh_mean ~ log(A * exp( -exp( -(k * (years - delay) ) ) ) ),
              A ~ 0 + forest_type + (1 | plant_id),
              k ~ 0 + forest_type + (1 | plant_id),
              delay ~ 0 + forest_type + (1 | plant_id),
@@ -74,7 +74,7 @@ ft_lognorm %>%
                names_to = "parameter") %>% 
   mutate(A_cm = exp(value)) %>% 
   ggplot(aes(x = A_cm, y = parameter)) +
-  stat_halfeye()
+  stat_halfeye() 
 ```
 
 ![](figures/2025-01-13_explore-growth-model-priors/unnamed-chunk-6-1.png)
@@ -110,9 +110,9 @@ ft_lognorm %>%
 ![](figures/2025-01-13_explore-growth-model-priors/unnamed-chunk-8-1.png)
 
 ``` r
-rstudent_t(n = 1000, df = 5, mu = 0, sigma = 5) %>% 
+rstudent_t(n = 1000, df = 5, mu = 0, sigma = 2) %>% 
   density() %>% 
-  plot(xlim = c(0, 50)) 
+  plot(xlim = c(0, 20)) 
 ```
 
 ![](figures/2025-01-13_explore-growth-model-priors/unnamed-chunk-9-1.png)
@@ -137,10 +137,14 @@ ft_lognorm %>%
 
 ![](figures/2025-01-13_explore-growth-model-priors/unnamed-chunk-10-1.png)
 
+I actually think that *delay* could be negative beacuse the trees were
+growing in pots before being planted in the field and we only have
+measurements from the field.
+
 ``` r
-rstudent_t(n = 1000, df = 5, mu = 0, sigma = 50) %>% 
+rstudent_t(n = 1000, df = 5, mu = 0, sigma = 20) %>% 
   density() %>% 
-  plot(xlim = c(0, 200))
+  plot(xlim = c(-40, 40))
 ```
 
 ![](figures/2025-01-13_explore-growth-model-priors/unnamed-chunk-11-1.png)
@@ -150,8 +154,8 @@ rstudent_t(n = 1000, df = 5, mu = 0, sigma = 50) %>%
 ``` r
 priors1 <- c(
   prior(lognormal(4, 1), nlpar = "A", lb = 0),
-  prior(student_t(5, 0, 5), nlpar = "k", lb = 0),
-  prior(student_t(5, 0, 50), nlpar = "delay", lb = 0))
+  prior(student_t(5, 0, 2), nlpar = "k", lb = 0),
+  prior(student_t(5, 0, 20), nlpar = "delay"))
 ```
 
 Fit model with priors
@@ -160,7 +164,7 @@ Fit model with priors
 m1 <- 
   brm(gompertz1,
       data = data_sample,
-      family = brmsfamily("gaussian"), 
+      family = brmsfamily("lognormal"), 
       prior = priors1,
       iter = 500,
       cores = 4,
@@ -172,6 +176,44 @@ m1 <-
       sample_prior = "yes",
       file_refit = "on_change")
 ```
+
+# plot fits
+
+``` r
+keys_ft_sp <- data_sample %>%
+  select(plant_id, forest_type, genus_species) %>%
+  distinct(plant_id, .keep_all = TRUE) %>%
+  mutate(plant_id = droplevels(plant_id))
+
+data_sample %>%
+  data_grid(years = seq_range(years, n = 20),
+            plant_id = droplevels(unique(data_sample$plant_id))) %>%
+  left_join(keys_ft_sp) %>%
+  add_predicted_draws(m1) %>%
+  ggplot(aes(y = dbh_mean, x = years)) +
+  geom_point(data = data_sample,
+             aes(colour = forest_type),
+             shape = 16,
+             alpha = 0.6) +
+  stat_lineribbon(aes(y = .prediction,
+                      group = plant_id,
+                      colour = forest_type),
+                  .width = 0,
+                  linewidth = 1,
+                  alpha = 0.3) +
+  stat_lineribbon(aes(y = .prediction,
+                      group = genus_species),
+                  colour = "black",
+                  linetype = 2,
+                  linewidth = 1.5,
+                  .width = 0,
+                  show.legend = FALSE) +
+  facet_wrap(~genus_species,
+             scales = "free_y") +
+  theme(legend.position = "bottom")
+```
+
+![](figures/2025-01-13_explore-growth-model-priors/unnamed-chunk-14-1.png)
 
 # Compare prior and posterior distributions
 
@@ -200,11 +242,11 @@ bind_rows(prior_A, posterior_A) %>%
   stat_halfeye(alpha = 0.4, 
                normalize = "groups",
                point_interval = "mode_hdi") +
-  coord_cartesian(xlim = c(0, 400)) +
+  coord_cartesian(xlim = c(0, 200)) +
   ggtitle("A")
 ```
 
-![](figures/2025-01-13_explore-growth-model-priors/unnamed-chunk-14-1.png)
+![](figures/2025-01-13_explore-growth-model-priors/unnamed-chunk-15-1.png)
 
 ## *k*
 
@@ -241,13 +283,13 @@ bind_rows(prior_k, posterior_k) %>%
   stat_halfeye(alpha = 0.4, 
                normalize = "groups",
                point_interval = "mode_hdi") +
-  coord_cartesian(xlim = c(0, 1)) +
+  coord_cartesian(xlim = c(0, 0.5)) +
   
   plot_layout(guides = "collect", ncol = 1)+
   plot_annotation(title = "k")
 ```
 
-![](figures/2025-01-13_explore-growth-model-priors/unnamed-chunk-15-1.png)
+![](figures/2025-01-13_explore-growth-model-priors/unnamed-chunk-16-1.png)
 
 ## delay
 
@@ -275,19 +317,19 @@ bind_rows(prior_delay, posterior_delay) %>%
   stat_halfeye(alpha = 0.4, 
                normalize = "groups",
                point_interval = "mode_hdi") +
-  coord_cartesian(xlim = c(0, 100)) +
+  coord_cartesian(xlim = c(-50, 50)) +
   
   bind_rows(prior_delay, posterior_delay) %>% 
   ggplot(aes(x = value, 
              fill = parameter,
              y = parameter)) +
-  stat_halfeye(alpha = 0.4, 
+  stat_halfeye(alpha = 0.4,  
                normalize = "groups",
                point_interval = "mode_hdi") +
-  coord_cartesian(xlim = c(0, 15)) +
+  coord_cartesian(xlim = c(-5, 10)) +
   
   plot_layout(guides = "collect", ncol = 1) +
   plot_annotation(title = "delay")
 ```
 
-![](figures/2025-01-13_explore-growth-model-priors/unnamed-chunk-16-1.png)
+![](figures/2025-01-13_explore-growth-model-priors/unnamed-chunk-17-1.png)

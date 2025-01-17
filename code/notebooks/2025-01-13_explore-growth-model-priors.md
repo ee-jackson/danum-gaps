@@ -1,6 +1,6 @@
 # Explore priors for the growth models
 eleanorjackson
-2025-01-16
+2025-01-17
 
 ``` r
 library("tidyverse")
@@ -79,15 +79,31 @@ ft_lognorm %>%
 
 ![](figures/2025-01-13_explore-growth-model-priors/unnamed-chunk-6-1.png)
 
-suggested prior:
+suggested priors:
 
 ``` r
 rlnorm(n = 1000, meanlog = 4, sdlog = 1) %>% 
   density() %>% 
-  plot(xlim = c(0, 400))
+  plot(xlim = c(0, 1000))
 ```
 
 ![](figures/2025-01-13_explore-growth-model-priors/unnamed-chunk-7-1.png)
+
+``` r
+rlnorm(n = 1000, meanlog = log(150), sdlog = 1.5) %>% 
+  density() %>% 
+  plot(xlim = c(0, 1000))
+```
+
+![](figures/2025-01-13_explore-growth-model-priors/unnamed-chunk-7-2.png)
+
+``` r
+rgamma(n = 10000, shape = 1, rate = 0.0035) %>%
+  density() %>% 
+  plot(xlim = c(0, 1000))
+```
+
+![](figures/2025-01-13_explore-growth-model-priors/unnamed-chunk-7-3.png)
 
 ## Posterior for *k*:
 
@@ -153,7 +169,7 @@ rstudent_t(n = 1000, df = 5, mu = 0, sigma = 20) %>%
 
 ``` r
 priors1 <- c(
-  prior(lognormal(4, 1), nlpar = "A", lb = 0),
+  prior(lognormal(5, 1.2), nlpar = "A", lb = 0),
   prior(student_t(5, 0, 2), nlpar = "k", lb = 0),
   prior(student_t(5, 0, 20), nlpar = "delay"))
 ```
@@ -174,7 +190,7 @@ m1 <-
                         "2025-01-13_explore-growth-model-priors", 
                         "m1.rds"),
       sample_prior = "yes",
-      file_refit = "on_change")
+      file_refit = "always")
 ```
 
 # plot fits
@@ -242,8 +258,18 @@ bind_rows(prior_A, posterior_A) %>%
   stat_halfeye(alpha = 0.4, 
                normalize = "groups",
                point_interval = "mode_hdi") +
+  coord_cartesian(xlim = c(0, 1000)) +
+  
+  bind_rows(prior_A, posterior_A) %>% 
+  ggplot(aes(x = value, y = parameter,
+             fill = parameter)) +
+  stat_halfeye(alpha = 0.4, 
+               normalize = "groups",
+               point_interval = "mode_hdi") +
   coord_cartesian(xlim = c(0, 200)) +
-  ggtitle("A")
+  
+  plot_layout(guides = "collect", ncol = 1)+
+  plot_annotation(title = "A")
 ```
 
 ![](figures/2025-01-13_explore-growth-model-priors/unnamed-chunk-15-1.png)

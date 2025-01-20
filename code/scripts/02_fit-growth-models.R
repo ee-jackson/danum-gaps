@@ -45,7 +45,7 @@ priors1 <- c(
 
 # Forest type only models -------------------------------------------------
 
-# family = Gaussian
+# family = Gaussian, flat priors
 gompertz1 <-
   bf(dbh_mean ~ A * exp( -exp( -(k * (years - delay) ) ) ),
      A ~ 0 + forest_type + (1 | plant_id),
@@ -64,6 +64,30 @@ ft_gau <-
       file = "output/models/ft_gau")
 
 add_criterion(x = ft_gau,
+              criterion = "loo")
+
+# family = lognormal, flat priors
+gompertz2 <-
+  bf(dbh_mean ~ log(A) * exp( -exp( -(k * (years - delay) ) ) ),
+     log(A) ~ 0 + forest_type + (1 | plant_id),
+     k ~ 0 + forest_type + (1 | plant_id),
+     delay ~ 0 + forest_type + (1 | plant_id),
+     nl = TRUE)
+
+ft_lognorm <-
+  brm(gompertz2,
+      data = data_sample,
+      family = brmsfamily("lognormal"),
+      control = list(adapt_delta = 0.9,
+                     max_treedepth = 11),
+      iter = 5000,
+      cores = 4,
+      chains = 4,
+      init = 0,
+      seed = 123,
+      file = "output/models/ft_lognorm")
+
+add_criterion(x = ft_lognorm,
               criterion = "loo")
 
 # family = lognormal

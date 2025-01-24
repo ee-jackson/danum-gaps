@@ -68,8 +68,8 @@ data_sample <-
 ## Define model formula
 
 ```{r}
-gompertz1 <- bf(dbh_mean ~ log(A * exp( -exp( -(k * (years - delay) ) ) ) ),
-             A ~ 0 + forest_type + (1 | plant_id),
+gompertz1 <- bf(dbh_mean ~ log(A) * exp( -exp( -(k * (years - delay) ) ) ),
+             log(A) ~ 0 + forest_type + (1 | plant_id),
              k ~ 0 + forest_type + (1 | plant_id),
              delay ~ 0 + forest_type + (1 | plant_id),
              nl = TRUE)
@@ -173,7 +173,7 @@ rstudent_t(n = 1000, df = 5, mu = 0, sigma = 20) %>%
 
 ```{r}
 priors1 <- c(
-  prior(lognormal(5, 1.2), nlpar = "A", lb = 0),
+  prior(lognormal(4, 1), nlpar = "A", lb = 0),
   prior(student_t(5, 0, 2), nlpar = "k", lb = 0),
   prior(student_t(5, 0, 20), nlpar = "delay"))
 ```

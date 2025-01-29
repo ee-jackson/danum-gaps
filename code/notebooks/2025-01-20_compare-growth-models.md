@@ -1,34 +1,11 @@
----
-title: "Compare growth models"
-author: 'eleanorjackson'
-date: '`r format(Sys.time(), "%d %B, %Y")`' 
-format: gfm+emoji
-editor: source
-execute:
-  warning: false
----
+# Compare growth models
+eleanorjackson
+2025-01-29
 
-```{r setup}
-#| include: false
+Here I’m comparing models of different complexity (in terms of their
+random effect structure).
 
-file_name <- knitr::current_input()
-
-knitr::opts_chunk$set(
-  fig.path =
-    paste0("figures/", sub("\\.rmarkdown$", "", basename(file_name)), 
-           "/", sep = "")
-)
-
-set.seed(123)
-ggplot2::theme_set(ggplot2::theme_bw(base_size = 10))
-```
-
-Here I'm comparing models of different complexity
-(in terms of their random effect structure).
-
-```{r}
-#| output: FALSE
-
+``` r
 library("tidyverse")
 library("here")
 library("patchwork")
@@ -36,28 +13,25 @@ library("brms")
 library("broom.mixed")
 ```
 
-```{r}
-
+``` r
 file_names <- as.list(dir(path = here::here("output", "models", "priors2"),
                           full.names = TRUE))
 
 model_list <- map(file_names, readRDS, environment())
 
 names(model_list) <- lapply(file_names, basename)
-
 ```
 
-Leave-one-out cross-validation (LOO-CV) 
-is a popular method for comparing Bayesian models 
-based on their estimated predictive performance on new/unseen data.
+Leave-one-out cross-validation (LOO-CV) is a popular method for
+comparing Bayesian models based on their estimated predictive
+performance on new/unseen data.
 
-Expected log predictive density (ELPD): 
-If new observations are well-accounted by the posterior predictive distribution,
-then the density of the posterior predictive distribution is high 
-and so is its logarithm. 
-So higher ELPD = better predictive performance.
+Expected log predictive density (ELPD): If new observations are
+well-accounted by the posterior predictive distribution, then the
+density of the posterior predictive distribution is high and so is its
+logarithm. So higher ELPD = better predictive performance.
 
-```{r}
+``` r
 comp <- loo_compare(model_list$ft_lognorm_priors.rds,
                     model_list$ft_sp_lognorm_priors.rds,
                     model_list$ft_sp_pl_lognorm_priors.rds,
@@ -66,7 +40,13 @@ comp <- loo_compare(model_list$ft_lognorm_priors.rds,
 print(comp, digits = 3)
 ```
 
-```{r}
+                                              elpd_diff se_diff  
+    model_list$ft_sp_pl_co_lognorm_priors.rds     0.000     0.000
+    model_list$ft_sp_pl_lognorm_priors.rds      -43.483    22.514
+    model_list$ft_sp_lognorm_priors.rds         -53.862    16.913
+    model_list$ft_lognorm_priors.rds          -2749.305    81.632
+
+``` r
 comp %>% 
   data.frame() %>% 
   rownames_to_column(var = "model_name") %>% 
@@ -81,7 +61,9 @@ comp %>%
        title = "expected log predictive density (ELPD)") 
 ```
 
-```{r}
+![](figures/2025-01-20_compare-growth-models/unnamed-chunk-4-1.png)
+
+``` r
 loo_compare(model_list$ft_sp_lognorm_priors.rds,
             model_list$ft_sp_pl_lognorm_priors.rds,
             model_list$ft_sp_pl_co_lognorm_priors.rds) %>% 
@@ -98,19 +80,22 @@ loo_compare(model_list$ft_sp_lognorm_priors.rds,
        title = "expected log predictive density (ELPD)") 
 ```
 
-In the [loo package documentation](https://mc-stan.org/loo/articles/online-only/faq.html#how-to-use-cross-validation-for-model-selection-)
+![](figures/2025-01-20_compare-growth-models/unnamed-chunk-5-1.png)
+
+In the [loo package
+documentation](https://mc-stan.org/loo/articles/online-only/faq.html#how-to-use-cross-validation-for-model-selection-)
 they say:
 
-> If elpd difference (`elpd_diff` in loo package) is less than 4, 
-the difference is small 
-[(Sivula, Magnusson and Vehtari, 2020)](https://doi.org/10.48550/arXiv.2008.10296)). 
-If elpd difference is larger than 4,
-then compare that difference to standard error of `elpd_diff` 
-(provided e.g. by loo package) [(Sivula, Magnusson and Vehtari, 2020)](https://doi.org/10.48550/arXiv.2008.10296).
+> If elpd difference (`elpd_diff` in loo package) is less than 4, the
+> difference is small [(Sivula, Magnusson and Vehtari,
+> 2020)](https://doi.org/10.48550/arXiv.2008.10296)). If elpd difference
+> is larger than 4, then compare that difference to standard error of
+> `elpd_diff` (provided e.g. by loo package) [(Sivula, Magnusson and
+> Vehtari, 2020)](https://doi.org/10.48550/arXiv.2008.10296).
 
 ## Compare parameter estimates
 
-```{r}
+``` r
 my_coef_tab <-
   tibble(fit = model_list[2:4],
          model = names(model_list[2:4])) %>%
@@ -127,13 +112,9 @@ my_coef_tab <-
     )
   )) %>%
   unnest(tidy)
-
 ```
 
-```{r}
-#| fig_width: 7
-#| fig_height: 7
-
+``` r
 my_coef_tab %>% 
   rowwise() %>% 
   mutate(parameter = pluck(strsplit(term,"_"),1,2)) %>% 
@@ -146,12 +127,12 @@ my_coef_tab %>%
              scales = "free") 
 ```
 
-These are the estimates of the posterior distribution with 95% credible intervals based on quantiles. 
+![](figures/2025-01-20_compare-growth-models/unnamed-chunk-7-1.png)
 
-```{r}
-#| fig_width: 7
-#| fig_height: 7
+These are the estimates of the posterior distribution with 95% credible
+intervals based on quantiles.
 
+``` r
 my_vars <- c("b_A_forest_typeprimary", "b_A_forest_typesecondary",
              "b_delay_forest_typeprimary", "b_delay_forest_typesecondary",
              "b_k_forest_typeprimary", "b_k_forest_typesecondary")
@@ -174,16 +155,15 @@ draws %>%
   facet_grid(model~parameter, scales = "free") 
 ```
 
-Here looking at the mode (point) and highest density interval
-(I think sometimes prefered since they allow for skewed posterior distributions).
+![](figures/2025-01-20_compare-growth-models/unnamed-chunk-8-1.png)
 
-The most basic model is really terrible. 
-Excluding it from the below plot.
+Here looking at the mode (point) and highest density interval (I think
+sometimes prefered since they allow for skewed posterior distributions).
 
-```{r}
-#| fig_width: 7
-#| fig_height: 7
+The most basic model is really terrible. Excluding it from the below
+plot.
 
+``` r
 my_vars <- c("b_A_forest_typeprimary", "b_A_forest_typesecondary",
              "b_delay_forest_typeprimary", "b_delay_forest_typesecondary",
              "b_k_forest_typeprimary", "b_k_forest_typesecondary")
@@ -206,17 +186,16 @@ draws %>%
   facet_grid(model~parameter, scales = "free")
 ```
 
-Adding cohort into the model seems to introduce a lot of uncertainty
-in the estimates for *delay* and *k*, 
-yet this model supposedly has the best predictive performance?
-Do I need to give the chains longer to converge?
+![](figures/2025-01-20_compare-growth-models/unnamed-chunk-9-1.png)
+
+Adding cohort into the model seems to introduce a lot of uncertainty in
+the estimates for *delay* and *k*, yet this model supposedly has the
+best predictive performance? Do I need to give the chains longer to
+converge?
 
 ### ft_sp_lognorm_priors
 
-```{r}
-#| fig_width: 7
-#| fig_height: 7
-
+``` r
 plot(model_list[[2]], 
        variable = "^b_*",
        ask = FALSE,
@@ -224,12 +203,11 @@ plot(model_list[[2]],
        nvariables = 6) 
 ```
 
+![](figures/2025-01-20_compare-growth-models/unnamed-chunk-10-1.png)
+
 ### ft_sp_pl_lognorm_priors
 
-```{r}
-#| fig_width: 7
-#| fig_height: 7
-
+``` r
 plot(model_list[[4]], 
        variable = "^b_*",
        ask = FALSE,
@@ -237,17 +215,18 @@ plot(model_list[[4]],
        nvariables = 6) 
 ```
 
+![](figures/2025-01-20_compare-growth-models/unnamed-chunk-11-1.png)
+
 ### ft_sp_pl_co_lognorm_priors
 
-```{r}
-#| fig_width: 7
-#| fig_height: 7
-
+``` r
 plot(model_list[[3]], 
        variable = "^b_*",
        ask = FALSE,
        regex = TRUE,
        nvariables = 6) 
 ```
+
+![](figures/2025-01-20_compare-growth-models/unnamed-chunk-12-1.png)
 
 They do look a bit sloppy here compared to the other models.

@@ -1,0 +1,106 @@
+---
+title: "Prior sensitivity for *A* in the growth models"
+author: 'eleanorjackson'
+date: '`r format(Sys.time(), "%d %B, %Y")`' 
+format: gfm+emoji
+editor: source
+execute:
+  warning: false
+---
+
+```{r setup}
+#| include: false
+
+file_name <- knitr::current_input()
+
+knitr::opts_chunk$set(
+  fig.path =
+    paste0("figures/", sub("\\.rmarkdown$", "", basename(file_name)), 
+           "/", sep = "")
+)
+
+set.seed(123)
+ggplot2::theme_set(ggplot2::theme_classic(base_size = 10))
+```
+
+I've fit models with the full data using priors which
+[I selected here](/code/notebooks/2025-01-24_test-A-param-prior.md).
+
+I want to check the sensitivity of the pior -  
+are the parameter estimates from these two models very different?
+
+```{r}
+#| output: FALSE
+
+library("tidyverse")
+library("here")
+library("patchwork")
+library("brms")
+library("tidybayes")
+library("modelr")
+```
+
+
+```{r}
+
+priors1 <-
+  readRDS(here::here("output", "models", "priors1", "ft_sp_pl_lognorm_priors.rds"))
+
+
+priors2 <-
+  readRDS(here::here("output", "models", "priors2", "ft_sp_pl_lognorm_priors.rds"))
+
+my_vars <- c("b_A_forest_typeprimary", "b_A_forest_typesecondary",
+             "b_delay_forest_typeprimary", "b_delay_forest_typesecondary",
+             "b_k_forest_typeprimary", "b_k_forest_typesecondary")
+
+my_regex <- paste0(my_vars, collapse="|")
+```
+
+The `prior1` model uses a `lognormal(4, 1)` prior on the *A* parameter,
+and the `prior2` model uses a wider `lognormal(5, 1.2)` prior 
+on the *A* parameter.
+
+```{r}
+posterior_1 <-
+  priors1 %>% 
+  spread_draws(!!sym(my_regex), regex = TRUE) %>% 
+  pivot_longer(cols = all_of(my_vars), 
+               names_to = "var") %>% 
+  mutate(prior = "prior_1") %>% 
+  select(value, var, prior)
+
+posterior_2 <-
+  priors2 %>% 
+  spread_draws(!!sym(my_regex), regex = TRUE) %>% 
+  pivot_longer(cols = all_of(my_vars), 
+               names_to = "var") %>% 
+  mutate(prior = "prior_2") %>% 
+  select(value, var, prior)
+
+```
+
+
+```{r}
+bind_rows(posterior_1, 
+          posterior_2) %>% 
+  rowwise() %>% 
+  mutate(parameter = pluck(strsplit(var,"_"),1,2)) %>% 
+  ggplot(aes(x = value, y = var)) +
+  stat_halfeye(normalize = "groups",
+               point_interval = "mode_hdi") +
+  facet_grid(prior~parameter, scales = "free") +
+  theme_bw()
+```
+
+```{r}
+posterior_summary(priors1,
+                  variable = my_vars)
+```
+
+```{r}
+posterior_summary(priors2,
+                  variable = my_vars)
+```
+
+Look very similar to me!

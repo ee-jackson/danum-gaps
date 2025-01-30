@@ -1,0 +1,151 @@
+---
+title: "Descriptive plots for Maria"
+author: 'eleanorjackson'
+date: '`r format(Sys.time(), "%d %B, %Y")`' 
+format: pdf
+editor: source
+execute:
+  warning: false
+---
+
+```{r setup}
+#| include: false
+
+file_name <- knitr::current_input()
+
+knitr::opts_chunk$set(
+  fig.path =
+    paste0("figures/", sub("\\.rmarkdown$", "", basename(file_name)), 
+           "/", sep = "")
+)
+
+set.seed(123)
+ggplot2::theme_set(ggplot2::theme_classic(base_size = 10))
+```
+
+```{r}
+#| echo: false
+
+library("tidyverse")
+library("here")
+library("patchwork")
+```
+
+```{r}
+#| echo: false
+
+data <- 
+  readRDS(here::here("data", "derived", "data_cleaned.rds")) 
+```
+
+## Initial size
+
+The secondary forest seedlings (SBE) were planted first and
+the leftovers were planted in the primary forest (Danum) at a later date.
+
+In the below figure we can see that the primary forest seedlings were
+smaller than the secondary forest seedlings at the time of their first survey,
+and have a smaller range of sizes.
+This could be beacuse they were in pots for longer causing their growth to be stunted.
+
+This effects some species more than others.
+
+```{r}
+#| echo: false
+
+data <- 
+  data %>% 
+  drop_na(dbase_mean) %>% 
+  group_by(plant_id) %>%
+  slice_min(survey_date, with_ties = FALSE) %>%
+  ungroup() %>% 
+  select(plant_id, survey_date) %>%
+  rename(first_survey = survey_date) %>% 
+  right_join(data) 
+```
+
+```{r}
+#| echo: false
+#| fig.height: 6
+
+data %>% 
+  rowwise() %>% 
+  mutate(type = paste(forest_type, cohort, sep = "_")) %>% 
+  ungroup() %>% 
+  filter(survey_date == first_survey) %>% 
+  ggplot(aes(x = dbase_mean, 
+             fill = type,
+             colour = type)) +
+  geom_density(alpha = 0.3) +
+  facet_wrap(~genus_species) +
+  stat_summary(aes(xintercept = ..x.., y = 0), 
+               fun = mean, 
+               geom = "vline", 
+               orientation = "y",
+               linetype = 2) +
+  xlim(0, 25) +
+  theme(legend.position = "bottom") +
+  xlab("Basal diameter") +
+  ggtitle("Size at first survey")
+```
+
+```{r}
+#| echo: false
+
+data %>% 
+  filter(survey_date == first_survey) %>% 
+  group_by(genus_species, forest_type, cohort) %>% 
+  summarise(`median_basal_diameter` = median(dbase_mean, na.rm = TRUE),
+           IQR = IQR(dbase_mean, na.rm = TRUE)) %>% 
+  knitr::kable()
+```
+
+
+## Irregular & unequal sampling effort
+
+In the below figure each line represents a date on which data was collected
+and the lines are coloured by the census number. 
+Each census took multiple days (or months in the case of the SBE) to complete.
+
+```{r}
+#| echo: false
+#| fig_width: 9
+
+data %>% 
+  mutate(month = lubridate::month(survey_date)) %>% 
+  group_by(survey_date) %>% 
+  slice_head() %>% 
+  ggplot(aes(y = forest_type, x = survey_date, 
+             colour = census_no)) +
+  geom_point(alpha = 0.6, shape = "|", size = 10) +
+  theme_bw() +
+  scale_x_date(minor_breaks = "year") +
+  scale_colour_viridis_d() +
+  theme(legend.position = "none")
+```
+
+
+```{r}
+#| echo: false
+
+data %>% 
+  select(census_no, plot, forest_type) %>%
+  distinct() %>% 
+  ggplot(aes(x = census_no, y = plot)) +
+  geom_point(shape = 16, alpha = 0.8) +
+  facet_wrap(~forest_type, scales = "free_x") +
+  guides(x =  guide_axis(angle = 90)) 
+```
+
+There have been 22 censuses of the primary forest seedlings, and 26 censuses of the secondary forest seedlings.
+
+Plot 17 in the secondary forest was not sampled as frequently as the other secondary forest plots as it wasn’t included in surveys for the climber cutting study.
+
+## Climber cutting
+
+Three of the secondary forest plots received a climber cutting treatment (plots 05, 11 and 14) 
+(see [O’Brien et al 2019](https://doi.org/10.1111/1365-2664.13335)). 
+When data was collected for this study only two planting lines 
+from each of the climber cut (plots 05, 11 and 14) and 
+control plots (plots 03 and 08) were surveyed 
+since a full census would take too long.

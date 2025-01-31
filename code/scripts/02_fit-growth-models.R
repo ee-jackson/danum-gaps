@@ -2,7 +2,7 @@
 
 ## Author: E E Jackson, eleanor.elizabeth.j@gmail.com
 ## Script: 02_fit-growth-models.R
-## Desc: Fit growth models
+## Desc: Fit growth models of increasing complexity
 ## Date created: 2025-01-10
 
 
@@ -38,7 +38,7 @@ data_sample <-
 # Set priors --------------------------------------------------------------
 
 priors1 <- c(
-  prior(lognormal(4, 1), nlpar = "A", lb = 0),
+  prior(lognormal(5, 1.2), nlpar = "A", lb = 0),
   prior(student_t(5, 0, 2), nlpar = "k", lb = 0),
   prior(student_t(5, 0, 20), nlpar = "delay"))
 
@@ -57,7 +57,8 @@ ft_gau <-
   brm(gompertz1,
       data = data_sample,
       family = brmsfamily("gaussian"),
-      iter = 5000,
+      prior = NULL,
+      iter = 1000,
       cores = 4,
       chains = 4,
       seed = 123,
@@ -65,6 +66,10 @@ ft_gau <-
 
 add_criterion(x = ft_gau,
               criterion = "loo")
+
+print("ft_gau fit complete")
+
+rm(ft_gau)
 
 # family = lognormal, flat priors
 gompertz2 <-
@@ -78,17 +83,19 @@ ft_lognorm <-
   brm(gompertz2,
       data = data_sample,
       family = brmsfamily("lognormal"),
-      control = list(adapt_delta = 0.9,
-                     max_treedepth = 11),
-      iter = 5000,
+      prior = NULL,
+      iter = 1000,
       cores = 4,
       chains = 4,
-      init = 0,
       seed = 123,
       file = "output/models/ft_lognorm")
 
 add_criterion(x = ft_lognorm,
               criterion = "loo")
+
+print("ft_lognorm fit complete")
+
+rm(ft_lognorm)
 
 # family = lognormal
 gompertz2 <-
@@ -103,17 +110,19 @@ ft_lognorm_priors <-
       data = data_sample,
       family = brmsfamily("lognormal"),
       prior = priors1,
-      control = list(adapt_delta = 0.9,
-                     max_treedepth = 11),
-      iter = 5000,
+      iter = 1000,
       cores = 4,
       chains = 4,
       init = 0,
       seed = 123,
-      file = "output/models/ft_lognorm_priors")
+      file = "output/models/priors2/ft_lognorm_priors")
 
 add_criterion(x = ft_lognorm_priors,
               criterion = "loo")
+
+print("ft_lognorm_priors fit complete")
+
+rm(ft_lognorm_priors)
 
 
 # add species -------------------------------------------------------------
@@ -121,11 +130,14 @@ add_criterion(x = ft_lognorm_priors,
 gompertz3 <-
   bf(dbh_mean ~ log(A) * exp( -exp( -(k * (years - delay) ) ) ),
      log(A) ~ 0 + forest_type +
-       (0 + forest_type|genus_species) + (1 | plant_id),
+       (0 + forest_type|genus_species) +
+       (1 | plant_id),
      k ~ 0 + forest_type +
-       (0 + forest_type|genus_species) + (1 | plant_id),
+       (0 + forest_type|genus_species) +
+       (1 | plant_id),
      delay ~ 0 + forest_type +
-       (0 + forest_type|genus_species) + (1 | plant_id),
+       (0 + forest_type|genus_species) +
+       (1 | plant_id),
      nl = TRUE)
 
 ft_sp_lognorm_priors <-
@@ -133,17 +145,19 @@ ft_sp_lognorm_priors <-
       data = data_sample,
       family = brmsfamily("lognormal"),
       prior = priors1,
-      control = list(adapt_delta = 0.9,
-                     max_treedepth = 11),
-      iter = 5000,
+      iter = 1000,
       cores = 4,
       chains = 4,
       init = 0,
       seed = 123,
-      file = "output/models/ft_sp_lognorm_priors")
+      file = "output/models/priors2/ft_sp_lognorm_priors")
 
 add_criterion(x = ft_sp_lognorm_priors,
               criterion = "loo")
+
+print("ft_sp_lognorm_priors fit complete")
+
+rm(ft_sp_lognorm_priors)
 
 
 # add plot ----------------------------------------------------------------
@@ -152,13 +166,16 @@ gompertz4 <-
   bf(dbh_mean ~ log(A) * exp( -exp( -(k * (years - delay) ) ) ),
      log(A) ~ 0 + forest_type +
        (0 + forest_type|genus_species) +
-       (1 | plant_id) + (1 | forest_type:plot),
+       (1 | plant_id) +
+       (1 | forest_type:plot),
      k ~ 0 + forest_type +
        (0 + forest_type|genus_species) +
-       (1 | plant_id) + (1 | forest_type:plot),
+       (1 | plant_id) +
+       (1 | forest_type:plot),
      delay ~ 0 + forest_type +
        (0 + forest_type|genus_species) +
-       (1 | plant_id) + (1 | forest_type:plot),
+       (1 | plant_id) +
+       (1 | forest_type:plot),
      nl = TRUE)
 
 ft_sp_pl_lognorm_priors <-
@@ -166,17 +183,19 @@ ft_sp_pl_lognorm_priors <-
       data = data_sample,
       family = brmsfamily("lognormal"),
       prior = priors1,
-      control = list(adapt_delta = 0.9,
-                     max_treedepth = 11),
-      iter = 5000,
+      iter = 1000,
       cores = 4,
       chains = 4,
       init = 0,
       seed = 123,
-      file = "output/models/ft_sp_pl_lognorm_priors")
+      file = "output/models/priors2/ft_sp_pl_lognorm_priors")
 
 add_criterion(x = ft_sp_pl_lognorm_priors,
               criterion = "loo")
+
+print("ft_sp_pl_lognorm_priors fit complete")
+
+rm(ft_sp_pl_lognorm_priors)
 
 
 # add cohort --------------------------------------------------------------
@@ -185,32 +204,79 @@ gompertz5 <-
   bf(dbh_mean ~ log(A) * exp( -exp( -(k * (years - delay) ) ) ),
      log(A) ~ 0 + forest_type +
        (0 + forest_type|genus_species) +
-       (1 | plant_id) + (1 | forest_type:plot) +
-       (1 | forest_type:cohort),
+       (1 | plant_id) +
+       (1 | cohort),
      k ~ 0 + forest_type +
        (0 + forest_type|genus_species) +
-       (1 | plant_id) + (1 | forest_type:plot) +
-       (1 | forest_type:cohort),
+       (1 | plant_id) +
+       (1 | cohort),
      delay ~ 0 + forest_type +
        (0 + forest_type|genus_species) +
-       (1 | plant_id) + (1 | forest_type:plot) +
-       (1 | forest_type:cohort),
+       (1 | plant_id) +
+       (1 | cohort),
      nl = TRUE)
 
-ft_sp_pl_co_lognorm_priors <-
+ft_sp_co_lognorm_priors <-
   brm(gompertz5,
       data = data_sample,
       family = brmsfamily("lognormal"),
       prior = priors1,
-      control = list(adapt_delta = 0.9,
-                     max_treedepth = 11),
-      iter = 5000,
+      iter = 1000,
       cores = 4,
       chains = 4,
       init = 0,
       seed = 123,
-      file = "output/models/ft_sp_pl_co_lognorm_priors")
+      file = "output/models/priors2/ft_sp_co_lognorm_priors")
 
-add_criterion(x = ft_sp_pl_co_lognorm_priors,
+add_criterion(x = ft_sp_co_lognorm_priors,
               criterion = "loo")
 
+print("ft_sp_co_lognorm_priors fit complete")
+
+rm(ft_sp_co_lognorm_priors)
+
+# add climber cut ---------------------------------------------------------
+
+data_sample <-
+  data_sample %>%
+  mutate(climber_cut = case_when(
+    forest_type == "secondary" & plot == "05" |
+    forest_type == "secondary" & plot == "11" |
+    forest_type == "secondary" & plot == "14" ~ TRUE,
+    .default  = FALSE
+  ))
+
+gompertz7 <-
+  bf(dbh_mean ~ log(A) * exp( -exp( -(k * (years - delay) ) ) ),
+     log(A) ~ 0 + forest_type +
+       (0 + forest_type|genus_species) +
+       (1 | plant_id) +
+       (1 | climber_cut),
+     k ~ 0 + forest_type +
+       (0 + forest_type|genus_species) +
+       (1 | plant_id) +
+       (1 | climber_cut),
+     delay ~ 0 + forest_type +
+       (0 + forest_type|genus_species) +
+       (1 | plant_id) +
+       (1 | climber_cut),
+     nl = TRUE)
+
+ft_sp_cc_lognorm_priors <-
+  brm(gompertz7,
+      data = data_sample,
+      family = brmsfamily("lognormal"),
+      prior = priors1,
+      iter = 1000,
+      cores = 4,
+      chains = 4,
+      init = 0,
+      seed = 123,
+      file = "output/models/priors2/ft_sp_cc_lognorm_priors")
+
+add_criterion(x = ft_sp_cc_lognorm_priors,
+              criterion = "loo")
+
+print("ft_sp_cc_lognorm_priors fit complete")
+
+rm(ft_sp_cc_lognorm_priors)

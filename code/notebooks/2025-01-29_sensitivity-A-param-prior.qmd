@@ -43,12 +43,14 @@ library("modelr")
 
 ```{r}
 
-priors1 <-
-  readRDS(here::here("output", "models", "priors1", "ft_sp_pl_lognorm_priors.rds"))
+priors0 <-
+  readRDS(here::here("output", "models", "ft_sp_lognorm.rds"))
 
+priors1 <-
+  readRDS(here::here("output", "models", "priors1", "ft_sp_lognorm_priors.rds"))
 
 priors2 <-
-  readRDS(here::here("output", "models", "priors2", "ft_sp_pl_lognorm_priors.rds"))
+  readRDS(here::here("output", "models", "priors2", "ft_sp_lognorm_priors.rds"))
 
 my_vars <- c("b_A_forest_typeprimary", "b_A_forest_typesecondary",
              "b_delay_forest_typeprimary", "b_delay_forest_typesecondary",
@@ -60,8 +62,17 @@ my_regex <- paste0(my_vars, collapse="|")
 The `prior1` model uses a `lognormal(4, 1)` prior on the *A* parameter,
 and the `prior2` model uses a wider `lognormal(5, 1.2)` prior 
 on the *A* parameter.
+The `prior0` model has flat priors.
 
 ```{r}
+posterior_0 <-
+  priors0 %>% 
+  spread_draws(!!sym(my_regex), regex = TRUE) %>% 
+  pivot_longer(cols = all_of(my_vars), 
+               names_to = "var") %>% 
+  mutate(prior = "prior_flat") %>% 
+  select(value, var, prior)
+
 posterior_1 <-
   priors1 %>% 
   spread_draws(!!sym(my_regex), regex = TRUE) %>% 
@@ -82,7 +93,8 @@ posterior_2 <-
 
 
 ```{r}
-bind_rows(posterior_1, 
+bind_rows(posterior_0,
+          posterior_1, 
           posterior_2) %>% 
   rowwise() %>% 
   mutate(parameter = pluck(strsplit(var,"_"),1,2)) %>% 
@@ -91,6 +103,11 @@ bind_rows(posterior_1,
                point_interval = "mode_hdi") +
   facet_grid(prior~parameter, scales = "free") +
   theme_bw()
+```
+
+```{r}
+posterior_summary(priors0,
+                  variable = my_vars)
 ```
 
 ```{r}

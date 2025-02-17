@@ -348,8 +348,8 @@ data_backfilled <-
   mutate(climber_cut = case_when(
     forest_type == "secondary" & plot == "05" |
       forest_type == "secondary" & plot == "11" |
-      forest_type == "secondary" & plot == "14" ~ TRUE,
-    .default  = FALSE
+      forest_type == "secondary" & plot == "14" ~ 1,
+    .default  = 0
   ))
 
 

@@ -11,6 +11,8 @@
 library("tidyverse")
 library("here")
 library("janitor")
+library("lme4")
+library("modelr")
 
 
 # Get data ----------------------------------------------------------------
@@ -276,18 +278,6 @@ data_backfilled <-
   bind_rows(filter(data_backfilled, ! plant_id %in% lazarus_ids))
 
 
-# Clean growth ------------------------------------------------------------
-
-data_backfilled <-
-  data_backfilled %>%
-  rowwise() %>%
-  mutate(
-    dbh_mean = mean(c(dbh1, dbh2), na.rm = TRUE),
-    dbase_mean = mean(c(diam1, diam2), na.rm = TRUE)
-  ) %>%
-  ungroup()
-
-
 # Clean cohort ------------------------------------------------------------
 
 data_backfilled <-
@@ -320,19 +310,66 @@ data_backfilled <-
   mutate(years = as.numeric(days, units = "weeks")/52.25,
          days_num = as.numeric(days))
 
+
+# Clean growth ------------------------------------------------------------
+
+data_backfilled <-
+  data_backfilled %>%
+  rowwise() %>%
+  mutate(
+    dbh_mean = mean(c(dbh1, dbh2), na.rm = TRUE),
+    dbase_mean = mean(c(diam1, diam2), na.rm = TRUE)
+  ) %>%
+  ungroup()
+
+# predict basal diameter or DBH when missing
+dbase_pred <-
+  lme4::lmer(dbase_mean ~ dbh_mean + (1 | genus_species),
+             data = data_backfilled)
+
+dbh_pred <-
+  lme4::lmer(dbh_mean ~ dbase_mean + (1 | genus_species),
+             data = data_backfilled)
+
+data_backfilled <-
+  data_backfilled %>%
+  modelr::add_predictions(model = dbh_pred, var = "dbh_pred") %>%
+  modelr::add_predictions(model = dbase_pred, var = "dbase_pred") %>%
+  mutate(dbh_coalesce = coalesce(dbh_mean, dbh_pred),
+         dbase_coalesce = coalesce(dbase_mean, dbase_pred) ) %>%
+  mutate(dbh_coalesce = replace(dbh_coalesce, dbh_coalesce < 0 , NA),
+         dbase_coalesce = replace(dbase_coalesce, dbase_coalesce < 0 , NA) )
+
+
+# Add col indicating whether climber cut ----------------------------------
+
+data_backfilled <-
+  data_backfilled %>%
+  mutate(climber_cut = case_when(
+    forest_type == "secondary" & plot == "05" |
+      forest_type == "secondary" & plot == "11" |
+      forest_type == "secondary" & plot == "14" ~ TRUE,
+    .default  = FALSE
+  ))
+
+
 # Save --------------------------------------------------------------------
 
 data_backfilled <-
   data_backfilled %>%
-  select(forest_type, plant_id, plot, line, position, cohort, plant_no,
-         genus, species, genus_species, first_survey,
-         planting_date, census_no, census_id, survey_date,
+  mutate(forest_logged = ifelse(forest_type == "secondary", 1, 0)) %>%
+  select(plant_id, forest_type, forest_logged, climber_cut,
+         genus, species, genus_species,
+         plot, line, position, cohort, plant_no,
+         first_survey, planting_date, census_no, census_id, survey_date,
          days, years, days_num,
-         survival, height_apex, dbh_mean, dbase_mean) %>%
+         survival, height_apex, dbh_mean, dbh_pred, dbh_coalesce,
+         dbase_mean, dbase_pred, dbase_coalesce) %>%
   distinct() %>%
   filter(! if_all(c(survival, dbh_mean, dbase_mean, height_apex), is.na)) %>%
   filter(! str_detect(plant_id, "NA")) %>%
-  mutate(across(c(forest_type, plant_id, plot, cohort, genus_species,
+  mutate(across(c(forest_type, forest_logged, plant_id, plot,
+                  climber_cut, cohort, genus_species,
                   line, position, plant_no, census_no), as.factor))
 
 saveRDS(data_backfilled,

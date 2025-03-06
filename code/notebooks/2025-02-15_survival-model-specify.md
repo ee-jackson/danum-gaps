@@ -1,0 +1,274 @@
+# Thinking about how to specify the survival model
+eleanorjackson
+2025-03-06
+
+``` r
+library("tidyverse")
+library("lme4")
+library("brms")
+```
+
+Get data
+
+``` r
+data <-
+  readRDS(here::here("data", "derived", "data_cleaned.rds"))
+```
+
+Aggregate data and add censor
+
+``` r
+# time to first recorded dead
+interval_censored <-
+  data %>%
+  filter(survival == 0) %>%
+  group_by(plant_id) %>%
+  slice_min(survey_date, with_ties = FALSE) %>%
+  ungroup() %>%
+  rename(time_to_dead = years) %>%
+  select(plant_id, genus_species, plot, forest_type, cohort, time_to_dead) %>%
+  mutate(censor = "interval")
+
+# time to last recorded alive
+interval_censored <-
+  data %>%
+  filter(plant_id %in% interval_censored$plant_id) %>%
+  filter(survival == 1) %>%
+  group_by(plant_id) %>%
+  slice_max(survey_date, with_ties = FALSE) %>%
+  ungroup() %>%
+  rename(time_to_last_alive = years) %>%
+  select(plant_id, time_to_last_alive, dbase_mean, dbh_mean) %>%
+  right_join(interval_censored)
+
+# trees never recorded dead
+right_censored <-
+  data %>%
+  filter(!plant_id %in% interval_censored$plant_id) %>%
+  group_by(plant_id) %>%
+  slice_max(survey_date, with_ties = FALSE) %>%
+  ungroup() %>%
+  rename(time_to_last_alive = years) %>%
+  select(plant_id, genus_species, plot, forest_type,
+         cohort, time_to_last_alive, dbase_mean, dbh_mean) %>%
+  mutate(censor = "right")
+
+data_aggregated <-
+  bind_rows(interval_censored, right_censored) %>%
+  filter(time_to_last_alive > 0) %>%
+  mutate(forest_logged = ifelse(forest_type == "secondary", 1, 0)) %>%
+  mutate(forest_logged = as.factor(forest_logged)) %>% 
+  rowwise() %>% 
+  mutate(time_to_dead_discrete =
+           case_when(
+             censor == "interval" ~ median(c(time_to_last_alive, time_to_dead)),
+             .default = time_to_dead
+             )) %>% 
+  ungroup()
+```
+
+``` r
+data_aggregated %>% 
+  ggplot(aes(x = dbase_mean, y = time_to_dead_discrete, 
+             colour = forest_type)) +
+  geom_point(shape = 16, alpha = 0.5) +
+  geom_smooth(method = "glm")+
+  ylim(0,20) +
+  xlim(0,300)
+```
+
+![](figures/2025-02-15_survival-model-specify/unnamed-chunk-4-1.png)
+
+``` r
+data_aggregated %>% 
+  ggplot(aes(x = dbh_mean, y = time_to_dead_discrete, 
+             colour = forest_type)) +
+  geom_point(shape = 16, alpha = 0.5) +
+  geom_smooth(method = "glm")+
+  ylim(0,20) +
+  xlim(0,300)
+```
+
+![](figures/2025-02-15_survival-model-specify/unnamed-chunk-5-1.png)
+
+## Simple glm
+
+``` r
+m1 <- glm(
+  formula = time_to_dead_discrete ~ dbase_mean,
+  data = data_aggregated
+  )
+```
+
+``` r
+data_aggregated %>% 
+  modelr::data_grid(dbase_mean = modelr::seq_range(dbase_mean, n = 20)) %>% 
+  modelr::add_predictions(m1) %>%
+  ggplot(aes(x = dbase_mean)) +
+  geom_point(aes(y = time_to_dead_discrete),
+             data = data_aggregated, 
+             shape = 16, alpha = 0.5) +
+  geom_line(aes(y = pred), colour = "blue") +
+  ylim(0,20) +
+  xlim(0,300)
+```
+
+![](figures/2025-02-15_survival-model-specify/unnamed-chunk-7-1.png)
+
+## add forest type
+
+``` r
+m2 <- glm(
+  formula = time_to_dead_discrete ~
+    0 + forest_logged + dbase_mean,
+  data = data_aggregated
+  )
+```
+
+``` r
+data_aggregated %>% 
+  modelr::data_grid(dbase_mean = modelr::seq_range(dbase_mean, n = 20),
+                    forest_logged) %>% 
+  modelr::add_predictions(m2) %>%
+  ggplot(aes(x = dbase_mean)) +
+  geom_point(aes(y = time_to_dead_discrete, colour = forest_logged),
+             data = data_aggregated, 
+             shape = 16, alpha = 0.5) +
+  geom_line(aes(y = pred, colour = forest_logged)) +
+  ylim(0,20) +
+  xlim(0,300)
+```
+
+![](figures/2025-02-15_survival-model-specify/unnamed-chunk-9-1.png)
+
+## Forest type \* size interaction
+
+Survival is dependent on an interaction between size and forest type?
+
+``` r
+m3 <- glm(
+  formula = time_to_dead_discrete ~
+    0 + forest_logged * dbase_mean,
+  data = data_aggregated
+  )
+```
+
+``` r
+data_aggregated %>% 
+  modelr::data_grid(dbase_mean = modelr::seq_range(dbase_mean, n = 20),
+                    forest_logged) %>% 
+  modelr::add_predictions(m3) %>%
+  ggplot(aes(x = dbase_mean)) +
+  geom_point(aes(y = time_to_dead_discrete, colour = forest_logged),
+             data = data_aggregated, 
+             shape = 16, alpha = 0.5) +
+  geom_line(aes(y = pred, colour = forest_logged)) +
+  ylim(0,20) +
+  xlim(0,300)
+```
+
+![](figures/2025-02-15_survival-model-specify/unnamed-chunk-11-1.png)
+
+## Add species random intercept
+
+``` r
+m4 <- lmer(
+  formula = time_to_dead_discrete ~
+    0 + forest_logged * dbase_mean + 
+    (1 | genus_species),
+  data = data_aggregated
+  )
+```
+
+``` r
+data_aggregated %>% 
+  modelr::data_grid(dbase_mean = modelr::seq_range(dbase_mean, n = 20),
+                    forest_logged,
+                    genus_species) %>% 
+  modelr::add_predictions(m4) %>%
+  ggplot(aes(x = dbase_mean)) +
+  geom_point(aes(y = time_to_dead_discrete, colour = forest_logged),
+             data = data_aggregated, 
+             shape = 16, alpha = 0.5, size = 1) +
+  geom_line(aes(y = pred, colour = forest_logged)) +
+  facet_wrap(~genus_species) +
+  ylim(0,20) +
+  xlim(0,300) +
+  theme(legend.position = "bottom")
+```
+
+![](figures/2025-02-15_survival-model-specify/unnamed-chunk-13-1.png)
+
+Not a lot of data at the species level
+
+## Species ranom slope
+
+``` r
+m5 <- lmer(
+  formula = time_to_dead_discrete ~
+    0 + forest_logged * dbase_mean + 
+    (0 + forest_logged * dbase_mean | genus_species),
+  data = data_aggregated
+  )
+```
+
+Singluar fit!
+
+## Species ranom slope, no interaction
+
+``` r
+m6 <- lmer(
+  formula = time_to_dead_discrete ~
+    0 + forest_logged + dbase_mean + 
+    (0 + forest_logged + dbase_mean | genus_species),
+  data = data_aggregated
+  )
+```
+
+Did not converge
+
+# Imputing missing values on the fly
+
+https://paulbuerkner.com/brms/articles/brms_missings.html
+
+https://bookdown.org/content/4857/missing-data-and-other-opportunities.html#imputing-primates.
+
+``` r
+data_aggregated %>% 
+  ggplot(aes(x = time_to_last_alive, y = dbh_mean, colour = dbase_mean)) +
+  geom_point(alpha = 0.5) +
+  scale_color_continuous(na.value="red")
+```
+
+![](figures/2025-02-15_survival-model-specify/unnamed-chunk-16-1.png)
+
+``` r
+data_aggregated %>% 
+  ggplot(aes(x = time_to_last_alive, y = dbase_mean, colour = dbh_mean)) +
+  geom_point(alpha = 0.5) +
+  scale_color_continuous(na.value="red")
+```
+
+![](figures/2025-02-15_survival-model-specify/unnamed-chunk-16-2.png)
+
+``` r
+bform <- 
+  bf(time_to_last_alive|cens(x = censor, y2 = time_to_dead) ~
+        0 + forest_logged + mi(dbase_mean) + mi(dbh_mean)) +
+  bf(dbh_mean | mi() ~ mi(dbase_mean) + forest_logged) +
+  bf(dbase_mean | mi() ~ mi(dbh_mean) + forest_logged) +
+  set_rescor(FALSE)
+```
+
+``` r
+m7 <-
+  brm(bform,
+      data = data_aggregated,
+      family = brmsfamily("weibull"),
+      prior = NULL,
+      iter = 2000,
+      cores = 4,
+      chains = 4,
+      init = 0,
+      seed = 123)
+```

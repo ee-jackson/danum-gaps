@@ -11,8 +11,6 @@
 library("tidyverse")
 library("here")
 library("janitor")
-library("lme4")
-library("modelr")
 
 
 # Get data ----------------------------------------------------------------
@@ -201,15 +199,6 @@ data_backfilled <-
   ) %>%
   bind_rows()
 
-# fill missing plant level data for backfilled plants
-data_backfilled <-
-  data_backfilled %>%
-  dplyr::group_by(plant_id) %>%
-  arrange(survey_date, .by_group = TRUE) %>%
-  ungroup() %>%
-  tidyr::fill(line:planting_date, .direction = "updown")
-
-
 # "new" cohort of plants were first surveyed in census "06"
 data_backfilled <-
   data_backfilled %>%
@@ -218,6 +207,14 @@ data_backfilled <-
               old_new == "N" &
               census_no %in% c("01", "02", "03", "04", "05") )
   )
+
+# fill missing plant level data for backfilled plants
+data_backfilled <-
+  data_backfilled %>%
+  dplyr::group_by(plant_id) %>%
+  arrange(census_no, .by_group = TRUE) %>%
+  tidyr::fill(line:planting_date, .direction = "updown") %>%
+  ungroup()
 
 # add survey dates for for backfilled plants
 data_backfilled <-
@@ -278,6 +275,18 @@ data_backfilled <-
   bind_rows(filter(data_backfilled, ! plant_id %in% lazarus_ids))
 
 
+# Clean growth ------------------------------------------------------------
+
+data_backfilled <-
+  data_backfilled %>%
+  rowwise() %>%
+  mutate(
+    dbh_mean = mean(c(dbh1, dbh2), na.rm = TRUE),
+    dbase_mean = mean(c(diam1, diam2), na.rm = TRUE)
+  ) %>%
+  ungroup()
+
+
 # Clean cohort ------------------------------------------------------------
 
 data_backfilled <-
@@ -311,36 +320,6 @@ data_backfilled <-
          days_num = as.numeric(days))
 
 
-# Clean growth ------------------------------------------------------------
-
-data_backfilled <-
-  data_backfilled %>%
-  rowwise() %>%
-  mutate(
-    dbh_mean = mean(c(dbh1, dbh2), na.rm = TRUE),
-    dbase_mean = mean(c(diam1, diam2), na.rm = TRUE)
-  ) %>%
-  ungroup()
-
-# predict basal diameter or DBH when missing
-dbase_pred <-
-  lme4::lmer(dbase_mean ~ dbh_mean + (1 | genus_species),
-             data = data_backfilled)
-
-dbh_pred <-
-  lme4::lmer(dbh_mean ~ dbase_mean + (1 | genus_species),
-             data = data_backfilled)
-
-data_backfilled <-
-  data_backfilled %>%
-  modelr::add_predictions(model = dbh_pred, var = "dbh_pred") %>%
-  modelr::add_predictions(model = dbase_pred, var = "dbase_pred") %>%
-  mutate(dbh_coalesce = coalesce(dbh_mean, dbh_pred),
-         dbase_coalesce = coalesce(dbase_mean, dbase_pred) ) %>%
-  mutate(dbh_coalesce = replace(dbh_coalesce, dbh_coalesce < 0 , NA),
-         dbase_coalesce = replace(dbase_coalesce, dbase_coalesce < 0 , NA) )
-
-
 # Add col indicating whether climber cut ----------------------------------
 
 data_backfilled <-
@@ -363,8 +342,7 @@ data_backfilled <-
          plot, line, position, cohort, plant_no,
          first_survey, planting_date, census_no, census_id, survey_date,
          days, years, days_num,
-         survival, height_apex, dbh_mean, dbh_pred, dbh_coalesce,
-         dbase_mean, dbase_pred, dbase_coalesce) %>%
+         survival, height_apex, dbh_mean, dbase_mean) %>%
   distinct() %>%
   filter(! if_all(c(survival, dbh_mean, dbase_mean, height_apex), is.na)) %>%
   filter(! str_detect(plant_id, "NA")) %>%

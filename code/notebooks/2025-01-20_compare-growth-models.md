@@ -1,6 +1,6 @@
 # Compare growth models
 eleanorjackson
-2025-02-05
+2025-03-22
 
 Here I’m comparing models of different complexity (in terms of their
 random effect structure).
@@ -32,36 +32,36 @@ density of the posterior predictive distribution is high and so is its
 logarithm. So higher ELPD = better predictive performance.
 
 ``` r
-comp <- loo_compare(model_list$ft_sp_lognorm_priors.rds,
-                    model_list$ft_sp_pl_lognorm_priors.rds,
+comp <- loo_compare(model_list$ft_sp_pl_lognorm_priors.rds,
                     model_list$ft_sp_co_lognorm_priors.rds,
                     model_list$ft_sp_cc_lognorm_priors.rds,
+                    model_list$growth_model.rds,
                     criterion = "loo")
 
 print(comp, digits = 3, simplify = FALSE)
 ```
 
                                            elpd_diff  se_diff    elpd_loo  
-    model_list$ft_sp_cc_lognorm_priors.rds      0.000      0.000 -30631.188
-    model_list$ft_sp_co_lognorm_priors.rds    -91.725     25.536 -30722.912
-    model_list$ft_sp_lognorm_priors.rds      -153.696     21.302 -30784.883
-    model_list$ft_sp_pl_lognorm_priors.rds   -163.528     17.484 -30794.716
+    model_list$ft_sp_co_lognorm_priors.rds      0.000      0.000 -30601.904
+    model_list$ft_sp_pl_lognorm_priors.rds   -126.660     19.600 -30728.564
+    model_list$growth_model.rds              -127.049     18.842 -30728.953
+    model_list$ft_sp_cc_lognorm_priors.rds   -141.200     20.867 -30743.104
                                            se_elpd_loo p_loo      se_p_loo  
-    model_list$ft_sp_cc_lognorm_priors.rds    176.292    2892.160     78.225
-    model_list$ft_sp_co_lognorm_priors.rds    177.745    3018.218     80.110
-    model_list$ft_sp_lognorm_priors.rds       177.391    3064.210     79.842
-    model_list$ft_sp_pl_lognorm_priors.rds    177.806    3099.183     83.243
+    model_list$ft_sp_co_lognorm_priors.rds    177.587    2868.340     81.313
+    model_list$ft_sp_pl_lognorm_priors.rds    177.961    3023.100     82.189
+    model_list$growth_model.rds               177.518    3023.337     81.680
+    model_list$ft_sp_cc_lognorm_priors.rds    178.614    3054.369     84.959
                                            looic      se_looic  
-    model_list$ft_sp_cc_lognorm_priors.rds  61262.375    352.583
-    model_list$ft_sp_co_lognorm_priors.rds  61445.824    355.490
-    model_list$ft_sp_lognorm_priors.rds     61569.766    354.782
-    model_list$ft_sp_pl_lognorm_priors.rds  61589.431    355.612
+    model_list$ft_sp_co_lognorm_priors.rds  61203.809    355.174
+    model_list$ft_sp_pl_lognorm_priors.rds  61457.129    355.922
+    model_list$growth_model.rds             61457.906    355.036
+    model_list$ft_sp_cc_lognorm_priors.rds  61486.209    357.228
 
 ``` r
-loo_compare(model_list$ft_sp_lognorm_priors.rds,
-            model_list$ft_sp_pl_lognorm_priors.rds,
+loo_compare(model_list$ft_sp_pl_lognorm_priors.rds,
             model_list$ft_sp_co_lognorm_priors.rds,
-            model_list$ft_sp_cc_lognorm_priors.rds) %>% 
+            model_list$ft_sp_cc_lognorm_priors.rds,
+            model_list$growth_model.rds) %>% 
   data.frame() %>% 
   rownames_to_column(var = "model_name") %>% 
   ggplot(aes(x    = reorder(model_name, elpd_diff), 
@@ -89,10 +89,10 @@ they say:
 > Vehtari, 2020)](https://doi.org/10.48550/arXiv.2008.10296).
 
 ``` r
-loo_compare(model_list$ft_sp_lognorm_priors.rds,
-            model_list$ft_sp_pl_lognorm_priors.rds,
+loo_compare(model_list$ft_sp_pl_lognorm_priors.rds,
             model_list$ft_sp_co_lognorm_priors.rds,
             model_list$ft_sp_cc_lognorm_priors.rds,
+            model_list$growth_model.rds,
             criterion = "loo") %>% 
   data.frame() %>% 
   rownames_to_column(var = "model_name") %>% 
@@ -114,8 +114,8 @@ https://mc-stan.org/loo/reference/loo-glossary.html
 
 ``` r
 my_coef_tab <-
-  tibble(fit = model_list[c(2:4, 6)],
-         model = names(model_list[c(2:4, 6)])) %>%
+  tibble(fit = model_list[c(3:6)],
+         model = names(model_list[c(3:6)])) %>%
   mutate(tidy = purrr::map(
     fit,
     tidy,
@@ -135,7 +135,11 @@ my_coef_tab <-
 my_coef_tab %>% 
   rowwise() %>% 
   mutate(parameter = pluck(strsplit(term,"_"),1,2)) %>% 
-  ggplot(aes(x = term, y = estimate, ymin = conf.low, ymax = conf.high)) +
+  mutate(forest_type = pluck(strsplit(term,"_"),1,4)) %>% 
+  mutate(forest_type = str_remove(forest_type, "type")) %>% 
+  ggplot(aes(x = forest_type, 
+             y = estimate, 
+             ymin = conf.low, ymax = conf.high)) +
   geom_pointrange(shape = 21, fill = "white") +
   labs(x = NULL,
        y = NULL) +
@@ -157,16 +161,18 @@ my_vars <- c("b_A_forest_typeprimary", "b_A_forest_typesecondary",
 my_regex <- paste0(my_vars, collapse="|")
 
 draws <-
-  map(model_list[c(2:4, 6)],
+  map(model_list[c(3:6)],
            tidybayes::spread_draws, !!sym(my_regex), regex = TRUE) %>% 
   bind_rows(.id = "model") %>% 
   pivot_longer(cols = all_of(my_vars), 
                names_to = "var") %>% 
   rowwise() %>% 
-  mutate(parameter = pluck(strsplit(var,"_"), 1, 2)) 
+  mutate(parameter = pluck(strsplit(var,"_"), 1, 2)) %>% 
+  mutate(forest_type = pluck(strsplit(var,"_"),1,4)) %>% 
+  mutate(forest_type = str_remove(forest_type, "type")) 
 
 draws %>% 
-  ggplot(aes(x = value, y = var)) +
+  ggplot(aes(x = value, y = forest_type)) +
   tidybayes::stat_halfeye(normalize = "groups",
                point_interval = "mode_hdi") +
   facet_grid(model~parameter, scales = "free")
@@ -194,10 +200,15 @@ plot(model_list[[4]],
 
 ![](figures/2025-01-20_compare-growth-models/unnamed-chunk-9-1.png)
 
-### ft_sp_pl_lognorm_priors
+Yeah.. not good
+
+### cc_sp_lognorm_priors
+
+This model is secondary forest only. Maybe a very small difference in
+*A* and *k* in seedlings in climber cut plots.
 
 ``` r
-plot(model_list[[6]], 
+plot(model_list[[1]], 
        variable = "^b_*",
        ask = FALSE,
        regex = TRUE,
@@ -206,19 +217,10 @@ plot(model_list[[6]],
 
 ![](figures/2025-01-20_compare-growth-models/unnamed-chunk-10-1.png)
 
-### ft_sp_co_lognorm_priors
+### co_sp_lognorm_priors
 
-``` r
-plot(model_list[[3]], 
-       variable = "^b_*",
-       ask = FALSE,
-       regex = TRUE,
-       nvariables = 6) 
-```
-
-![](figures/2025-01-20_compare-growth-models/unnamed-chunk-11-1.png)
-
-### ft_sp_cc_lognorm_priors
+Also secondary forest only - looking at the effect of cohort. We can see
+a small difference in *delay* between cohorts.
 
 ``` r
 plot(model_list[[2]], 
@@ -228,6 +230,4 @@ plot(model_list[[2]],
        nvariables = 6) 
 ```
 
-![](figures/2025-01-20_compare-growth-models/unnamed-chunk-12-1.png)
-
-Yeah.. not good
+![](figures/2025-01-20_compare-growth-models/unnamed-chunk-11-1.png)

@@ -1,6 +1,6 @@
 # Compare growth models
 eleanorjackson
-2025-03-22
+2025-03-23
 
 Here I’m comparing models of different complexity (in terms of their
 random effect structure).
@@ -42,17 +42,17 @@ print(comp, digits = 3, simplify = FALSE)
 ```
 
                                            elpd_diff  se_diff    elpd_loo  
-    model_list$ft_sp_co_lognorm_priors.rds      0.000      0.000 -30601.904
-    model_list$ft_sp_pl_lognorm_priors.rds   -126.660     19.600 -30728.564
-    model_list$growth_model.rds              -127.049     18.842 -30728.953
-    model_list$ft_sp_cc_lognorm_priors.rds   -141.200     20.867 -30743.104
+    model_list$ft_sp_co_lognorm_priors.rds      0.000      0.000 -30727.751
+    model_list$ft_sp_pl_lognorm_priors.rds     -0.813     17.824 -30728.564
+    model_list$growth_model.rds                -1.202     16.866 -30728.953
+    model_list$ft_sp_cc_lognorm_priors.rds    -15.353     19.205 -30743.104
                                            se_elpd_loo p_loo      se_p_loo  
-    model_list$ft_sp_co_lognorm_priors.rds    177.587    2868.340     81.313
+    model_list$ft_sp_co_lognorm_priors.rds    179.176    3035.759     83.262
     model_list$ft_sp_pl_lognorm_priors.rds    177.961    3023.100     82.189
     model_list$growth_model.rds               177.518    3023.337     81.680
     model_list$ft_sp_cc_lognorm_priors.rds    178.614    3054.369     84.959
                                            looic      se_looic  
-    model_list$ft_sp_co_lognorm_priors.rds  61203.809    355.174
+    model_list$ft_sp_co_lognorm_priors.rds  61455.502    358.352
     model_list$ft_sp_pl_lognorm_priors.rds  61457.129    355.922
     model_list$growth_model.rds             61457.906    355.036
     model_list$ft_sp_cc_lognorm_priors.rds  61486.209    357.228
@@ -188,7 +188,7 @@ the estimates for *delay* and *k*, yet this model supposedly has the
 best predictive performance? Do I need to give the chains longer to
 converge?
 
-### ft_sp_lognorm_priors
+### ft_sp_co_lognorm_priors
 
 ``` r
 plot(model_list[[4]], 
@@ -201,6 +201,18 @@ plot(model_list[[4]],
 ![](figures/2025-01-20_compare-growth-models/unnamed-chunk-9-1.png)
 
 Yeah.. not good
+
+### ft_sp_co_lognorm_priors
+
+``` r
+plot(model_list[[3]], 
+       variable = "^b_*",
+       ask = FALSE,
+       regex = TRUE,
+       nvariables = 6) 
+```
+
+![](figures/2025-01-20_compare-growth-models/unnamed-chunk-10-1.png)
 
 ### cc_sp_lognorm_priors
 
@@ -215,7 +227,7 @@ plot(model_list[[1]],
        nvariables = 6) 
 ```
 
-![](figures/2025-01-20_compare-growth-models/unnamed-chunk-10-1.png)
+![](figures/2025-01-20_compare-growth-models/unnamed-chunk-11-1.png)
 
 ### co_sp_lognorm_priors
 
@@ -230,4 +242,4 @@ plot(model_list[[2]],
        nvariables = 6) 
 ```
 
-![](figures/2025-01-20_compare-growth-models/unnamed-chunk-11-1.png)
+![](figures/2025-01-20_compare-growth-models/unnamed-chunk-12-1.png)

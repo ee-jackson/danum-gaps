@@ -1,6 +1,6 @@
 # Calculate growth rate
 eleanorjackson
-2025-03-18
+2025-03-25
 
 ``` r
 library("tidyverse")
@@ -98,7 +98,7 @@ agr %>%
 tidy_epred_sp <- 
   data_sample %>% 
   drop_na(dbh_mean) %>% 
-  data_grid(years = c(0:30),
+  data_grid(years = c(0:40),
             forest_type,
             genus_species,
             .model = mod) %>% 
@@ -137,6 +137,40 @@ agr_sp %>%
 
 ``` r
 agr_sp %>% 
+  ggplot(aes(x = .epred, y = growth_cmyr, 
+             xmin = .lower, xmax = .upper,
+             colour = forest_type)) +
+  geom_pointinterval(point_alpha = 1, 
+                     point_size = 0.75,
+                     interval_alpha = 0.5,
+                     interval_linewidth = 0.5) +
+  facet_wrap(~genus_species, scales = "free", nrow = 3) +
+  xlab("DBH (cm)") +
+  ylab("growth (cm/yr)") +
+  theme(legend.position = "bottom")
+```
+
+![](figures/2025-03-13_calculate-growth-rate/unnamed-chunk-11-2.png)
+
+``` r
+agr_sp %>% 
+  ggplot(aes(x = .epred, y = growth_cmyr, 
+             xmin = .lower, xmax = .upper,
+             colour = forest_type)) +
+  geom_pointinterval(point_alpha = 1, 
+                     point_size = 0.75,
+                     interval_alpha = 0.5,
+                     interval_linewidth = 0.5) +
+  facet_wrap(~genus_species, scales = "fixed", nrow = 3) +
+  xlab("DBH (cm)") +
+  ylab("growth (cm/yr)") +
+  theme(legend.position = "bottom")
+```
+
+![](figures/2025-03-13_calculate-growth-rate/unnamed-chunk-11-3.png)
+
+``` r
+agr_sp %>% 
   ggplot(aes(x = .epred, y = growth_cmyr, colour = forest_type)) +
   geom_path() +
   facet_wrap(~genus_species, scales = "fixed", nrow = 3) +
@@ -145,7 +179,7 @@ agr_sp %>%
   theme(legend.position = "bottom")
 ```
 
-![](figures/2025-03-13_calculate-growth-rate/unnamed-chunk-11-2.png)
+![](figures/2025-03-13_calculate-growth-rate/unnamed-chunk-11-4.png)
 
 ``` r
 agr_sp %>% 
@@ -160,4 +194,4 @@ agr_sp %>%
   theme(legend.position = "bottom")
 ```
 
-![](figures/2025-03-13_calculate-growth-rate/unnamed-chunk-11-3.png)
+![](figures/2025-03-13_calculate-growth-rate/unnamed-chunk-11-5.png)

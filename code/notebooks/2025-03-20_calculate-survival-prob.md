@@ -1,6 +1,18 @@
 # Calculate survival probability
 eleanorjackson
-2025-03-20
+2025-03-25
+
+- [Censor data](#censor-data)
+- [Simple survival model](#simple-survival-model)
+  - [Survival over time](#survival-over-time)
+  - [Survival over size](#survival-over-size)
+  - [By species](#by-species)
+    - [Survival](#survival)
+    - [Hazard](#hazard)
+- [Imputed size model](#imputed-size-model)
+  - [By species](#by-species-1)
+    - [Survival](#survival-1)
+    - [Hazard](#hazard-1)
 
 Getting survival probability and hazards form our first survival models.
 
@@ -12,12 +24,13 @@ library("tidybayes")
 ```
 
 ``` r
-file_names <- as.list(dir(path = here::here("output", "models", "survival"),
-                          full.names = TRUE))
+survival_model <- 
+  readRDS(here::here("output", "models", 
+                     "survival", "survival_model.rds"))
 
-model_list <- map(file_names, readRDS, environment())
-
-names(model_list) <- lapply(file_names, basename)
+survival_model_impute <- 
+  readRDS(here::here("output", "models", 
+                     "survival", "survival_model_impute.rds"))
 ```
 
 ## Censor data
@@ -100,6 +113,8 @@ vary by group. I think it’ll look like this, with the intercept removed:
 
 `surv = exp(-(((time - 0) / exp (b_parameter))^shape)))`
 
+# Simple survival model
+
 ## Survival over time
 
 ``` r
@@ -108,20 +123,20 @@ pred_df <-
   data_aggregated %>%
   data_grid(time_to_last_alive = 
               seq_range(time_to_last_alive, n = 20, expand = TRUE)) %>%
-  mutate(.chain= 0) %>%
-  mutate(shape= 0) %>%
-  mutate(.draw= 0) %>%
-  mutate(.iteration= 0) %>%
-  mutate(b_forest_logged0 = 0) %>%
-  mutate(b_forest_logged1 = 0) 
+  mutate(.chain = NA) %>%
+  mutate(shape = NA) %>%
+  mutate(.draw = NA) %>%
+  mutate(.iteration = NA) %>%
+  mutate(b_forest_logged0 = NA) %>%
+  mutate(b_forest_logged1 = NA) 
 
 # put together the relevant estimates from the mcmc chains
 mcmc_df <- 
-  model_list$ft_sp_sz_weibull.rds %>%
+  survival_model %>%
   spread_draws (b_forest_logged0,
                 b_forest_logged1,
                 shape) %>%
-  mutate (time_to_last_alive = 0) 
+  mutate (time_to_last_alive = NA) 
 
 # combine information for prediction and MCMC chains,
 # estimate survival, hazard and relative hazard curves
@@ -138,44 +153,46 @@ curves_df <-
     ),
     time_to_last_alive
   ) %>%
-  filter(time_to_last_alive > 0) %>%
-  filter(.draw > 0) %>%
+  filter(!is.na(time_to_last_alive)) %>%
+  filter(!is.na(.draw)) %>%
   # survival curves
-  mutate (surv0 = exp(-(((time_to_last_alive - 0) / 
+  mutate (primary_forest_surv = exp(-(((time_to_last_alive - 0) / 
                            exp(b_forest_logged0))^shape))) %>%
-  mutate (surv1 = exp(-(((time_to_last_alive - 0) / 
+  mutate (secondary_forest_surv = exp(-(((time_to_last_alive - 0) / 
                            exp(b_forest_logged1))^shape))) %>%
   # hazard curves
-  mutate (haz0 = ((1 / exp (b_forest_logged0)) * shape *
+  mutate (primary_forest_haz = ((1 / exp (b_forest_logged0)) * shape *
                     ((time_to_last_alive - 0) / 
                        exp (b_forest_logged0))^(shape - 1))) %>%
-  mutate (haz1 = ((1 / exp (b_forest_logged1)) * shape *
+  mutate (secondary_forest_haz = ((1 / exp (b_forest_logged1)) * shape *
                     ((time_to_last_alive - 0) / 
                        exp (b_forest_logged1))^(shape - 1)))  
 ```
 
 ``` r
 curves_df %>% 
-  pivot_longer(c(surv0, surv1)) %>% 
+  pivot_longer(c(primary_forest_surv, secondary_forest_surv)) %>% 
   ggplot (aes (x= time_to_last_alive, 
                y= value, 
                colour = name, 
                fill = name)) +
   stat_lineribbon (.width= .95, alpha = 0.5) +
-  ylab("Survival probability")
+  ylab("Survival probability")+
+  xlab("Years since first survey")
 ```
 
 ![](figures/2025-03-20_calculate-survival-prob/unnamed-chunk-5-1.png)
 
 ``` r
 curves_df %>% 
-  pivot_longer(c(haz0, haz1)) %>% 
+  pivot_longer(c(primary_forest_haz, secondary_forest_haz)) %>% 
   ggplot (aes (x= time_to_last_alive, 
                y= value, 
                colour = name, 
                fill = name)) +
   stat_lineribbon (.width= .95, alpha = 0.5) +
-  ylab("Hazard")
+  ylab("Hazard") +
+  xlab("Years since first survey")
 ```
 
 ![](figures/2025-03-20_calculate-survival-prob/unnamed-chunk-6-1.png)
@@ -186,21 +203,21 @@ curves_df %>%
 pred_df_sz <- 
   data_aggregated %>%
   data_grid(dbase_mean_sc = 
-              seq(0, 50, 2)) %>%
-  mutate(.chain = 0) %>%
-  mutate(shape = 0) %>%
-  mutate(.draw = 0) %>%
-  mutate(.iteration = 0) %>%
-  mutate(b_forest_logged0 = 0) %>%
-  mutate(b_forest_logged1 = 0)
+              seq(0.1, 50, 1)) %>%
+  mutate(.chain = NA) %>%
+  mutate(shape = NA) %>%
+  mutate(.draw = NA) %>%
+  mutate(.iteration = NA) %>%
+  mutate(b_forest_logged0 = NA) %>%
+  mutate(b_forest_logged1 = NA)
 
 # put together the relevant estimates from the mcmc chains
 mcmc_df_sz <-
-  model_list$ft_sp_sz_weibull.rds %>%
+  survival_model %>%
   spread_draws(b_forest_logged0,
                b_forest_logged1,
                shape) %>%
-  mutate(dbase_mean_sc = 2) 
+  mutate(dbase_mean_sc = NA) 
 
 # combine information for prediction and MCMC chains,
 # estiamte survival, hazard and relative hazard curves
@@ -217,25 +234,25 @@ curves_df_sz <-
     ),
     dbase_mean_sc
   ) %>%
-  filter (dbase_mean_sc != 2) %>%
-  filter (.draw > 0) %>%
+  filter (!is.na(dbase_mean_sc)) %>%
+  filter (!is.na(.draw)) %>%
   # survival curves
-  mutate (surv0 = exp (-(((dbase_mean_sc - 0) / exp (b_forest_logged0)
-  )^shape))) %>%
-  mutate (surv1 = exp (-(((dbase_mean_sc - 0) / exp (b_forest_logged1)
-  )^shape))) %>%
+  mutate (primary_forest_surv = exp (-(((dbase_mean_sc - 0) / 
+                            exp (b_forest_logged0))^shape))) %>%
+  mutate (secondary_forest_surv = exp (-(((dbase_mean_sc - 0) / 
+                            exp (b_forest_logged1))^shape))) %>%
   # hazard curves
-  mutate (haz0 = ((1 / exp (b_forest_logged0)) * shape *
-                    ((dbase_mean_sc - 0) / exp (b_forest_logged0)
-                    )^(shape - 1))) %>%
-  mutate (haz1 = ((1 / exp (b_forest_logged1)) * shape *
-                    ((dbase_mean_sc - 0) / exp (b_forest_logged1)
-                    )^(shape - 1))) 
+  mutate(primary_forest_haz = ((1 / exp (b_forest_logged0)) * shape *
+                    ((dbase_mean_sc - 0) / 
+                       exp (b_forest_logged0))^(shape - 1))) %>%
+  mutate(secondary_forest_haz = ((1 / exp (b_forest_logged1)) * shape *
+                    ((dbase_mean_sc - 0) / 
+                       exp (b_forest_logged1))^(shape - 1))) 
 ```
 
 ``` r
 curves_df_sz %>% 
-  pivot_longer(c(surv0, surv1)) %>% 
+  pivot_longer(c(primary_forest_surv, secondary_forest_surv)) %>% 
   ggplot(aes(x = dbase_mean_sc, 
              y = value, 
              colour = name, 
@@ -249,41 +266,51 @@ curves_df_sz %>%
 
 ``` r
 curves_df_sz %>% 
-  pivot_longer(c(haz0, haz1)) %>% 
+  pivot_longer(c(primary_forest_haz, secondary_forest_haz)) %>% 
   ggplot (aes (x = dbase_mean_sc, 
                y = value, 
                colour = name, 
                fill = name)) +
   stat_lineribbon (.width= .95, alpha = 0.5) +
-  ylab("Survival probability") +
+  ylab("Hazard") +
   xlab("Basal diameter /cm")
 ```
 
 ![](figures/2025-03-20_calculate-survival-prob/unnamed-chunk-9-1.png)
 
-## Try with the species model
+## By species
+
+### Survival
 
 ``` r
+grp_eff <- 
+  get_variables(survival_model) %>%
+  str_subset(pattern = "^r_genus_species")
+
 pred_df_sz_sp <- 
   data_aggregated %>%
-  data_grid(dbase_mean_sc = 
-              seq(0, 50, 2)) %>%
-  mutate(.chain = 0) %>%
-  mutate(shape = 0) %>%
-  mutate(.draw = 0) %>%
-  mutate(.iteration = 0) %>%
-  mutate(b_forest_logged0 = 0) %>%
-  mutate(b_forest_logged1 = 0)
+  data_grid(b_dbase_mean_sc = 
+              seq(0.1, 50, 1)) %>%
+  mutate(.chain = NA) %>%
+  mutate(shape = NA) %>%
+  mutate(.draw = NA) %>%
+  mutate(.iteration = NA) %>%
+  mutate(b_forest_logged0 = NA) %>%
+  mutate(b_forest_logged1 = NA)
 
-# put together the relevant estimates from the mcmc chains
+pred_df_sz_sp[grp_eff] <- NA
+
 mcmc_df_sz_sp <-
-  model_list$ft_sp_sz_weibull.rds %>%
-  spread_draws(shape, `r_.*`, 
+  survival_model %>%
+  spread_draws(shape, `r_.*`, `b_.*`,
                  regex = TRUE) %>% 
-  mutate(dbase_mean_sc = 2) 
+  mutate(b_dbase_mean_sc = NA)  %>% 
+  rowwise() %>% 
+  mutate(across(contains(",forest_logged0]"),
+                 ~ .x + b_forest_logged0)) %>% 
+  mutate(across(contains(",forest_logged1]"),
+                 ~ .x + b_forest_logged1))
 
-# combine information for prediction and MCMC chains,
-# estiamte survival, hazard and relative hazard curves
 curves_df_sz_sp <-
   union(pred_df_sz_sp, mcmc_df_sz_sp) %>%
   expand(
@@ -293,22 +320,434 @@ curves_df_sz_sp <-
       .draw,
       b_forest_logged0,
       b_forest_logged1,
-      shape
+      shape,
+      `r_genus_species[Dipterocarpus_conformis,forest_logged0]`,
+      `r_genus_species[Dryobalanops_lanceolata,forest_logged0]`,
+      `r_genus_species[Hopea_sangal,forest_logged0]`,
+      `r_genus_species[Parashorea_malaanonan,forest_logged0]`,
+      `r_genus_species[Parashorea_tomentella,forest_logged0]`,
+      `r_genus_species[Shorea_argentifolia,forest_logged0]`,
+      `r_genus_species[Shorea_beccariana,forest_logged0]`,
+      `r_genus_species[Shorea_faguetiana,forest_logged0]`,
+      `r_genus_species[Shorea_gibbosa,forest_logged0]`,
+      `r_genus_species[Shorea_johorensis,forest_logged0]`,
+      `r_genus_species[Shorea_leprosula,forest_logged0]`,
+      `r_genus_species[Shorea_macrophylla,forest_logged0]`,
+      `r_genus_species[Shorea_macroptera,forest_logged0]`,
+      `r_genus_species[Shorea_ovalis,forest_logged0]`,
+      `r_genus_species[Shorea_parvifolia,forest_logged0]`,
+      `r_genus_species[Dipterocarpus_conformis,forest_logged1]`,
+      `r_genus_species[Dryobalanops_lanceolata,forest_logged1]`,
+      `r_genus_species[Hopea_sangal,forest_logged1]`,
+      `r_genus_species[Parashorea_malaanonan,forest_logged1]`,
+      `r_genus_species[Parashorea_tomentella,forest_logged1]`,
+      `r_genus_species[Shorea_argentifolia,forest_logged1]`,
+      `r_genus_species[Shorea_beccariana,forest_logged1]`,
+      `r_genus_species[Shorea_faguetiana,forest_logged1]`,
+      `r_genus_species[Shorea_gibbosa,forest_logged1]`,
+      `r_genus_species[Shorea_johorensis,forest_logged1]`,
+      `r_genus_species[Shorea_leprosula,forest_logged1]`,
+      `r_genus_species[Shorea_macrophylla,forest_logged1]`,
+      `r_genus_species[Shorea_macroptera,forest_logged1]`,
+      `r_genus_species[Shorea_ovalis,forest_logged1]`,
+      `r_genus_species[Shorea_parvifolia,forest_logged1]`
     ),
-    dbase_mean_sc
+    b_dbase_mean_sc
   ) %>%
-  filter (dbase_mean_sc != 2) %>%
-  filter (.draw > 0) %>%
+  filter(!is.na(b_dbase_mean_sc)) %>%
+  filter (!is.na(.draw)) %>%
   # survival curves
-  mutate (surv0 = exp (-(((dbase_mean_sc - 0) / exp (b_forest_logged0)
-  )^shape))) %>%
-  mutate (surv1 = exp (-(((dbase_mean_sc - 0) / exp (b_forest_logged1)
-  )^shape))) %>%
-  # hazard curves
-  mutate (haz0 = ((1 / exp (b_forest_logged0)) * shape *
-                    ((dbase_mean_sc - 0) / exp (b_forest_logged0)
-                    )^(shape - 1))) %>%
-  mutate (haz1 = ((1 / exp (b_forest_logged1)) * shape *
-                    ((dbase_mean_sc - 0) / exp (b_forest_logged1)
-                    )^(shape - 1))) 
+  mutate(across(contains("r_genus_species["),
+                 ~ exp (-(((b_dbase_mean_sc - 0) / exp (.x))^shape)))) 
+  
+plotting_data_sp <- 
+  curves_df_sz_sp %>% 
+  pivot_longer(contains("r_genus_species[")) %>% 
+  mutate(genus_species = str_split_i(string = name, pattern ="\\[", i = 2)) %>% 
+  mutate(genus_species = str_split_i(string = genus_species, pattern =",", i = 1)) %>% 
+  mutate(forest_type = str_split_i(string = name, pattern =",", i = 2)) %>% 
+  mutate(forest_type = ifelse(forest_type== "forest_logged0]", "primary", "secondary")) 
 ```
+
+``` r
+plotting_data_sp %>% 
+  ggplot (aes (x = b_dbase_mean_sc, 
+               y = value, 
+               colour = forest_type, 
+               fill = forest_type)) +
+  stat_lineribbon (.width = 0.95, alpha = 0.5) +
+  ylab("Survival probability")+
+  xlab("Basal diameter /cm") +
+  facet_wrap(~genus_species, ncol = 3) +
+  theme(legend.position = "bottom")
+```
+
+![](figures/2025-03-20_calculate-survival-prob/unnamed-chunk-11-1.png)
+
+``` r
+plotting_data_sp %>% 
+  ggplot (aes (x = b_dbase_mean_sc, 
+               y = value, 
+               colour = genus_species, 
+               fill = genus_species)) +
+  stat_lineribbon (.width = 0, alpha = 0.5) +
+  ylab("Survival probability")+
+  xlab("Basal diameter /cm") +
+  facet_wrap(~forest_type) +
+  theme(legend.position = "bottom")
+```
+
+![](figures/2025-03-20_calculate-survival-prob/unnamed-chunk-12-1.png)
+
+### Hazard
+
+``` r
+curves_df_sz_sp_haz <-
+  union(pred_df_sz_sp, mcmc_df_sz_sp) %>%
+  expand(
+    nesting(
+      .chain,
+      .iteration,
+      .draw,
+      b_forest_logged0,
+      b_forest_logged1,
+      shape,
+      `r_genus_species[Dipterocarpus_conformis,forest_logged0]`,
+      `r_genus_species[Dryobalanops_lanceolata,forest_logged0]`,
+      `r_genus_species[Hopea_sangal,forest_logged0]`,
+      `r_genus_species[Parashorea_malaanonan,forest_logged0]`,
+      `r_genus_species[Parashorea_tomentella,forest_logged0]`,
+      `r_genus_species[Shorea_argentifolia,forest_logged0]`,
+      `r_genus_species[Shorea_beccariana,forest_logged0]`,
+      `r_genus_species[Shorea_faguetiana,forest_logged0]`,
+      `r_genus_species[Shorea_gibbosa,forest_logged0]`,
+      `r_genus_species[Shorea_johorensis,forest_logged0]`,
+      `r_genus_species[Shorea_leprosula,forest_logged0]`,
+      `r_genus_species[Shorea_macrophylla,forest_logged0]`,
+      `r_genus_species[Shorea_macroptera,forest_logged0]`,
+      `r_genus_species[Shorea_ovalis,forest_logged0]`,
+      `r_genus_species[Shorea_parvifolia,forest_logged0]`,
+      `r_genus_species[Dipterocarpus_conformis,forest_logged1]`,
+      `r_genus_species[Dryobalanops_lanceolata,forest_logged1]`,
+      `r_genus_species[Hopea_sangal,forest_logged1]`,
+      `r_genus_species[Parashorea_malaanonan,forest_logged1]`,
+      `r_genus_species[Parashorea_tomentella,forest_logged1]`,
+      `r_genus_species[Shorea_argentifolia,forest_logged1]`,
+      `r_genus_species[Shorea_beccariana,forest_logged1]`,
+      `r_genus_species[Shorea_faguetiana,forest_logged1]`,
+      `r_genus_species[Shorea_gibbosa,forest_logged1]`,
+      `r_genus_species[Shorea_johorensis,forest_logged1]`,
+      `r_genus_species[Shorea_leprosula,forest_logged1]`,
+      `r_genus_species[Shorea_macrophylla,forest_logged1]`,
+      `r_genus_species[Shorea_macroptera,forest_logged1]`,
+      `r_genus_species[Shorea_ovalis,forest_logged1]`,
+      `r_genus_species[Shorea_parvifolia,forest_logged1]`
+    ),
+    b_dbase_mean_sc
+  ) %>%
+  filter(!is.na(b_dbase_mean_sc)) %>%
+  filter (.draw > 0) %>%
+  # hazard
+  mutate(across(contains("r_genus_species["),
+                 ~ ((1 / exp (.x)) * shape *
+                    ((b_dbase_mean_sc - 0) / 
+                       exp (.x))^(shape - 1))))
+
+  
+plotting_data_sp_haz <- 
+  curves_df_sz_sp_haz %>% 
+  pivot_longer(contains("r_genus_species[")) %>% 
+  mutate(genus_species = str_split_i(string = 
+                                       name, pattern ="\\[", i = 2)) %>% 
+  mutate(genus_species = str_split_i(string = 
+                                       genus_species, pattern =",", i = 1)) %>% 
+  mutate(forest_type = str_split_i(string = 
+                                     name, pattern =",", i = 2)) %>% 
+  mutate(forest_type = ifelse(forest_type == 
+                                "forest_logged0]", "primary", "secondary")) 
+```
+
+``` r
+plotting_data_sp_haz %>% 
+  ggplot (aes (x = b_dbase_mean_sc, 
+               y = value, 
+               colour = forest_type, 
+               fill = forest_type)) +
+  stat_lineribbon (.width= 0.95, alpha = 0.5) +
+  ylab("Hazard")+
+  xlab("Basal diameter /cm") +
+  facet_wrap(~genus_species, ncol = 3, scales = "free_y") +
+  theme(legend.position = "bottom")
+```
+
+![](figures/2025-03-20_calculate-survival-prob/unnamed-chunk-14-1.png)
+
+The hazard rate is the instantaneous failure rate.
+
+# Imputed size model
+
+``` r
+pred_df_sz <- 
+  data_aggregated %>%
+  data_grid(bsp_timetolastalive_midbh_mean_sc = 
+              seq(0.1, 100.1, 1)) %>%
+  mutate(.chain = NA) %>%
+  mutate(shape_timetolastalive = NA) %>%
+  mutate(.draw = NA) %>%
+  mutate(.iteration = NA) %>%
+  mutate(b_timetolastalive_forest_logged0 = NA) %>%
+  mutate(b_timetolastalive_forest_logged1 = NA)
+
+# put together the relevant estimates from the mcmc chains
+mcmc_df_sz <-
+  survival_model_impute %>%
+  spread_draws(b_timetolastalive_forest_logged0,
+               b_timetolastalive_forest_logged1,
+               shape_timetolastalive) %>%
+  mutate(bsp_timetolastalive_midbh_mean_sc = NA) 
+
+# combine information for prediction and MCMC chains,
+# estimate survival, hazard and relative hazard curves
+curves_df_sz <-
+  union(pred_df_sz, mcmc_df_sz) %>%
+  expand(
+    nesting(
+      .chain,
+      .iteration,
+      .draw,
+      b_timetolastalive_forest_logged0,
+      b_timetolastalive_forest_logged1,
+      shape_timetolastalive
+    ),
+    bsp_timetolastalive_midbh_mean_sc
+  ) %>%
+  filter (!is.na(bsp_timetolastalive_midbh_mean_sc)) %>%
+  filter (!is.na(.draw)) %>%
+  # survival curves
+  mutate (primary_forest_surv = exp (-(((bsp_timetolastalive_midbh_mean_sc - 0) / 
+                            exp (b_timetolastalive_forest_logged0))^shape_timetolastalive))) %>%
+  mutate (secondary_forest_surv = exp (-(((bsp_timetolastalive_midbh_mean_sc - 0) / 
+                            exp (b_timetolastalive_forest_logged1))^shape_timetolastalive))) %>%
+  # hazard curves
+  mutate(primary_forest_haz = ((1 / exp (b_timetolastalive_forest_logged0)) * shape_timetolastalive *
+                    ((bsp_timetolastalive_midbh_mean_sc - 0) / 
+                       exp (b_timetolastalive_forest_logged0))^(shape_timetolastalive - 1))) %>%
+  mutate(secondary_forest_haz = ((1 / exp (b_timetolastalive_forest_logged1)) * shape_timetolastalive *
+                    ((bsp_timetolastalive_midbh_mean_sc - 0) / 
+                       exp (b_timetolastalive_forest_logged1))^(shape_timetolastalive - 1))) 
+```
+
+``` r
+curves_df_sz %>% 
+  pivot_longer(c(primary_forest_surv, secondary_forest_surv)) %>% 
+  ggplot(aes(x = bsp_timetolastalive_midbh_mean_sc, 
+             y = value, 
+             colour = name, 
+             fill = name)) +
+  stat_lineribbon (.width= .95, alpha = 0.5) +
+  ylab("Survival probability") +
+  xlab("DBH /cm")
+```
+
+![](figures/2025-03-20_calculate-survival-prob/unnamed-chunk-16-1.png)
+
+``` r
+curves_df_sz %>% 
+  pivot_longer(c(primary_forest_haz, secondary_forest_haz)) %>% 
+  ggplot(aes(x = bsp_timetolastalive_midbh_mean_sc, 
+             y = value, 
+             colour = name, 
+             fill = name)) +
+  stat_lineribbon (.width= .95, alpha = 0.5) +
+  ylab("Hazard") +
+  xlab("DBH /cm")
+```
+
+![](figures/2025-03-20_calculate-survival-prob/unnamed-chunk-17-1.png)
+
+## By species
+
+### Survival
+
+``` r
+grp_eff_im <- 
+  get_variables(survival_model_impute) %>%
+  str_subset(pattern = "^r_genus_species")
+
+pred_df_sz_sp <- 
+  data_aggregated %>%
+  data_grid(bsp_timetolastalive_midbh_mean_sc = 
+              seq(0.1, 100.1, 1)) %>%
+  mutate(.chain = NA) %>%
+  mutate(shape_timetolastalive = NA) %>%
+  mutate(.draw = NA) %>%
+  mutate(.iteration = NA) %>%
+  mutate(b_timetolastalive_forest_logged0 = NA) %>%
+  mutate(b_timetolastalive_forest_logged1 = NA)
+
+pred_df_sz_sp[grp_eff_im] <- NA
+
+mcmc_df_sz_sp <-
+  survival_model_impute %>%
+  spread_draws(shape_timetolastalive, `r_.*`, 
+               b_timetolastalive_forest_logged0,
+               b_timetolastalive_forest_logged1,
+               bsp_timetolastalive_midbh_mean_sc,
+                 regex = TRUE) %>% 
+  mutate(bsp_timetolastalive_midbh_mean_sc = NA)  %>% 
+  rowwise() %>% 
+  mutate(across(contains(",forest_logged0]"),
+                 ~ .x + b_timetolastalive_forest_logged0)) %>% 
+  mutate(across(contains(",forest_logged1]"),
+                 ~ .x + b_timetolastalive_forest_logged1))
+
+curves_df_sz_sp <-
+  union(pred_df_sz_sp, mcmc_df_sz_sp) %>%
+  expand(
+    nesting(
+      .chain,
+      .iteration,
+      .draw,
+      b_timetolastalive_forest_logged0,
+      b_timetolastalive_forest_logged1,
+      shape_timetolastalive,
+      `r_genus_species__timetolastalive[Dipterocarpus_conformis,forest_logged0]`,
+      `r_genus_species__timetolastalive[Dryobalanops_lanceolata,forest_logged0]`,
+      `r_genus_species__timetolastalive[Hopea_sangal,forest_logged0]`,
+      `r_genus_species__timetolastalive[Parashorea_malaanonan,forest_logged0]`,
+      `r_genus_species__timetolastalive[Parashorea_tomentella,forest_logged0]`,
+      `r_genus_species__timetolastalive[Shorea_argentifolia,forest_logged0]`,
+      `r_genus_species__timetolastalive[Shorea_beccariana,forest_logged0]`,
+      `r_genus_species__timetolastalive[Shorea_faguetiana,forest_logged0]`,
+      `r_genus_species__timetolastalive[Shorea_gibbosa,forest_logged0]`,
+      `r_genus_species__timetolastalive[Shorea_johorensis,forest_logged0]`,
+      `r_genus_species__timetolastalive[Shorea_leprosula,forest_logged0]`,
+      `r_genus_species__timetolastalive[Shorea_macrophylla,forest_logged0]`,
+      `r_genus_species__timetolastalive[Shorea_macroptera,forest_logged0]`,
+      `r_genus_species__timetolastalive[Shorea_ovalis,forest_logged0]`,
+      `r_genus_species__timetolastalive[Shorea_parvifolia,forest_logged0]`,
+      `r_genus_species__timetolastalive[Dipterocarpus_conformis,forest_logged1]`,
+      `r_genus_species__timetolastalive[Dryobalanops_lanceolata,forest_logged1]`,
+      `r_genus_species__timetolastalive[Hopea_sangal,forest_logged1]`,
+      `r_genus_species__timetolastalive[Parashorea_malaanonan,forest_logged1]`,
+      `r_genus_species__timetolastalive[Parashorea_tomentella,forest_logged1]`,
+      `r_genus_species__timetolastalive[Shorea_argentifolia,forest_logged1]`,
+      `r_genus_species__timetolastalive[Shorea_beccariana,forest_logged1]`,
+      `r_genus_species__timetolastalive[Shorea_faguetiana,forest_logged1]`,
+      `r_genus_species__timetolastalive[Shorea_gibbosa,forest_logged1]`,
+      `r_genus_species__timetolastalive[Shorea_johorensis,forest_logged1]`,
+      `r_genus_species__timetolastalive[Shorea_leprosula,forest_logged1]`,
+      `r_genus_species__timetolastalive[Shorea_macrophylla,forest_logged1]`,
+      `r_genus_species__timetolastalive[Shorea_macroptera,forest_logged1]`,
+      `r_genus_species__timetolastalive[Shorea_ovalis,forest_logged1]`,
+      `r_genus_species__timetolastalive[Shorea_parvifolia,forest_logged1]`
+    ),
+    bsp_timetolastalive_midbh_mean_sc
+  ) %>%
+  filter(!is.na(bsp_timetolastalive_midbh_mean_sc)) %>%
+  filter (!is.na(.draw)) %>%
+  # survival curves
+  mutate(across(contains("r_genus_species__timetolastalive["),
+                 ~ exp (-(((bsp_timetolastalive_midbh_mean_sc - 0) / exp (.x))^shape_timetolastalive)))) 
+  
+plotting_data_sp <- 
+  curves_df_sz_sp %>% 
+  pivot_longer(contains("r_genus_species__")) %>% 
+  mutate(genus_species = str_split_i(string = name, pattern ="\\[", i = 2)) %>% 
+  mutate(genus_species = str_split_i(string = genus_species, pattern =",", i = 1)) %>% 
+  mutate(forest_type = str_split_i(string = name, pattern =",", i = 2)) %>% 
+  mutate(forest_type = ifelse(forest_type== "forest_logged0]", "primary", "secondary")) 
+```
+
+``` r
+plotting_data_sp %>% 
+  ggplot (aes (x = bsp_timetolastalive_midbh_mean_sc, 
+               y = value, 
+               colour = forest_type, 
+               fill = forest_type)) +
+  stat_lineribbon (.width = 0.95, alpha = 0.5) +
+  ylab("Survival probability")+
+  xlab("DBH /cm") +
+  facet_wrap(~genus_species, ncol = 3) +
+  theme(legend.position = "bottom")
+```
+
+![](figures/2025-03-20_calculate-survival-prob/unnamed-chunk-19-1.png)
+
+### Hazard
+
+``` r
+curves_df_sz_sp_haz <-
+  union(pred_df_sz_sp, mcmc_df_sz_sp) %>%
+  expand(
+    nesting(
+      .chain,
+      .iteration,
+      .draw,
+      b_timetolastalive_forest_logged0,
+      b_timetolastalive_forest_logged1,
+      shape_timetolastalive,
+      `r_genus_species__timetolastalive[Dipterocarpus_conformis,forest_logged0]`,
+      `r_genus_species__timetolastalive[Dryobalanops_lanceolata,forest_logged0]`,
+      `r_genus_species__timetolastalive[Hopea_sangal,forest_logged0]`,
+      `r_genus_species__timetolastalive[Parashorea_malaanonan,forest_logged0]`,
+      `r_genus_species__timetolastalive[Parashorea_tomentella,forest_logged0]`,
+      `r_genus_species__timetolastalive[Shorea_argentifolia,forest_logged0]`,
+      `r_genus_species__timetolastalive[Shorea_beccariana,forest_logged0]`,
+      `r_genus_species__timetolastalive[Shorea_faguetiana,forest_logged0]`,
+      `r_genus_species__timetolastalive[Shorea_gibbosa,forest_logged0]`,
+      `r_genus_species__timetolastalive[Shorea_johorensis,forest_logged0]`,
+      `r_genus_species__timetolastalive[Shorea_leprosula,forest_logged0]`,
+      `r_genus_species__timetolastalive[Shorea_macrophylla,forest_logged0]`,
+      `r_genus_species__timetolastalive[Shorea_macroptera,forest_logged0]`,
+      `r_genus_species__timetolastalive[Shorea_ovalis,forest_logged0]`,
+      `r_genus_species__timetolastalive[Shorea_parvifolia,forest_logged0]`,
+      `r_genus_species__timetolastalive[Dipterocarpus_conformis,forest_logged1]`,
+      `r_genus_species__timetolastalive[Dryobalanops_lanceolata,forest_logged1]`,
+      `r_genus_species__timetolastalive[Hopea_sangal,forest_logged1]`,
+      `r_genus_species__timetolastalive[Parashorea_malaanonan,forest_logged1]`,
+      `r_genus_species__timetolastalive[Parashorea_tomentella,forest_logged1]`,
+      `r_genus_species__timetolastalive[Shorea_argentifolia,forest_logged1]`,
+      `r_genus_species__timetolastalive[Shorea_beccariana,forest_logged1]`,
+      `r_genus_species__timetolastalive[Shorea_faguetiana,forest_logged1]`,
+      `r_genus_species__timetolastalive[Shorea_gibbosa,forest_logged1]`,
+      `r_genus_species__timetolastalive[Shorea_johorensis,forest_logged1]`,
+      `r_genus_species__timetolastalive[Shorea_leprosula,forest_logged1]`,
+      `r_genus_species__timetolastalive[Shorea_macrophylla,forest_logged1]`,
+      `r_genus_species__timetolastalive[Shorea_macroptera,forest_logged1]`,
+      `r_genus_species__timetolastalive[Shorea_ovalis,forest_logged1]`,
+      `r_genus_species__timetolastalive[Shorea_parvifolia,forest_logged1]`
+    ),
+    bsp_timetolastalive_midbh_mean_sc
+  ) %>%
+  filter(!is.na(bsp_timetolastalive_midbh_mean_sc)) %>%
+  filter (!is.na(.draw)) %>%
+  # hazard
+  mutate(across(contains("r_genus_species__timetolastalive["),
+                 ~ ((1 / exp (.x)) * shape_timetolastalive *
+                    ((bsp_timetolastalive_midbh_mean_sc - 0) / 
+                       exp (.x))^(shape_timetolastalive - 1))))
+  
+plotting_data_sp <- 
+  curves_df_sz_sp_haz %>% 
+  pivot_longer(contains("r_genus_species__")) %>% 
+  mutate(genus_species = str_split_i(string = name, pattern ="\\[", i = 2)) %>% 
+  mutate(genus_species = str_split_i(string = genus_species, pattern =",", i = 1)) %>% 
+  mutate(forest_type = str_split_i(string = name, pattern =",", i = 2)) %>% 
+  mutate(forest_type = ifelse(forest_type== "forest_logged0]", "primary", "secondary")) 
+```
+
+``` r
+plotting_data_sp %>% 
+  ggplot (aes (x = bsp_timetolastalive_midbh_mean_sc, 
+               y = value, 
+               colour = forest_type, 
+               fill = forest_type)) +
+  stat_lineribbon (.width = 0.95, alpha = 0.5) +
+  ylab("Hazard")+
+  xlab("DBH /cm") +
+  facet_wrap(~genus_species, ncol = 3, scales = "free_y") +
+  theme(legend.position = "bottom")
+```
+
+![](figures/2025-03-20_calculate-survival-prob/unnamed-chunk-21-1.png)

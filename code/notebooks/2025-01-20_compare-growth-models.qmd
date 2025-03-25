@@ -38,7 +38,7 @@ library("broom.mixed")
 
 ```{r}
 
-file_names <- as.list(dir(path = here::here("output", "models", "priors2"),
+file_names <- as.list(dir(path = here::here("output", "models", "priors3"),
                           full.names = TRUE))
 
 model_list <- map(file_names, readRDS, environment())
@@ -61,7 +61,7 @@ So higher ELPD = better predictive performance.
 comp <- loo_compare(model_list$ft_sp_pl_lognorm_priors.rds,
                     model_list$ft_sp_co_lognorm_priors.rds,
                     model_list$ft_sp_cc_lognorm_priors.rds,
-                    model_list$growth_model.rds,
+                    model_list$ft_sp_lognorm_priors.rds,
                     criterion = "loo")
 
 print(comp, digits = 3, simplify = FALSE)
@@ -71,7 +71,7 @@ print(comp, digits = 3, simplify = FALSE)
 loo_compare(model_list$ft_sp_pl_lognorm_priors.rds,
             model_list$ft_sp_co_lognorm_priors.rds,
             model_list$ft_sp_cc_lognorm_priors.rds,
-            model_list$growth_model.rds) %>% 
+            model_list$ft_sp_lognorm_priors.rds) %>% 
   data.frame() %>% 
   rownames_to_column(var = "model_name") %>% 
   ggplot(aes(x    = reorder(model_name, elpd_diff), 
@@ -99,7 +99,7 @@ then compare that difference to standard error of `elpd_diff`
 loo_compare(model_list$ft_sp_pl_lognorm_priors.rds,
             model_list$ft_sp_co_lognorm_priors.rds,
             model_list$ft_sp_cc_lognorm_priors.rds,
-            model_list$growth_model.rds,
+            model_list$ft_sp_lognorm_priors.rds,
             criterion = "loo") %>% 
   data.frame() %>% 
   rownames_to_column(var = "model_name") %>% 
@@ -119,8 +119,8 @@ https://mc-stan.org/loo/reference/loo-glossary.html
 
 ```{r}
 my_coef_tab <-
-  tibble(fit = model_list[c(3:6)],
-         model = names(model_list[c(3:6)])) %>%
+  tibble(fit = model_list[c(4:7)],
+         model = names(model_list[c(4:7)])) %>%
   mutate(tidy = purrr::map(
     fit,
     tidy,
@@ -170,7 +170,7 @@ my_vars <- c("b_A_forest_typeprimary", "b_A_forest_typesecondary",
 my_regex <- paste0(my_vars, collapse="|")
 
 draws <-
-  map(model_list[c(3:6)],
+  map(model_list[c(4:7)],
            tidybayes::spread_draws, !!sym(my_regex), regex = TRUE) %>% 
   bind_rows(.id = "model") %>% 
   pivot_longer(cols = all_of(my_vars), 
@@ -191,10 +191,8 @@ draws %>%
 Here looking at the mode (point) and highest density interval
 (I think sometimes prefered since they allow for skewed posterior distributions).
 
-Adding cohort into the model seems to introduce a lot of uncertainty
-in the estimates for *delay* and *k*, 
-yet this model supposedly has the best predictive performance?
-Do I need to give the chains longer to converge?
+The cohort model struggles with *k*. 
+Kind of makes sense that it is confused, as only one cohort in the primary forest.
 
 ### ft_sp_co_lognorm_priors
 
@@ -202,32 +200,19 @@ Do I need to give the chains longer to converge?
 #| fig_width: 7
 #| fig_height: 7
 
-plot(model_list[[4]], 
+plot(model_list[[5]], 
        variable = "^b_*",
        ask = FALSE,
        regex = TRUE,
        nvariables = 6) 
 ```
 
-Yeah.. not good
-
-### ft_sp_co_lognorm_priors
-
-```{r}
-#| fig_width: 7
-#| fig_height: 7
-
-plot(model_list[[3]], 
-       variable = "^b_*",
-       ask = FALSE,
-       regex = TRUE,
-       nvariables = 6) 
-```
+Not great, but better than before.
 
 ### cc_sp_lognorm_priors
 
 This model is secondary forest only.
-Maybe a very small difference in *A* and *k* in seedlings in climber cut plots.
+Climber cut plots and non-climber cut plots look very similar.
 
 ```{r}
 #| fig_width: 7
@@ -243,7 +228,7 @@ plot(model_list[[1]],
 ### co_sp_lognorm_priors
 
 Also secondary forest only - looking at the effect of cohort.
-We can see a small difference in *delay* between cohorts.
+We can see a small difference in *A* and *k* between cohorts.
 
 ```{r}
 #| fig_width: 7

@@ -2,7 +2,9 @@
 title: "Compare survival models"
 author: 'eleanorjackson'
 date: '`r format(Sys.time(), "%d %B, %Y")`' 
-format: gfm+emoji
+format: 
+  gfm:
+    toc: true
 editor: source
 execute:
   warning: false
@@ -94,6 +96,8 @@ data_aggregated <-
 
 ## Simple model
 
+With random slope for forest type allowed for species:
+
 ```{r}
 #| eval: FALSE
 
@@ -124,9 +128,24 @@ plot(model_list$ft_sp_sz_weibull2.rds,
      param = "b_", ask = FALSE)
 ```
 
+With random intercept for species:
+
+```{r}
+#| eval: FALSE
+
+time_to_last_alive|cens(x = censor, y2 = time_to_dead) ~
+        0 + forest_logged + dbase_mean_sc +
+        (1 | genus_species)
+
+```
+
+```{r}
+plot(model_list$ft_sp_sz_weibull3.rds,
+     param = "b_", ask = FALSE)
+```
+
 ## Imputing missing values
 
-With forest type explaining size:
 
 ```{r}
 #| eval: FALSE
@@ -139,10 +158,10 @@ bform <-
     family = brmsfamily("weibull")
   ) +
   bf(dbh_mean_sc |
-       mi() ~ mi(dbase_mean_sc) + forest_logged,
+       mi() ~ mi(dbase_mean_sc),
      family = brmsfamily("gaussian")) +
   bf(dbase_mean_sc |
-       mi() ~ mi(dbh_mean_sc) + forest_logged,
+       mi() ~ mi(dbh_mean_sc),
      family = brmsfamily("gaussian")) +
   set_rescor(FALSE)
 ```
@@ -204,7 +223,7 @@ plot(model_list$ft_sp_sz_impute_weibull3.rds,
      param = "b_", ask = FALSE)
 ```
 
-## Interaction
+## Interaction model
 
 ```{r}
 #| eval: FALSE
@@ -220,12 +239,13 @@ plot(model_list$ft_sp_sz_interact2_weibull.rds,
 ```
 
 
-## Compare
+## Compare all models
 
 ```{r}
 loo_compare(
   model_list$ft_sp_sz_weibull.rds,
   model_list$ft_sp_sz_weibull2.rds,
+  model_list$ft_sp_sz_weibull3.rds,
   model_list$ft_sp_sz_impute_weibull.rds,
   model_list$ft_sp_sz_impute_weibull2.rds,
   model_list$ft_sp_sz_impute_weibull3.rds,
@@ -244,10 +264,11 @@ loo_compare(
        title = "expected log predictive density (ELPD)") 
 ```
 
+
 ```{r}
 my_coef_tab <-
-  tibble(fit = model_list[c(1,2,3,5,6,7)],
-         model = names(model_list[c(1,2,3,5,6,7)])) %>%
+  tibble(fit = model_list[c(1,2,3,6,7,8)],
+         model = names(model_list[c(1,2,3,6,7,8)])) %>%
   mutate(tidy = purrr::map(
     fit,
     tidy,
@@ -278,7 +299,47 @@ my_coef_tab %>%
   facet_wrap(~model, ncol = 1) 
 ```
 
+## Comparing simple models
+
+```{r}
+loo_compare(
+  model_list$ft_sp_sz_weibull.rds,
+  model_list$ft_sp_sz_weibull2.rds,
+  model_list$ft_sp_sz_weibull3.rds
+) %>% 
+  data.frame() %>% 
+  rownames_to_column(var = "model_name") %>% 
+  ggplot(aes(x    = reorder(model_name, elpd_diff), 
+             y    = elpd_diff, 
+             ymin = elpd_diff - se_diff, 
+             ymax = elpd_diff + se_diff)) +
+  geom_pointrange(shape = 21, fill = "white") +
+  coord_flip() +
+  geom_hline(yintercept = 0, colour = "blue", linetype = 2) +
+  labs(x = NULL, y = "difference from model with the largest ELPD", 
+       title = "expected log predictive density (ELPD)") 
+```
+
 ## Comparing impute models
+
+```{r}
+loo_compare(
+  model_list$ft_sp_sz_impute_weibull.rds,
+  model_list$ft_sp_sz_impute_weibull2.rds,
+  model_list$ft_sp_sz_impute_weibull3.rds
+) %>% 
+  data.frame() %>% 
+  rownames_to_column(var = "model_name") %>% 
+  ggplot(aes(x    = reorder(model_name, elpd_diff), 
+             y    = elpd_diff, 
+             ymin = elpd_diff - se_diff, 
+             ymax = elpd_diff + se_diff)) +
+  geom_pointrange(shape = 21, fill = "white") +
+  coord_flip() +
+  geom_hline(yintercept = 0, colour = "blue", linetype = 2) +
+  labs(x = NULL, y = "difference from model with the largest ELPD", 
+       title = "expected log predictive density (ELPD)") 
+```
 
 ```{r}
 my_coef_tab <-

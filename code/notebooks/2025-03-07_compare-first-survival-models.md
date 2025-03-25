@@ -1,6 +1,14 @@
 # Compare survival models
 eleanorjackson
-2025-03-23
+2025-03-25
+
+- [Censor data](#censor-data)
+- [Simple model](#simple-model)
+- [Imputing missing values](#imputing-missing-values)
+- [Interaction model](#interaction-model)
+- [Compare all models](#compare-all-models)
+- [Comparing simple models](#comparing-simple-models)
+- [Comparing impute models](#comparing-impute-models)
 
 ``` r
 library("tidyverse")
@@ -70,6 +78,8 @@ data_aggregated <-
 
 ## Simple model
 
+With random slope for forest type allowed for species:
+
 ``` r
 time_to_last_alive|cens(x = censor, y2 = time_to_dead) ~
         0 + forest_logged + dbase_mean_sc +
@@ -102,9 +112,22 @@ plot(model_list$ft_sp_sz_weibull2.rds,
 
 ![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-7-2.png)
 
-## Imputing missing values
+With random intercept for species:
 
-With forest type explaining size:
+``` r
+time_to_last_alive|cens(x = censor, y2 = time_to_dead) ~
+        0 + forest_logged + dbase_mean_sc +
+        (1 | genus_species)
+```
+
+``` r
+plot(model_list$ft_sp_sz_weibull3.rds,
+     param = "b_", ask = FALSE)
+```
+
+![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-9-1.png)
+
+## Imputing missing values
 
 ``` r
 bform <-
@@ -115,10 +138,10 @@ bform <-
     family = brmsfamily("weibull")
   ) +
   bf(dbh_mean_sc |
-       mi() ~ mi(dbase_mean_sc) + forest_logged,
+       mi() ~ mi(dbase_mean_sc),
      family = brmsfamily("gaussian")) +
   bf(dbase_mean_sc |
-       mi() ~ mi(dbh_mean_sc) + forest_logged,
+       mi() ~ mi(dbh_mean_sc),
      family = brmsfamily("gaussian")) +
   set_rescor(FALSE)
 ```
@@ -128,11 +151,11 @@ plot(model_list$ft_sp_sz_impute_weibull.rds,
      param = "b_", ask = FALSE)
 ```
 
-![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-9-1.png)
+![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-11-1.png)
 
-![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-9-2.png)
+![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-11-2.png)
 
-![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-9-3.png)
+![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-11-3.png)
 
 With species random effect explaining size:
 
@@ -158,11 +181,11 @@ plot(model_list$ft_sp_sz_impute_weibull2.rds,
      param = "b_", ask = FALSE)
 ```
 
-![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-11-1.png)
+![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-13-1.png)
 
-![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-11-2.png)
+![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-13-2.png)
 
-![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-11-3.png)
+![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-13-3.png)
 
 With species as a fixed effect explaining size:
 
@@ -188,25 +211,25 @@ plot(model_list$ft_sp_sz_impute_weibull3.rds,
      param = "b_", ask = FALSE)
 ```
 
-![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-13-1.png)
+![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-15-1.png)
 
-![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-13-2.png)
+![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-15-2.png)
 
-![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-13-3.png)
+![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-15-3.png)
 
-![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-13-4.png)
+![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-15-4.png)
 
-![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-13-5.png)
+![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-15-5.png)
 
-![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-13-6.png)
+![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-15-6.png)
 
-![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-13-7.png)
+![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-15-7.png)
 
-![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-13-8.png)
+![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-15-8.png)
 
-![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-13-9.png)
+![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-15-9.png)
 
-## Interaction
+## Interaction model
 
 ``` r
 time_to_last_alive|cens(x = censor, y2 = time_to_dead) ~
@@ -219,16 +242,17 @@ plot(model_list$ft_sp_sz_interact2_weibull.rds,
      param = "b_", ask = FALSE)
 ```
 
-![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-15-1.png)
+![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-17-1.png)
 
-![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-15-2.png)
+![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-17-2.png)
 
-## Compare
+## Compare all models
 
 ``` r
 loo_compare(
   model_list$ft_sp_sz_weibull.rds,
   model_list$ft_sp_sz_weibull2.rds,
+  model_list$ft_sp_sz_weibull3.rds,
   model_list$ft_sp_sz_impute_weibull.rds,
   model_list$ft_sp_sz_impute_weibull2.rds,
   model_list$ft_sp_sz_impute_weibull3.rds,
@@ -247,12 +271,12 @@ loo_compare(
        title = "expected log predictive density (ELPD)") 
 ```
 
-![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-16-1.png)
+![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-18-1.png)
 
 ``` r
 my_coef_tab <-
-  tibble(fit = model_list[c(1,2,3,5,6,7)],
-         model = names(model_list[c(1,2,3,5,6,7)])) %>%
+  tibble(fit = model_list[c(1,2,3,6,7,8)],
+         model = names(model_list[c(1,2,3,6,7,8)])) %>%
   mutate(tidy = purrr::map(
     fit,
     tidy,
@@ -283,9 +307,53 @@ my_coef_tab %>%
   facet_wrap(~model, ncol = 1) 
 ```
 
-![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-18-1.png)
+![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-20-1.png)
+
+## Comparing simple models
+
+``` r
+loo_compare(
+  model_list$ft_sp_sz_weibull.rds,
+  model_list$ft_sp_sz_weibull2.rds,
+  model_list$ft_sp_sz_weibull3.rds
+) %>% 
+  data.frame() %>% 
+  rownames_to_column(var = "model_name") %>% 
+  ggplot(aes(x    = reorder(model_name, elpd_diff), 
+             y    = elpd_diff, 
+             ymin = elpd_diff - se_diff, 
+             ymax = elpd_diff + se_diff)) +
+  geom_pointrange(shape = 21, fill = "white") +
+  coord_flip() +
+  geom_hline(yintercept = 0, colour = "blue", linetype = 2) +
+  labs(x = NULL, y = "difference from model with the largest ELPD", 
+       title = "expected log predictive density (ELPD)") 
+```
+
+![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-21-1.png)
 
 ## Comparing impute models
+
+``` r
+loo_compare(
+  model_list$ft_sp_sz_impute_weibull.rds,
+  model_list$ft_sp_sz_impute_weibull2.rds,
+  model_list$ft_sp_sz_impute_weibull3.rds
+) %>% 
+  data.frame() %>% 
+  rownames_to_column(var = "model_name") %>% 
+  ggplot(aes(x    = reorder(model_name, elpd_diff), 
+             y    = elpd_diff, 
+             ymin = elpd_diff - se_diff, 
+             ymax = elpd_diff + se_diff)) +
+  geom_pointrange(shape = 21, fill = "white") +
+  coord_flip() +
+  geom_hline(yintercept = 0, colour = "blue", linetype = 2) +
+  labs(x = NULL, y = "difference from model with the largest ELPD", 
+       title = "expected log predictive density (ELPD)") 
+```
+
+![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-22-1.png)
 
 ``` r
 my_coef_tab <-
@@ -313,4 +381,4 @@ my_coef_tab %>%
   facet_wrap(~model, ncol = 1) 
 ```
 
-![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-20-1.png)
+![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-24-1.png)

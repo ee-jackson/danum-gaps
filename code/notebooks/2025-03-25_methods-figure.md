@@ -1,17 +1,14 @@
 # Create a figure exlaining the analysis?
 eleanorjackson
-2025-03-27
+2025-03-28
 
 - [Growth](#growth)
   - [First panel](#first-panel)
-    - [Primary forest](#primary-forest)
-    - [Secondary forest](#secondary-forest)
   - [Second panel](#second-panel)
-    - [Primary forest](#primary-forest-1)
-    - [Secondary forest](#secondary-forest-1)
+  - [Third panel](#third-panel)
 - [Survival](#survival)
-  - [Censor data](#censor-data)
-  - [Panel three](#panel-three)
+  - [Fourth panel](#fourth-panel)
+  - [Fifth panel](#fifth-panel)
 - [Combined panels](#combined-panels)
 
 ``` r
@@ -47,8 +44,6 @@ growth_model <- readRDS(here::here("output",
                                    "priors3",
                                    "growth_model.rds"))
 ```
-
-## First panel
 
 ``` r
 sp_n <- 
@@ -110,41 +105,51 @@ sp1_preds <-
                   allow_new_levels = FALSE) 
 ```
 
-### Primary forest
+## First panel
 
 ``` r
-growth_data_sp1_p <-
+plant_1 <- 
   growth_data_sp1 %>% 
-  filter(forest_type == "primary")
+  filter(forest_type == "secondary") %>% 
+  group_by(plant_id) %>% 
+  summarise(n = n()) %>% 
+  arrange(-n) %>% 
+  pluck(1,2) %>% 
+  paste()
 
-sp1_preds_p <-
+growth_data_pl1 <-
+  growth_data_sp1 %>% 
+  filter(plant_id == plant_1)
+
+pl1_preds <-
   sp1_preds %>% 
-  filter(forest_type == "primary")
+  filter(plant_id == plant_1)
 
-ggplot() +
-  stat_lineribbon(data = sp1_preds_p,
+p1 <- 
+  ggplot() +
+  stat_lineribbon(data = pl1_preds,
                   aes(x = years, y = .epred,
                       group = plant_id),
                   colour = "forestgreen",
                   .width = 0,
                   linewidth = 1,
-                  alpha = 0.3) +
-  stat_lineribbon(data = sp1_preds_p,
-                  aes(x = years, y = .epred),
-                  .width = 0,
-                  linewidth = 1,
-                  alpha = 1,
-                  linetype = 2) +
+                  alpha = 0.4) +
+  geom_point(data = growth_data_pl1,
+             aes(x = years, y = dbh_mean),
+             shape = 4, stroke = 0.75, size = 2,
+             colour = "forestgreen") +
   theme(legend.position = "none") +
   ylab("DBH cm") +
   xlab("Years") +
   scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0))
+
+p1
 ```
 
 ![](figures/2025-03-25_methods-figure/unnamed-chunk-6-1.png)
 
-### Secondary forest
+## Second panel
 
 ``` r
 growth_data_sp1_s <-
@@ -155,7 +160,7 @@ sp1_preds_s <-
   sp1_preds %>% 
   filter(forest_type == "secondary")
 
-p1 <- 
+p2 <- 
   ggplot() +
   stat_lineribbon(data = sp1_preds_s,
                   aes(x = years, y = .epred,
@@ -176,12 +181,12 @@ p1 <-
   scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0))
 
-p1
+p2
 ```
 
 ![](figures/2025-03-25_methods-figure/unnamed-chunk-7-1.png)
 
-## Second panel
+## Third panel
 
 ``` r
 all_preds <- 
@@ -225,68 +230,6 @@ all_gr %>%
 
 ![](figures/2025-03-25_methods-figure/unnamed-chunk-8-1.png)
 
-### Primary forest
-
-``` r
-sp1_gr_p <- 
-  sp1_preds_p %>% 
-  group_by(plant_id, years) %>% 
-  point_interval(.epred,
-                 .width = 0.95,
-                 .point = median,
-                 .interval = hdi,
-                 na.rm = TRUE) %>%
-  group_by(plant_id) %>% 
-  mutate(lag_dbh_pred = lag(.epred, n = 1, order_by = years)) %>% 
-  rowwise() %>% 
-  mutate(growth_cmyr = .epred - lag_dbh_pred) %>% 
-  ungroup()
-```
-
-``` r
-sp1_gr_p %>% 
-  ggplot(aes(x = .epred, y = growth_cmyr)) +
-  geom_line(aes(group = plant_id), 
-            stat = "smooth",
-            alpha = 0.3,
-            colour = "forestgreen",
-            linewidth = 1) +
-  xlab("DBH/cm") +
-  ylab("Growth rate cm/yr") +
-  scale_x_continuous(expand = c(0, 0)) +
-  scale_y_continuous(limit = c(0, NA), expand = c(0, 0))
-```
-
-![](figures/2025-03-25_methods-figure/unnamed-chunk-10-1.png)
-
-``` r
-all_gr_sp1_p <- 
-  all_gr %>% 
-  filter(genus_species == sp_1 & forest_type == "primary")
-
-ggplot() +
-  geom_line(data = sp1_gr_p,
-            aes(x = .epred, y = growth_cmyr,
-                group = plant_id), 
-            alpha = 0.3,
-            stat = "smooth",
-            colour = "forestgreen",
-            linewidth = 1) +
-  geom_path(data = all_gr_sp1_p,
-            aes(x = .epred, y = growth_cmyr), 
-            linewidth = 1,
-            alpha = 1,
-            linetype = 2) +
-  xlab("DBH cm") +
-  ylab("Growth rate cm/yr") +
-  scale_x_continuous(expand = c(0, 0)) +
-  scale_y_continuous(limit = c(0, NA), expand = c(0, 0))
-```
-
-![](figures/2025-03-25_methods-figure/unnamed-chunk-11-1.png)
-
-### Secondary forest
-
 ``` r
 sp1_gr_s <- 
   sp1_preds_s %>% 
@@ -317,14 +260,14 @@ sp1_gr_s %>%
   scale_y_continuous(limit = c(0, NA), expand = c(0, 0))
 ```
 
-![](figures/2025-03-25_methods-figure/unnamed-chunk-13-1.png)
+![](figures/2025-03-25_methods-figure/unnamed-chunk-10-1.png)
 
 ``` r
 all_gr_sp1_s <- 
   all_gr %>% 
   filter(genus_species == sp_1 & forest_type == "secondary")
 
-p2 <- 
+p3 <- 
   ggplot() +
   geom_line(data = sp1_gr_s,
             aes(x = .epred, y = growth_cmyr,
@@ -341,12 +284,12 @@ p2 <-
   xlab("DBH cm") +
   ylab("Growth rate cm/yr") +
   scale_x_continuous(expand = c(0, 0)) +
-  scale_y_continuous(limit = c(0, NA), expand = c(0, 0))
+  scale_y_continuous(limit = c(0, 25), expand = c(0, 0))
 
-p2
+p3
 ```
 
-![](figures/2025-03-25_methods-figure/unnamed-chunk-14-1.png)
+![](figures/2025-03-25_methods-figure/unnamed-chunk-11-1.png)
 
 # Survival
 
@@ -355,8 +298,6 @@ survival_model <-
   readRDS(here::here("output", "models", 
                      "survival", "survival_model_impute.rds"))
 ```
-
-## Censor data
 
 ``` r
 # time to first recorded dead
@@ -401,7 +342,32 @@ survival_data <-
          dbh_mean_sc = scale(dbh_mean))
 ```
 
-## Panel three
+## Fourth panel
+
+``` r
+p4 <- 
+  data %>% 
+  filter(genus_species == sp_1 & 
+           forest_logged == 1 & cohort == 1) %>% 
+  filter(plant_id %in% 
+           sample(unique(growth_data_sp1_s$plant_id), 30)) %>% 
+  mutate(survival = ifelse(survival == 0, "Dead", "Alive")) %>% 
+  ggplot(aes(y = plant_id, x = years,
+             shape = as.ordered(survival))) +
+  geom_point(size = 2, colour = "grey20", stroke = 0.75) +
+  scale_shape_manual(values = c(19, 4)) +
+  theme(axis.text.y = element_blank(),
+        legend.position = "top",legend.justification="left",
+        legend.title = element_blank()) +
+  xlab("Years") +
+  ylab("Seedling ID")
+
+p4
+```
+
+![](figures/2025-03-25_methods-figure/unnamed-chunk-14-1.png)
+
+## Fifth panel
 
 ``` r
 survival_data %>% 
@@ -418,7 +384,7 @@ survival_data %>%
   xlab("DBH")
 ```
 
-![](figures/2025-03-25_methods-figure/unnamed-chunk-17-1.png)
+![](figures/2025-03-25_methods-figure/unnamed-chunk-15-1.png)
 
 ``` r
 grp_eff_im <- 
@@ -495,7 +461,7 @@ plotting_data_sp %>%
   theme(legend.position = "bottom")
 ```
 
-![](figures/2025-03-25_methods-figure/unnamed-chunk-19-1.png)
+![](figures/2025-03-25_methods-figure/unnamed-chunk-17-1.png)
 
 ``` r
 surv_sp1 <-
@@ -503,7 +469,7 @@ surv_sp1 <-
   mutate(survival = 0) %>% 
   filter(genus_species == sp_1)
 
-p3 <-
+p5 <-
   ggplot() +
   geom_dots(data = filter(surv_sp1, forest_logged == 1),
          aes(x = dbh_mean, y =survival,
@@ -514,7 +480,7 @@ p3 <-
   stat_lineribbon(data = filter(plotting_data_sp, forest_type == "secondary"), 
     aes(x = bsp_timetolastalive_midbh_mean_sc, 
                y = value), colour = "forestgreen", fill = "forestgreen",
-               .width = 0.95, alpha = 0.6, show.legend = FALSE) +
+               .width = 0.95, alpha = 0.7, show.legend = FALSE) +
   stat_lineribbon(data = filter(plotting_data_sp, forest_type == "secondary"), 
     aes(x = bsp_timetolastalive_midbh_mean_sc, 
                y = value), colour = "forestgreen", 
@@ -525,18 +491,24 @@ p3 <-
   scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0), breaks = c(0,1)) 
 
-p3
+p5
 ```
 
-![](figures/2025-03-25_methods-figure/unnamed-chunk-20-1.png)
+![](figures/2025-03-25_methods-figure/unnamed-chunk-18-1.png)
 
 # Combined panels
 
 ``` r
-p1 + p2 + p3 +
+p1 + p2 + p3 + p4 + p5 +
+  patchwork::plot_layout(ncol = 3) +
   patchwork::plot_annotation(
     tag_levels = "a",
-    title = "Hopea sangal, secondary forest")
+    title = "Hopea sangal",
+    subtitle = "Secondary forest",
+    theme = theme(
+      plot.title = element_text(face = "italic")
+      )
+  )
 ```
 
-![](figures/2025-03-25_methods-figure/unnamed-chunk-21-1.png)
+![](figures/2025-03-25_methods-figure/unnamed-chunk-19-1.png)

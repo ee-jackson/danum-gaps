@@ -1,6 +1,6 @@
 # Compare survival models
 eleanorjackson
-2025-03-25
+2025-04-03
 
 - [Censor data](#censor-data)
 - [Simple model](#simple-model)
@@ -283,8 +283,9 @@ my_coef_tab <-
     parameters = c(
       "forest_logged0",
       "forest_logged1",
-      "shape",
-      "dbase_mean_sc"
+      "dbase_mean_sc",
+      "timetolastalive_midbase_mean_sc",
+      "timetolastalive_midbh_mean_sc"
     )
   )) %>%
   unnest(tidy)
@@ -309,6 +310,23 @@ my_coef_tab %>%
 
 ![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-20-1.png)
 
+``` r
+my_coef_tab %>% 
+  filter(term == "b_dbase_mean_sc" |
+           term == "bsp_timetolastalive_midbase_mean_sc"|
+           term == "bsp_timetolastalive_midbh_mean_sc"
+           ) %>% 
+  rowwise() %>% 
+  ggplot(aes(x = term, y = estimate, ymin = conf.low, ymax = conf.high)) +
+  geom_pointrange(shape = 21, fill = "white") +
+  labs(x = NULL,
+       y = NULL) +
+  coord_flip() +
+  facet_wrap(~model, ncol = 1) 
+```
+
+![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-21-1.png)
+
 ## Comparing simple models
 
 ``` r
@@ -330,7 +348,7 @@ loo_compare(
        title = "expected log predictive density (ELPD)") 
 ```
 
-![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-21-1.png)
+![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-22-1.png)
 
 ## Comparing impute models
 
@@ -353,7 +371,7 @@ loo_compare(
        title = "expected log predictive density (ELPD)") 
 ```
 
-![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-22-1.png)
+![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-23-1.png)
 
 ``` r
 my_coef_tab <-
@@ -364,7 +382,11 @@ my_coef_tab <-
     tidy,
     parameters = c(
       "bsp_dbhmeansc_midbase_mean_sc",
-      "bsp_dbasemeansc_midbh_mean_sc"
+      "bsp_dbasemeansc_midbh_mean_sc",
+      "bsp_timetolastalive_midbase_mean_sc",
+      "bsp_timetolastalive_midbh_mean_sc",
+      "b_dbhmeansc_Intercept",
+      "b_dbasemeansc_Intercept"
     )
   )) %>%
   unnest(tidy)
@@ -373,12 +395,11 @@ my_coef_tab <-
 ``` r
 my_coef_tab %>% 
   rowwise() %>% 
-  ggplot(aes(x = term, y = estimate, ymin = conf.low, ymax = conf.high)) +
+  ggplot(aes(y = term, x = estimate, xmin = conf.low, xmax = conf.high)) +
   geom_pointrange(shape = 21, fill = "white") +
   labs(x = NULL,
        y = NULL) +
-  coord_flip() +
   facet_wrap(~model, ncol = 1) 
 ```
 
-![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-24-1.png)
+![](figures/2025-03-07_compare-first-survival-models/unnamed-chunk-25-1.png)

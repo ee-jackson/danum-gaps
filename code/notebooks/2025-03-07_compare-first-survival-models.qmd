@@ -275,8 +275,9 @@ my_coef_tab <-
     parameters = c(
       "forest_logged0",
       "forest_logged1",
-      "shape",
-      "dbase_mean_sc"
+      "dbase_mean_sc",
+      "timetolastalive_midbase_mean_sc",
+      "timetolastalive_midbh_mean_sc"
     )
   )) %>%
   unnest(tidy)
@@ -292,6 +293,21 @@ my_coef_tab %>%
   rowwise() %>% 
   mutate(parameter = pluck(strsplit(term,"_"),1,-1)) %>% 
   ggplot(aes(x = parameter, y = estimate, ymin = conf.low, ymax = conf.high)) +
+  geom_pointrange(shape = 21, fill = "white") +
+  labs(x = NULL,
+       y = NULL) +
+  coord_flip() +
+  facet_wrap(~model, ncol = 1) 
+```
+
+```{r}
+my_coef_tab %>% 
+  filter(term == "b_dbase_mean_sc" |
+           term == "bsp_timetolastalive_midbase_mean_sc"|
+           term == "bsp_timetolastalive_midbh_mean_sc"
+           ) %>% 
+  rowwise() %>% 
+  ggplot(aes(x = term, y = estimate, ymin = conf.low, ymax = conf.high)) +
   geom_pointrange(shape = 21, fill = "white") +
   labs(x = NULL,
        y = NULL) +
@@ -350,7 +366,11 @@ my_coef_tab <-
     tidy,
     parameters = c(
       "bsp_dbhmeansc_midbase_mean_sc",
-      "bsp_dbasemeansc_midbh_mean_sc"
+      "bsp_dbasemeansc_midbh_mean_sc",
+      "bsp_timetolastalive_midbase_mean_sc",
+      "bsp_timetolastalive_midbh_mean_sc",
+      "b_dbhmeansc_Intercept",
+      "b_dbasemeansc_Intercept"
     )
   )) %>%
   unnest(tidy)
@@ -359,10 +379,9 @@ my_coef_tab <-
 ```{r}
 my_coef_tab %>% 
   rowwise() %>% 
-  ggplot(aes(x = term, y = estimate, ymin = conf.low, ymax = conf.high)) +
+  ggplot(aes(y = term, x = estimate, xmin = conf.low, xmax = conf.high)) +
   geom_pointrange(shape = 21, fill = "white") +
   labs(x = NULL,
        y = NULL) +
-  coord_flip() +
   facet_wrap(~model, ncol = 1) 
 ```

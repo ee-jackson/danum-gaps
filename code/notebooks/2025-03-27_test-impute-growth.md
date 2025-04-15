@@ -1,8 +1,8 @@
 # Test a growth model imputing size
 eleanorjackson
-2025-03-28
+2025-04-15
 
-Testing a growth model that imputes missing values of DBH.
+Testing a growth model that imputes missing values of size
 
 ``` r
 library("tidyverse")
@@ -26,11 +26,11 @@ data_sample2 <-
 well_sampled_trees2 <-
   data_sample2 %>%
   group_by(plant_id) %>%
-  summarise(n = n()) %>%
+  summarise(n = sum(!is.na(dbase_mean))) %>%
   filter(n > 10)
 
 data_test_sample <-
-  data %>%
+  data_sample2 %>%
   filter(plant_id %in% sample(unique(well_sampled_trees2$plant_id), 36))
 ```
 
@@ -62,56 +62,36 @@ data_test_sample %>%
     # A tibble: 1 × 2
       dbh_mean dbase_mean
          <int>      <int>
-    1      254         85
+    1      168         13
 
-By imputing DBH we will get 260 extra measurements. DBH is mostly
-missing at the start of the experiment when the trees were too small to
-take DBH.
+We’ll be imputing 13 missing values of basal diameter. Basal diameter is
+mostly missing for the final 3 surveys of primary forest seedlings.
 
 ``` r
 bform <-
-  bf(dbh_mean | mi() ~ log(A) * exp( -exp( -(k * (years - delay) ) ) ),
-     log(A) ~ 0 + forest_type + mi(dbase_mean) +
+  bf(dbase_mean | mi() ~ log(A) * exp( -exp( -(k * (years - delay) ) ) ),
+     log(A) ~ 0 + forest_type + 
        (1 | plant_id),
-     k ~ 0 + forest_type + mi(dbase_mean) +
+     k ~ 0 + forest_type + 
        (1 | plant_id),
-     delay ~ 0 + forest_type + mi(dbase_mean) +
+     delay ~ 0 + forest_type +
        (1 | plant_id),
      family = brmsfamily("lognormal"),
-     nl = TRUE) +
-  bf(dbase_mean |
-       mi() ~ mi(dbh_mean),
-     family = brmsfamily("gaussian")) +
-  set_rescor(FALSE)
+     nl = TRUE) 
 ```
-
-DBH over time (incl. missing values) is predicted by forest type and
-basal diameter. Missing basal diameter values are predicted by DBH.
 
 ``` r
-priors2 <- c(
-  prior(lognormal(5, 1.2), nlpar = "A", lb = 0, resp = "dbhmean"),
-  prior(student_t(5, 0, 0.5), nlpar = "k", lb = 0, resp = "dbhmean"),
-  prior(student_t(5, 0, 20), nlpar = "delay", resp = "dbhmean"),
-  prior(normal(50, 1000), class = "b", lb = 0, resp = "dbasemean")
-  )
+priors <- c(
+  prior(lognormal(5, 1.2), nlpar = "A", lb = 0),
+  prior(student_t(5, 0, 1), nlpar = "k", lb = 0),
+  prior(student_t(5, 0, 10), nlpar = "delay"))
 ```
-
-I’ve given quite a wide prior for basal diameter, it looks like this:
-
-``` r
-rnorm(n = 10000, 50, 1000) %>% 
-  density() %>% 
-  plot(xlim = c(0, 4000)) 
-```
-
-![](figures/2025-03-27_test-impute-growth/unnamed-chunk-8-1.png)
 
 ``` r
 growth_model_impute <-
   brm(bform,
       data = data_test_sample,
-      prior = priors2,
+      prior = priors,
       cores = 4,
       chains = 4,
       init = 0,
@@ -127,77 +107,64 @@ plot(growth_model_impute,
      ask = FALSE)
 ```
 
-![](figures/2025-03-27_test-impute-growth/unnamed-chunk-10-1.png)
+![](figures/2025-03-27_test-impute-growth/unnamed-chunk-9-1.png)
 
-![](figures/2025-03-27_test-impute-growth/unnamed-chunk-10-2.png)
+![](figures/2025-03-27_test-impute-growth/unnamed-chunk-9-2.png)
 
-![](figures/2025-03-27_test-impute-growth/unnamed-chunk-10-3.png)
-
-![](figures/2025-03-27_test-impute-growth/unnamed-chunk-10-4.png)
-
-Bad chains since I didn’t run very long and little data, but ok for
-testing.
+Not bad.
 
 Getting predictions:
 
 ``` r
 preds <- 
   data_test_sample %>% 
-  data_grid(dbase_mean = seq_range(dbase_mean, n = 5),
-            forest_type,
-            dbh_mean = seq_range(dbh_mean, n = 5),
+  data_grid(forest_type,
             years = c(0:20),
             .model = growth_model_impute) %>% 
   add_epred_draws(growth_model_impute,
                   re_formula = NA)
 ```
 
-Predicted DBH plotted against basal diameter:
-
 ``` r
 ggplot() +
-  geom_point(data = data_test_sample,
-             aes(x = dbase_mean, y = dbh_mean),
+  geom_point(data = filter(data_test_sample, forest_type == "primary"),
+             aes(y = dbase_mean, x = years),
              alpha = 0.6, shape = 16) +
-  stat_lineribbon(data = filter(preds, .category == "dbhmean"),
-                  aes(y = .epred, x = dbase_mean),
+  stat_lineribbon(data = filter(preds, forest_type == "primary"),
+                  aes(y = .epred, x = years),
                   .width = 0.95, alpha = 0.6) 
+```
+
+![](figures/2025-03-27_test-impute-growth/unnamed-chunk-11-1.png)
+
+Predicted basal diameter against real basal:
+
+``` r
+data_test_sample %>% 
+  filter(forest_type == "primary") %>% 
+  add_epred_draws(growth_model_impute,
+                  re_formula = NULL, 
+                  allow_new_levels = TRUE) %>% 
+  point_interval() %>% 
+  ggplot() +
+  geom_point(aes(x = dbase_mean, y = .epred),
+             alpha = 0.6, shape = 16, size = 1)
 ```
 
 ![](figures/2025-03-27_test-impute-growth/unnamed-chunk-12-1.png)
 
-Not a 1-to-1 fit since DBH is also predicted by time, forest type & tree
-ID.
-
-Predicted basal diameter plotted against DBH:
+Predicted basal diameter against real DBH where real basal is missing:
 
 ``` r
-ggplot() +
-  geom_point(data = data_test_sample,
-             aes(x = dbh_mean, y = dbase_mean),
-             alpha = 0.6, shape = 16) +
-  stat_lineribbon(data = filter(preds, .category == "dbasemean"),
-                  aes(y = .epred, x = dbh_mean),
-                  .width = 0.95, alpha = 0.6) 
+data_test_sample %>% 
+  filter(is.na(dbase_mean)) %>% 
+  add_epred_draws(growth_model_impute,
+                  re_formula = NULL, 
+                  allow_new_levels = TRUE) %>% 
+  point_interval() %>% 
+  ggplot() +
+  geom_point(aes(x = dbh_mean, y = .epred),
+             alpha = 0.6, shape = 16, size = 2)
 ```
 
 ![](figures/2025-03-27_test-impute-growth/unnamed-chunk-13-1.png)
-
-Nice! Basal diameter is predicted solely by DBH so this looks good.
-
-Prediction of DBH over time:
-
-``` r
-preds %>% 
-  filter(.category == "dbhmean") %>% 
-  ggplot() +
-  stat_lineribbon(aes(x = years, y = .epred, 
-                      group = forest_type, colour = forest_type),
-                  .width = 0,
-                  linewidth = 1) +
-  theme(legend.position = "bottom") +
-  ylab("DBH cm") +
-  xlab("Years")
-```
-
-![](figures/2025-03-27_test-impute-growth/unnamed-chunk-14-1.png)

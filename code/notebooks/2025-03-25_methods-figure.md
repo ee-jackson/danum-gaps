@@ -1,6 +1,6 @@
 # Create a figure exlaining the analysis?
 eleanorjackson
-2025-03-28
+2025-04-21
 
 - [Growth](#growth)
   - [First panel](#first-panel)
@@ -29,20 +29,21 @@ data <-
 well_sampled_trees <-
   data %>%
   group_by(plant_id) %>%
-  summarise(records = sum(!is.na(dbh_mean))) %>%
+  summarise(records = sum(!is.na(dbase_mean))) %>%
   filter(records > 2)
 
 growth_data <-
   data %>%
   filter(survival == 1) %>%
+  drop_na(dbase_mean) %>% 
   filter(plant_id %in% well_sampled_trees$plant_id)
 ```
 
 ``` r
 growth_model <- readRDS(here::here("output",
                                    "models",
-                                   "priors3",
-                                   "growth_model.rds"))
+                                   "priors2",
+                                   "growth_model_impute_base_nodbh.rds"))
 ```
 
 ``` r
@@ -60,26 +61,26 @@ sp_n
     # A tibble: 15 × 3
        genus_species           primary secondary
        <fct>                     <int>     <int>
-     1 Hopea_sangal                 17       156
-     2 Shorea_johorensis            16       136
-     3 Parashorea_tomentella        16       120
-     4 Dryobalanops_lanceolata      14       115
-     5 Parashorea_malaanonan        16       115
-     6 Shorea_ovalis                13        93
-     7 Shorea_leprosula              7        83
-     8 Shorea_macrophylla           13        73
-     9 Dipterocarpus_conformis      10        66
-    10 Shorea_parvifolia            13        61
-    11 Shorea_macroptera            14        56
-    12 Shorea_beccariana            17        54
-    13 Shorea_gibbosa               11        37
-    14 Shorea_argentifolia          12        29
-    15 Shorea_faguetiana             9        16
+     1 Parashorea_tomentella        21       301
+     2 Shorea_johorensis            20       295
+     3 Parashorea_malaanonan        20       288
+     4 Hopea_sangal                 18       259
+     5 Dryobalanops_lanceolata      20       245
+     6 Shorea_leprosula             19       220
+     7 Shorea_ovalis                19       198
+     8 Shorea_macroptera            19       173
+     9 Shorea_macrophylla           17       156
+    10 Dipterocarpus_conformis      18       140
+    11 Shorea_parvifolia            20       129
+    12 Shorea_gibbosa               18       106
+    13 Shorea_beccariana            20       105
+    14 Shorea_argentifolia          19        97
+    15 Shorea_faguetiana            18        74
 
 ``` r
 sp_1 <- 
   sp_n %>% 
-  pluck(1,1) %>% 
+  pluck(1, 4) %>% 
   paste()
 ```
 
@@ -101,6 +102,7 @@ sp1_preds <-
             genus_species = sp_1,
             plant_id = droplevels(unique(keys$plant_id))) %>%
   left_join(keys) %>%
+  filter(forest_type == "secondary") %>% 
   add_epred_draws(growth_model,
                   allow_new_levels = FALSE) 
 ```
@@ -114,7 +116,7 @@ plant_1 <-
   group_by(plant_id) %>% 
   summarise(n = n()) %>% 
   arrange(-n) %>% 
-  pluck(1,2) %>% 
+  pluck(1, 5) %>% 
   paste()
 
 growth_data_pl1 <-
@@ -135,11 +137,11 @@ p1 <-
                   linewidth = 1,
                   alpha = 0.4) +
   geom_point(data = growth_data_pl1,
-             aes(x = years, y = dbh_mean),
+             aes(x = years, y = dbase_mean),
              shape = 4, stroke = 0.75, size = 2,
              colour = "forestgreen") +
   theme(legend.position = "none") +
-  ylab("DBH cm") +
+  ylab("Basal diameter cm") +
   xlab("Years") +
   scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0))
@@ -176,7 +178,7 @@ p2 <-
                   alpha = 1,
                   linetype = 2) +
   theme(legend.position = "none") +
-  ylab("DBH cm") +
+  ylab("Basal diameter cm") +
   xlab("Years") +
   scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0))
@@ -191,14 +193,14 @@ p2
 ``` r
 all_preds <- 
   growth_data %>% 
-  drop_na(dbh_mean) %>% 
+  drop_na(dbase_mean) %>% 
   data_grid(years = c(0:20),
             forest_type,
-            genus_species,
+            genus_species = sp_1,
             .model = growth_model) %>% 
   add_epred_draws(object = growth_model, ndraws = NULL,
                   re_formula = ~ (0 + forest_type |genus_species),
-                  allow_new_levels = TRUE)
+                  allow_new_levels = FALSE)
 
 
 all_gr <- 
@@ -222,7 +224,7 @@ all_gr %>%
   geom_path(linewidth = 1,
             alpha = 1,
             linetype = 2) +
-  xlab("DBH cm") +
+  xlab("Basal diameter cm") +
   ylab("Growth rate cm/yr") +
   scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0))
@@ -254,7 +256,7 @@ sp1_gr_s %>%
             colour = "forestgreen",
             linewidth = 1,
             stat = "smooth") +
-  xlab("DBH cm") +
+  xlab("Basal diameter cm") +
   ylab("Growth rate cm/yr") +
   scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(limit = c(0, NA), expand = c(0, 0))
@@ -281,10 +283,10 @@ p3 <-
             linewidth = 1,
             alpha = 1,
             linetype = 2) +
-  xlab("DBH cm") +
+  xlab("Basal diameter cm") +
   ylab("Growth rate cm/yr") +
   scale_x_continuous(expand = c(0, 0)) +
-  scale_y_continuous(limit = c(0, 25), expand = c(0, 0))
+  scale_y_continuous(limit = c(0, NA), expand = c(0, 0))
 
 p3
 ```
@@ -300,46 +302,8 @@ survival_model <-
 ```
 
 ``` r
-# time to first recorded dead
-interval_censored <-
-  data %>%
-  filter(survival == 0) %>%
-  group_by(plant_id) %>%
-  slice_min(survey_date, with_ties = FALSE) %>%
-  ungroup() %>%
-  rename(time_to_dead = years) %>%
-  select(plant_id, genus_species, plot, forest_logged, cohort, time_to_dead) %>%
-  mutate(censor = "interval")
-
-# time to last recorded alive
-interval_censored <-
-  data %>%
-  filter(plant_id %in% interval_censored$plant_id) %>%
-  filter(survival == 1) %>%
-  group_by(plant_id) %>%
-  slice_max(survey_date, with_ties = FALSE) %>%
-  ungroup() %>%
-  rename(time_to_last_alive = years) %>%
-  select(plant_id, time_to_last_alive, dbh_mean, dbase_mean) %>%
-  right_join(interval_censored)
-
-# trees never recorded dead
-right_censored <-
-  data %>%
-  filter(!plant_id %in% interval_censored$plant_id) %>%
-  group_by(plant_id) %>%
-  slice_max(survey_date, with_ties = FALSE) %>%
-  ungroup() %>%
-  rename(time_to_last_alive = years) %>%
-  select(plant_id, genus_species, plot, forest_logged,
-         cohort, time_to_last_alive, dbh_mean, dbase_mean) %>%
-  mutate(censor = "right")
-
 survival_data <-
-  bind_rows(interval_censored, right_censored) %>%
-  filter(time_to_last_alive > 0) %>%
-  mutate(dbase_mean_sc = scale(dbase_mean),
-         dbh_mean_sc = scale(dbh_mean))
+  readRDS(here::here("data", "derived", "data_survival.rds"))
 ```
 
 ## Fourth panel
@@ -348,7 +312,7 @@ survival_data <-
 p4 <- 
   data %>% 
   filter(genus_species == sp_1 & 
-           forest_logged == 1 & cohort == 1) %>% 
+           forest_type == "secondary" & cohort == 1) %>% 
   filter(plant_id %in% 
            sample(unique(growth_data_sp1_s$plant_id), 30)) %>% 
   mutate(survival = ifelse(survival == 0, "Dead", "Alive")) %>% 
@@ -373,15 +337,15 @@ p4
 survival_data %>% 
   mutate(survival = 0) %>% 
   filter(genus_species == sp_1) %>%
-  ggplot(aes(x = dbh_mean)) +
-  geom_dots(aes(y =survival,
+  ggplot(aes(x = dbase_mean)) +
+  geom_dots(aes(y = survival,
                 side = ifelse(survival == 0, "top", "bottom")), 
             pch = 19, color = "grey20",
             overlaps = "nudge") +
   scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0), breaks = c(0,1)) +
   ylab("Survival") +
-  xlab("DBH")
+  xlab("Basal diameter")
 ```
 
 ![](figures/2025-03-25_methods-figure/unnamed-chunk-15-1.png)
@@ -393,30 +357,30 @@ grp_eff_im <-
 
 pred_df_sz_sp <- 
   survival_data %>%
-  data_grid(bsp_timetolastalive_midbh_mean_sc = 
+  data_grid(bsp_timetolastalive_midbase_mean_sc = 
               seq(0.1, 200.1, 1)) %>%
   mutate(.chain = NA) %>%
   mutate(shape_timetolastalive = NA) %>%
   mutate(.draw = NA) %>%
   mutate(.iteration = NA) %>%
-  mutate(b_timetolastalive_forest_logged0 = NA) %>%
-  mutate(b_timetolastalive_forest_logged1 = NA)
+  mutate(b_timetolastalive_forest_typeprimary = NA) %>%
+  mutate(b_timetolastalive_forest_typesecondary = NA)
 
 pred_df_sz_sp[grp_eff_im] <- NA
 
 mcmc_df_sz_sp <-
   survival_model %>%
   spread_draws(shape_timetolastalive, `r_.*`, 
-               b_timetolastalive_forest_logged0,
-               b_timetolastalive_forest_logged1,
-               bsp_timetolastalive_midbh_mean_sc,
+               b_timetolastalive_forest_typeprimary,
+               b_timetolastalive_forest_typesecondary,
+               bsp_timetolastalive_midbase_mean_sc,
                  regex = TRUE) %>% 
-  mutate(bsp_timetolastalive_midbh_mean_sc = NA)  %>% 
+  mutate(bsp_timetolastalive_midbase_mean_sc = NA)  %>% 
   rowwise() %>% 
-  mutate(across(contains(",forest_logged0]"),
-                 ~ .x + b_timetolastalive_forest_logged0)) %>% 
-  mutate(across(contains(",forest_logged1]"),
-                 ~ .x + b_timetolastalive_forest_logged1))
+  mutate(across(contains(",forest_typeprimary]"),
+                 ~ .x + b_timetolastalive_forest_typeprimary)) %>% 
+  mutate(across(contains(",forest_typesecondary]"),
+                 ~ .x + b_timetolastalive_forest_typesecondary))
 
 curves_df_sz_sp <-
   union(pred_df_sz_sp, mcmc_df_sz_sp) %>%
@@ -425,19 +389,19 @@ curves_df_sz_sp <-
       .chain,
       .iteration,
       .draw,
-      b_timetolastalive_forest_logged0,
-      b_timetolastalive_forest_logged1,
+      b_timetolastalive_forest_typeprimary,
+      b_timetolastalive_forest_typesecondary,
       shape_timetolastalive,
-      `r_genus_species__timetolastalive[Hopea_sangal,forest_logged0]`,
-      `r_genus_species__timetolastalive[Hopea_sangal,forest_logged1]`
+      `r_genus_species__timetolastalive[Hopea_sangal,forest_typeprimary]`,
+      `r_genus_species__timetolastalive[Hopea_sangal,forest_typesecondary]`
     ),
-    bsp_timetolastalive_midbh_mean_sc
+    bsp_timetolastalive_midbase_mean_sc
   ) %>%
-  filter(!is.na(bsp_timetolastalive_midbh_mean_sc)) %>%
+  filter(!is.na(bsp_timetolastalive_midbase_mean_sc)) %>%
   filter (!is.na(.draw)) %>%
   # survival curves
   mutate(across(contains("r_genus_species__timetolastalive["),
-                 ~ exp (-(((bsp_timetolastalive_midbh_mean_sc - 0) / exp (.x))^shape_timetolastalive)))) 
+                 ~ exp (-(((bsp_timetolastalive_midbase_mean_sc - 0) / exp (.x))^shape_timetolastalive)))) 
   
 plotting_data_sp <- 
   curves_df_sz_sp %>% 
@@ -445,18 +409,18 @@ plotting_data_sp <-
   mutate(genus_species = str_split_i(string = name, pattern ="\\[", i = 2)) %>% 
   mutate(genus_species = str_split_i(string = genus_species, pattern =",", i = 1)) %>% 
   mutate(forest_type = str_split_i(string = name, pattern =",", i = 2)) %>% 
-  mutate(forest_type = ifelse(forest_type== "forest_logged0]", "primary", "secondary")) 
+  mutate(forest_type = ifelse(forest_type== "forest_loggedprimary]", "primary", "secondary")) 
 ```
 
 ``` r
 plotting_data_sp %>% 
-  ggplot (aes (x = bsp_timetolastalive_midbh_mean_sc, 
+  ggplot (aes (x = bsp_timetolastalive_midbase_mean_sc, 
                y = value, 
                colour = forest_type, 
                fill = forest_type)) +
   stat_lineribbon (.width = 0.95, alpha = 0.5) +
   ylab("Survival probability")+
-  xlab("DBH /cm") +
+  xlab("Basal diameter /cm") +
   facet_wrap(~genus_species, ncol = 3) +
   theme(legend.position = "bottom")
 ```
@@ -471,25 +435,25 @@ surv_sp1 <-
 
 p5 <-
   ggplot() +
-  geom_dots(data = filter(surv_sp1, forest_logged == 1),
-         aes(x = dbh_mean, y =survival,
+  geom_dots(data = filter(surv_sp1, forest_type == "secondary"),
+         aes(x = dbh_mean, y = survival,
                 side = ifelse(survival == 0, "top", "bottom")), 
             pch = 19, color = "grey20",
             overlaps = "nudge"
          ) +
   stat_lineribbon(data = filter(plotting_data_sp, forest_type == "secondary"), 
-    aes(x = bsp_timetolastalive_midbh_mean_sc, 
+    aes(x = bsp_timetolastalive_midbase_mean_sc, 
                y = value), colour = "forestgreen", fill = "forestgreen",
                .width = 0.95, alpha = 0.7, show.legend = FALSE) +
   stat_lineribbon(data = filter(plotting_data_sp, forest_type == "secondary"), 
-    aes(x = bsp_timetolastalive_midbh_mean_sc, 
+    aes(x = bsp_timetolastalive_midbase_mean_sc, 
                y = value), colour = "forestgreen", 
                .width = 0, show.legend = FALSE) +
   ylab("Survival")+
-  xlab("DBH cm") +
+  xlab("Basal diameter cm") +
   theme(legend.position = "bottom") +
-  scale_x_continuous(expand = c(0, 0)) +
-  scale_y_continuous(expand = c(0, 0), breaks = c(0,1)) 
+  scale_x_continuous(limits = c(0, 200), expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0), breaks = c(0, 1)) 
 
 p5
 ```

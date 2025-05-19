@@ -1,0 +1,189 @@
+---
+title: "Look at correlations between estimated parameters"
+author: 'eleanorjackson'
+date: '`r format(Sys.time(), "%d %B, %Y")`' 
+format: 
+  gfm:
+    toc: true
+editor: source
+execute:
+  warning: false
+---
+
+```{r setup}
+#| include: false
+
+file_name <- knitr::current_input()
+
+knitr::opts_chunk$set(
+  fig.path =
+    paste0("figures/", sub("\\.rmarkdown$", "", basename(file_name)), 
+           "/", sep = "")
+)
+
+set.seed(123)
+ggplot2::theme_set(ggplot2::theme_bw(base_size = 10))
+```
+
+```{r}
+library("tidyverse")
+library("tidybayes")
+```
+
+
+```{r}
+mod_gro <-
+  readRDS(here::here("output", "models", "priors2",
+                     "growth_model_base.rds"))
+
+
+mod_surv <-
+  readRDS(here::here("output", "models", "survival",
+                     "survival_model_impute.rds"))
+```
+
+Get growth parameters
+
+```{r}
+pc_data_A <-
+  mod_gro %>%
+  spread_draws(
+    b_A_forest_typeprimary,
+    b_A_forest_typesecondary,
+    `r_genus_species__A.*`, regex = TRUE) %>%
+  rowwise() %>%
+  mutate(across(contains(",forest_typeprimary]"),
+                ~ .x + b_A_forest_typeprimary)) %>%
+  mutate(across(contains(",forest_typesecondary]"),
+                ~ .x + b_A_forest_typesecondary)) %>%
+  ungroup() %>%
+  pivot_longer(cols = contains("r_genus_species__A")) %>%
+
+  mutate(forest_type = case_when(
+    grepl("secondary", name) ~ "Secondary",
+    grepl("primary", name) ~ "Primary")) %>%
+  mutate(Species = str_split_i(string = name, pattern ="\\[", i = 2)) %>%
+  mutate(Species = str_split_i(string = Species, pattern =",", i = 1)) %>%
+  mutate(Parameter = "A") 
+
+pc_data_k <-
+  mod_gro %>%
+  spread_draws(
+    b_k_forest_typeprimary,
+    b_k_forest_typesecondary,
+    `r_genus_species__k.*`, regex = TRUE) %>%
+  rowwise() %>%
+  mutate(across(contains(",forest_typeprimary]"),
+                ~ .x + b_k_forest_typeprimary)) %>%
+  mutate(across(contains(",forest_typesecondary]"),
+                ~ .x + b_k_forest_typesecondary)) %>%
+  ungroup() %>%
+  pivot_longer(cols = contains("r_genus_species__k")) %>%
+
+  mutate(forest_type = case_when(
+    grepl("secondary", name) ~ "Secondary",
+    grepl("primary", name) ~ "Primary")) %>%
+  mutate(Species = str_split_i(string = name, pattern ="\\[", i = 2)) %>%
+  mutate(Species = str_split_i(string = Species, pattern =",", i = 1)) %>%
+  mutate(Parameter = "k")
+
+pc_data_delay <-
+  mod_gro %>%
+  spread_draws(
+    b_delay_forest_typeprimary,
+    b_delay_forest_typesecondary,
+    `r_genus_species__delay.*`, regex = TRUE) %>%
+  rowwise() %>%
+  mutate(across(contains(",forest_typeprimary]"),
+                ~ .x + b_delay_forest_typeprimary)) %>%
+  mutate(across(contains(",forest_typesecondary]"),
+                ~ .x + b_delay_forest_typesecondary)) %>%
+  ungroup() %>%
+  pivot_longer(cols = contains("r_genus_species__delay")) %>%
+
+  mutate(forest_type = case_when(
+    grepl("secondary", name) ~ "Secondary",
+    grepl("primary", name) ~ "Primary")) %>%
+  mutate(Species = str_split_i(string = name, pattern ="\\[", i = 2)) %>%
+  mutate(Species = str_split_i(string = Species, pattern =",", i = 1)) %>%
+  mutate(Parameter = "delay")
+
+growth_params <-
+  bind_rows(pc_data_A,
+            pc_data_delay,
+            pc_data_k) %>% 
+  group_by(Species, forest_type, Parameter) %>% 
+  summarise(median = median(value)) %>% 
+  pivot_wider(names_from = Parameter, values_from = median)
+
+```
+
+Get survival parameters
+
+```{r}
+surv_params <-
+  mod_surv %>%
+  spread_draws(r_genus_species__timetolastalive[genus_species,forest_type],
+               b_timetolastalive_forest_typesecondary,
+               b_timetolastalive_forest_typeprimary, regex=T) %>%
+  mutate(value = case_when(forest_type == "forest_typeprimary" ~
+                             r_genus_species__timetolastalive + b_timetolastalive_forest_typeprimary,
+                           forest_type == "forest_typesecondary" ~
+                             r_genus_species__timetolastalive + b_timetolastalive_forest_typesecondary)) %>%
+  mutate(forest_type = case_when(
+    forest_type == "forest_typesecondary" ~ "Secondary",
+    forest_type == "forest_typeprimary" ~ "Primary")) %>% 
+  group_by(genus_species, forest_type) %>% 
+  summarise(survival = median(value)) %>% 
+  rename(Species = genus_species)
+
+```
+
+```{r}
+all_params <- 
+  growth_params %>% 
+  full_join(surv_params) 
+```
+
+```{r}
+all_params %>% 
+  ggplot(aes(x = k, y = survival, colour = forest_type)) +
+  geom_point() +
+  facet_wrap(~forest_type, scales = "free") +
+  theme(legend.position = "none")
+```
+
+```{r}
+all_params %>% 
+  ggplot(aes(x = A, y = survival, colour = forest_type)) +
+  geom_point() +
+  facet_wrap(~forest_type, scales = "free") +
+  theme(legend.position = "none")
+```
+
+```{r}
+all_params %>% 
+  ggplot(aes(x = k, y = A, colour = forest_type)) +
+  geom_point() +
+  facet_wrap(~forest_type, scales = "free") +
+  theme(legend.position = "none")
+```
+
+```{r}
+data <-
+  readRDS(here::here("data", "derived", "data_cleaned.rds"))
+
+data %>% 
+  filter(genus_species == "Shorea_macrophylla") %>% 
+  ggplot(aes(x = years, y = dbase_mean)) +
+  geom_point() +
+  facet_wrap(~forest_type)
+
+data %>% 
+  filter(genus_species == "Shorea_macrophylla", 
+         census_id == "full_measurement_03") %>% 
+  summarise(median = median(dbase_mean, na.rm = TRUE),
+            mean = mean(dbase_mean, na.rm = TRUE))
+  
+```
+

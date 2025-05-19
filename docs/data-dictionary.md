@@ -21,7 +21,7 @@ If `Species` is `NA` it was a new seedling that died between initial planting an
 |`Survival`| 1 or 0 |
 |`HgtOld`| Height measurement from the previous survey. Included to help fieldworks find individual trees. |
 |`Height`| Only recorded if height is < 5m |
-|`Diam1`| till be identical if dbh tape used, calliper up to 5 cm|
+|`Diam1`| will be identical if dbh tape used, calliper up to 5 cm|
 |`Diam2`| |
 |`DBH1`| |
 |`DBH2`| |

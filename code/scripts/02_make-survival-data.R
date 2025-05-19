@@ -18,6 +18,20 @@ data <-
   readRDS(here::here("data", "derived", "data_cleaned.rds"))
 
 
+# Remove left censored data -----------------------------------------------
+
+# seedlings which were never recorded as alive
+left_censored <-
+  data %>%
+  group_by(plant_id) %>%
+  summarise(n = sum(survival)) %>%
+  filter(n == 0) %>%
+  select(plant_id)
+
+data <-
+  data %>%
+  filter(! plant_id %in% left_censored$plant_id)
+
 # Find interval censored data ---------------------------------------------
 
 # time to first recorded dead
@@ -64,7 +78,7 @@ right_censored <-
 # centre and scale for modelling
 data_aggregated <-
   bind_rows(interval_censored, right_censored) %>%
-  filter(time_to_last_alive > 0) %>%
+  filter(time_to_last_alive > 0) %>% # removes seedlings dead by 2nd census
   mutate(dbase_mean_sc = scale(dbase_mean),
          dbh_mean_sc = scale(dbh_mean))
 

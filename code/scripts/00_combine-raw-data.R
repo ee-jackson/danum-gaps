@@ -63,7 +63,8 @@ data_dv_older <-
                   "numeric","numeric","text") ) %>%
   select(Census, Survey.date, Year, Team, Canopy, Block, Subplot, Plant.no,
          Survival, Diam1, Diam2, DBH.1, DBH.2, Comments, Height.apex) %>%
-  janitor::clean_names()
+  janitor::clean_names() %>%
+  mutate_at(c("plant_no", "canopy"), toupper)
 
 # Some data is replicated in DanumGaps_Data_* files
 data_dv_pre2015 <-
@@ -81,15 +82,16 @@ data_dv <-
   bind_rows(data_list, .id = 'census_id') %>%
   mutate(census_id = as.factor(census_id)) %>%
   clean_names() %>%
+  mutate_at(c("plant_no", "canopy", "subplot"), toupper) %>%
   mutate(height_apex = NA) %>%
   bind_rows(data_dv_pre2015) %>%
   rename(plot = block,
          dbh1 = dbh_1,
          dbh2 = dbh_2) %>%
 
-  # Only gaps and plots without drought treatment
-  filter(canopy == "G" & subplot == "A") %>%
-  select(- canopy, - subplot) %>%
+  # Only plots without drought treatment
+  filter(subplot == "A") %>%
+  select(- subplot) %>%
 
   # Repairing individual cases of missing plant number
   mutate(plant_no = case_when(is.na(plant_no) & plot == 1 ~ "8",
@@ -97,10 +99,10 @@ data_dv <-
                               .default = plant_no) ) %>%
 
   # Plant nos are unique to species
-  mutate(plant_id =
+  mutate(plant_sp_id =
     str_extract(plant_no, pattern = "\\d+")
   ) %>%
-  left_join(data_dv_sps, by = c("plant_id" = "plant_no")) %>%
+  left_join(data_dv_sps, by = c("plant_sp_id" = "plant_no")) %>%
 
   # Create unique ID per individual
   mutate(plot = as.numeric(plot)) %>%
@@ -116,7 +118,7 @@ data_dv <-
   mutate(line = NA, position = NA, old_new = NA,
          planting_date = NA, height_apex = NA, forest_type = "primary",
          census_id = as.factor(census_id)) %>%
-  select(forest_type, plant_id, plot, line, position, old_new, plant_no,
+  select(forest_type, plant_id, plot, canopy, line, position, old_new, plant_no,
          genus, species, genus_species,
          planting_date, census_id, survey_date,
          survival, height_apex, diam1, diam2, dbh1, dbh2)
@@ -178,8 +180,8 @@ data_sbe <-
     .default = plant_id
   )) %>%
   # Making cols match the primary forest data
-  mutate(plant_no = NA, forest_type = "secondary") %>%
-  select(forest_type, plant_id, plot, line, position, old_new, plant_no,
+  mutate(plant_no = NA, forest_type = "secondary", canopy = NA) %>%
+  select(forest_type, plant_id, plot, canopy, line, position, old_new, plant_no,
          genus, species, genus_species,
          planting_date, census_id, survey_date,
          survival, height_apex, diam1, diam2, dbh1, dbh2)

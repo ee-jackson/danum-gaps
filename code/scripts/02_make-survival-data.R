@@ -42,7 +42,8 @@ interval_censored <-
   slice_min(survey_date, with_ties = FALSE) %>%
   ungroup() %>%
   rename(time_to_dead = years) %>%
-  select(plant_id, genus_species, plot, forest_type, cohort, time_to_dead) %>%
+  select(plant_id, genus_species, plot, canopy,
+         forest_type, cohort, time_to_dead) %>%
   mutate(censor = "interval")
 
 # time to last recorded alive
@@ -68,7 +69,7 @@ right_censored <-
   slice_max(survey_date, with_ties = FALSE) %>%
   ungroup() %>%
   rename(time_to_last_alive = years) %>%
-  select(plant_id, genus_species, plot, forest_type,
+  select(plant_id, genus_species, plot, canopy, forest_type,
          cohort, time_to_last_alive, dbh_mean, dbase_mean) %>%
   mutate(censor = "right")
 
@@ -78,7 +79,6 @@ right_censored <-
 # centre and scale for modelling
 data_aggregated <-
   bind_rows(interval_censored, right_censored) %>%
-  filter(time_to_last_alive > 0) %>% # removes seedlings dead by 2nd census
   mutate(dbase_mean_sc = scale(dbase_mean),
          dbh_mean_sc = scale(dbh_mean))
 

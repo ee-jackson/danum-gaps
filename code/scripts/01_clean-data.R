@@ -338,14 +338,14 @@ data_backfilled <-
   data_backfilled %>%
   select(plant_id, forest_type, climber_cut,
          genus, species, genus_species,
-         plot, line, position, cohort, plant_no,
+         plot, canopy, line, position, cohort, plant_no,
          first_survey, planting_date, census_no, census_id, survey_date,
          days, years, days_num,
          survival, height_apex, dbh_mean, dbase_mean) %>%
   distinct() %>%
   filter(! if_all(c(survival, dbh_mean, dbase_mean, height_apex), is.na)) %>%
   filter(! str_detect(plant_id, "NA")) %>%
-  mutate(across(c(forest_type, plant_id, plot,
+  mutate(across(c(forest_type, plant_id, plot, canopy,
                   climber_cut, cohort, genus_species,
                   line, position, plant_no, census_no), as.factor))
 

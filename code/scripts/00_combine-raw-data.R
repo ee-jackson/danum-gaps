@@ -111,7 +111,7 @@ data_dv <-
                         format = "d",
                         flag = "0"),
          survey_date = ymd(survey_date)) %>%
-  mutate(plant_id = paste(plot, plant_no, sep = "_"),
+  mutate(plant_id = paste(plot, plant_no, canopy, sep = "_"),
          genus_species = paste(genus, species, sep = "_")) %>%
 
   # Making cols match the primary forest data
@@ -126,7 +126,7 @@ data_dv <-
 rm(data_list)
 
 
-# Get secondary forest data -----------------------------------------------
+# Get logged forest data -----------------------------------------------
 
 data_sbe <-
   read_csv(
@@ -180,14 +180,14 @@ data_sbe <-
     .default = plant_id
   )) %>%
   # Making cols match the primary forest data
-  mutate(plant_no = NA, forest_type = "secondary", canopy = NA) %>%
+  mutate(plant_no = NA, forest_type = "logged", canopy = "C") %>%
   select(forest_type, plant_id, plot, canopy, line, position, old_new, plant_no,
          genus, species, genus_species,
          planting_date, census_id, survey_date,
          survival, height_apex, diam1, diam2, dbh1, dbh2)
 
 
-# Combine secondary and primary forest data -------------------------------
+# Combine logged and primary forest data -------------------------------
 
 data_comb <-
   bind_rows(data_dv, data_sbe) %>%

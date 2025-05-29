@@ -32,7 +32,8 @@ well_sampled_trees <-
 data_sample <-
   data %>%
   filter(survival == 1) %>%
-  filter(plant_id %in% well_sampled_trees$plant_id)
+  filter(plant_id %in% well_sampled_trees$plant_id) %>%
+  filter(canopy != "U")
 
 
 # Set priors --------------------------------------------------------------

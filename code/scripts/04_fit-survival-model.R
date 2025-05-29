@@ -21,7 +21,8 @@ library("brms")
 # Get data ----------------------------------------------------------------
 
 data <-
-  readRDS("data/derived/data_survival.rds")
+  readRDS("data/derived/data_survival.rds") %>%
+  filter(canopy != "U")
 
 
 # no impute ---------------------------------------------------------------

@@ -77,6 +77,7 @@ data_comb <-
     census_id == "DanumGaps_Data_2019.xlsx" ~ "20",
     census_id == "DanumGaps_Data_2023.xlsx" ~ "21",
     census_id == "DanumGaps_Data_2024.xlsx" ~ "22",
+    census_id == "DanumGaps_Data_2025.xlsx" ~ "23",
     census_id == "full_measurement_01" ~ "01",
     census_id == "intensive_02" ~ "02",
     census_id == "intensive_03" ~ "03",
@@ -149,7 +150,8 @@ data_comb <-
 data_comb <-
   data_comb %>%
   mutate(plot_line = case_when(
-    forest_type == "secondary" ~ paste(plot, line, sep = "_"),
+    forest_type == "logged" ~ paste(plot, line, sep = "_"),
+    forest_type == "primary" ~ paste(plot, canopy, sep = "_"),
     .default = plot
   ))
 
@@ -203,7 +205,7 @@ data_backfilled <-
 data_backfilled <-
   data_backfilled %>%
   filter(!
-           (forest_type == "secondary" &
+           (forest_type == "logged" &
               old_new == "N" &
               census_no %in% c("01", "02", "03", "04", "05") )
   )
@@ -213,7 +215,7 @@ data_backfilled <-
   data_backfilled %>%
   dplyr::group_by(plant_id) %>%
   arrange(census_no, .by_group = TRUE) %>%
-  tidyr::fill(line:planting_date, .direction = "updown") %>%
+  tidyr::fill(canopy:planting_date, .direction = "updown") %>%
   ungroup()
 
 # add survey dates for for backfilled plants
@@ -293,8 +295,8 @@ data_backfilled <-
   data_backfilled %>%
   mutate(cohort = case_when(
          forest_type == "primary" ~ 1,
-         forest_type == "secondary" & old_new == "O" ~ 1,
-         forest_type == "secondary" & old_new == "N" ~ 2
+         forest_type == "logged" & old_new == "O" ~ 1,
+         forest_type == "logged" & old_new == "N" ~ 2
   ))
 
 
@@ -325,9 +327,9 @@ data_backfilled <-
 data_backfilled <-
   data_backfilled %>%
   mutate(climber_cut = case_when(
-    forest_type == "secondary" & plot == "05" |
-      forest_type == "secondary" & plot == "11" |
-      forest_type == "secondary" & plot == "14" ~ 1,
+    forest_type == "logged" & plot == "05" |
+      forest_type == "logged" & plot == "11" |
+      forest_type == "logged" & plot == "14" ~ 1,
     .default  = 0
   ))
 

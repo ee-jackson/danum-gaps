@@ -1,0 +1,182 @@
+---
+title: "Should we include understory plots?"
+author: 'eleanorjackson'
+date: '`r format(Sys.time(), "%d %B, %Y")`' 
+format: 
+  gfm:
+    toc: true
+editor: source
+execute:
+  warning: false
+---
+
+```{r setup}
+#| include: false
+
+file_name <- knitr::current_input()
+
+knitr::opts_chunk$set(
+  fig.path =
+    paste0("figures/", sub("\\.rmarkdown$", "", basename(file_name)), 
+           "/", sep = "")
+)
+
+set.seed(123)
+ggplot2::theme_set(ggplot2::theme_bw(base_size = 10))
+```
+
+We initially chose to use the Danum Valley (primary forest) gap plots rather than the understory plots, since the light levels in a canopy gap are more comparable to logged forest in the Sabah Biodiversity Experiment, where planting lines were cleared of lianas.
+
+However... possibility that the gaps have more light than the SBE (secondary forest) and hence perhaps light is responsible for out preliminary results of faster growth and higher survival in the primary forest seedlings?
+
+Tommaso:
+
+> If I understood correctly you've focused on seedling planted in gaps at Danum. I wonder if it might be the case that seedlings at Danum (in gaps) actually have more light availability than those at SBE. One of the most striking results of the LiDAR data is that the liana cutting plots have almost no gaps and higher canopy cover than the primary forests.
+
+Mikey:
+
+> I understand using only the SBE intensive plots, but I would include all of the Danum plots (both gap and understorey). The light measurements do not define the light environment beyond a few years and many plots closed or opened during the 15 years of measurement.
+
+```{r}
+library("tidyverse")
+library("tidybayes")
+library("brms")
+```
+
+```{r}
+gro_dv <-
+  readRDS(here::here("data", "derived", "data_cleaned.rds")) %>% 
+  filter(forest_type == "primary")
+
+surv_dv <-
+  readRDS(here::here("data", "derived", "data_survival.rds")) %>% 
+  filter(forest_type == "primary")
+```
+
+## Growth of seedlings in gap vs understory Danum Valley plots
+
+```{r}
+gro_dv %>% 
+  drop_na(dbase_mean) %>% 
+  ggplot(aes(x = years, y = log(dbase_mean), colour = canopy)) +
+  geom_point(alpha = 0.3, size = 0.5, shape = 16) +
+  geom_smooth() +
+  ggtitle("Basal diameter")
+```
+
+```{r}
+gro_dv %>% 
+  drop_na(dbh_mean) %>% 
+  ggplot(aes(x = years, y = log(dbh_mean), colour = canopy)) +
+  geom_point(alpha = 0.3, size = 0.5, shape = 16) +
+  geom_smooth() +
+  ggtitle("DBH")
+```
+
+## Survival of seedlings in gap vs understory Danum Valley plots
+
+```{r}
+gro_dv %>% 
+  mutate(survival = as.factor(survival)) %>% 
+  ggplot(aes(x = census_no, group = survival, 
+             fill = survival)) +
+  geom_bar(position = "fill") +
+  facet_wrap(~canopy, ncol = 1,
+             axis.labels = "all_x", axes = "all_x") +
+  guides(x =  guide_axis(angle = 90)) +
+  theme(legend.position = "top", legend.justification = "left") 
+```
+
+## Modelling growth of seedlings in gap vs understory
+
+```{r}
+well_sampled_trees <-
+  gro_dv %>%
+  group_by(plant_id) %>%
+  summarise(records = sum(!is.na(dbase_mean))) %>%
+  filter(records > 2)
+
+data_sample <-
+  gro_dv %>%
+  filter(survival == 1) %>%
+  filter(plant_id %in% well_sampled_trees$plant_id)
+```
+
+```{r}
+priors1 <- c(
+  prior(lognormal(5, 1.2), nlpar = "A", lb = 0),
+  prior(student_t(5, 0, 1), nlpar = "k", lb = 0),
+  prior(student_t(5, 0, 10), nlpar = "delay"))
+```
+
+```{r}
+gompertz <-
+  bf(dbase_mean ~ log(A) * exp( -exp( -(k * (years - delay) ) ) ),
+     log(A) ~ 0 + canopy +
+       (0 + canopy|genus_species) +
+       (1 | plant_id),
+     k ~ 0 + canopy +
+       (0 + canopy|genus_species) +
+       (1 | plant_id),
+     delay ~ 0 + canopy +
+       (0 + canopy|genus_species) +
+       (1 | plant_id),
+     nl = TRUE)
+```
+
+```{r}
+#| results: hide
+
+growth_model <-
+  brm(gompertz,
+      data = data_sample,
+      family = brmsfamily("lognormal"),
+      prior = priors1,
+      cores = 4,
+      chains = 4,
+      init = 0,
+      seed = 123,
+      iter = 1000,
+      file_refit = "never",
+      file = here::here("code", 
+                        "notebooks", 
+                        "models", 
+                        "2025-06-28_understory-plots",
+                        "growth_canopy"))
+```
+
+```{r}
+growth_model
+```
+
+## Comparing parameter estimates from the canopy model (primary forest only) to the original forest type model (primary vs secondary)
+
+```{r}
+growth_model_og <-
+  readRDS(here::here("output", "models", "priors2",
+                     "growth_model_base.rds"))
+```
+
+
+```{r}
+my_coef_tab <-
+  bind_rows(
+  list(forest_type_model = broom.mixed::tidy(growth_model_og), 
+  canopy_model = broom.mixed::tidy(growth_model)),
+  .id = "model"
+  ) %>% 
+  filter(effect == "fixed")
+```
+
+```{r}
+my_coef_tab %>% 
+  rowwise() %>% 
+  mutate(parameter = pluck(strsplit(term,"_"),1,1)) %>% 
+  ggplot(aes(y = term, x = estimate,
+             xmin = conf.low,
+             xmax = conf.high)) +
+  geom_pointrange() +
+  facet_wrap(~parameter, scales = "free",
+             ncol = 1)
+```
+

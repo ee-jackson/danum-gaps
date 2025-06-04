@@ -141,7 +141,7 @@ growth_model <-
       file = here::here("code", 
                         "notebooks", 
                         "models", 
-                        "2025-06-28_understory-plots",
+                        "2025-05-28_understory-plots",
                         "growth_canopy"))
 ```
 

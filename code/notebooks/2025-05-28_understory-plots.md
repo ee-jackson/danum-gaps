@@ -1,6 +1,6 @@
 # Should we include understory plots?
 eleanorjackson
-2025-05-29
+2025-06-04
 
 - [Growth of seedlings in gap vs understory Danum Valley
   plots](#growth-of-seedlings-in-gap-vs-understory-danum-valley-plots)
@@ -65,7 +65,7 @@ gro_dv %>%
   ggtitle("Basal diameter")
 ```
 
-![](figures/2025-06-28_understory-plots/unnamed-chunk-3-1.png)
+![](figures/2025-05-28_understory-plots/unnamed-chunk-3-1.png)
 
 ``` r
 gro_dv %>% 
@@ -76,7 +76,7 @@ gro_dv %>%
   ggtitle("DBH")
 ```
 
-![](figures/2025-06-28_understory-plots/unnamed-chunk-4-1.png)
+![](figures/2025-05-28_understory-plots/unnamed-chunk-4-1.png)
 
 ## Survival of seedlings in gap vs understory Danum Valley plots
 
@@ -92,7 +92,7 @@ gro_dv %>%
   theme(legend.position = "top", legend.justification = "left") 
 ```
 
-![](figures/2025-06-28_understory-plots/unnamed-chunk-5-1.png)
+![](figures/2025-05-28_understory-plots/unnamed-chunk-5-1.png)
 
 ## Modelling growth of seedlings in gap vs understory
 
@@ -146,7 +146,7 @@ growth_model <-
       file = here::here("code", 
                         "notebooks", 
                         "models", 
-                        "2025-06-28_understory-plots",
+                        "2025-05-28_understory-plots",
                         "growth_canopy"))
 ```
 
@@ -240,4 +240,4 @@ my_coef_tab %>%
              ncol = 1)
 ```
 
-![](figures/2025-06-28_understory-plots/unnamed-chunk-13-1.png)
+![](figures/2025-05-28_understory-plots/unnamed-chunk-13-1.png)

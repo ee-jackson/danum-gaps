@@ -1,0 +1,122 @@
+---
+title: "Adjust growth model priors"
+author: 'eleanorjackson'
+date: '`r format(Sys.time(), "%d %B, %Y")`' 
+format: 
+  gfm:
+    toc: true
+editor: source
+execute:
+  warning: false
+---
+
+```{r setup}
+#| include: false
+
+file_name <- knitr::current_input()
+
+knitr::opts_chunk$set(
+  fig.path =
+    paste0("figures/", sub("\\.rmarkdown$", "", basename(file_name)), 
+           "/", sep = "")
+)
+
+set.seed(123)
+ggplot2::theme_set(ggplot2::theme_bw(base_size = 10))
+```
+
+DBH is mm not cm, so we need to change the prior for _A_.
+I also think we can do better with _k_ now I know exactly how it 
+translates to relative growth rate.
+
+```{r}
+library("tidyverse")
+library("brms")
+```
+
+
+```{r}
+#| eval: false
+
+# old
+priors2 <- c(
+  prior(lognormal(5, 1.2), nlpar = "A", lb = 0),
+  prior(student_t(5, 0, 1), nlpar = "k", lb = 0),
+  prior(student_t(5, 0, 10), nlpar = "delay"))
+
+# new
+priors3 <- c(
+  prior(lognormal(6, 1), nlpar = "A", lb = 0),
+  prior(student_t(5, 0, 0.5), nlpar = "k", lb = 0),
+  prior(student_t(5, 0, 10), nlpar = "delay"))
+```
+
+## _k_
+
+Current prior:
+
+```{r}
+rstudent_t(n = 1000, df = 5, mu = 0, sigma = 1) %>% 
+  density() %>% 
+  plot() 
+```
+
+Convert _k_ to RGR
+
+```{r}
+rstudent_t(n = 10000, df = 5, mu = 0, sigma = 1) %>% 
+  as.tibble() %>% 
+  mutate(rgr = (value / exp(1))*100) %>% 
+  ggplot(aes(x = rgr)) +
+  geom_density() +
+  coord_cartesian(xlim = c(0,100))+
+  xlab("RGR, % year-1")
+```
+
+New prior:
+
+```{r}
+rstudent_t(n = 10000, df = 5, mu = 0, sigma = 0.5) %>% 
+  as.tibble() %>% 
+  mutate(rgr = (value / exp(1))*100) %>% 
+  ggplot(aes(x = rgr)) +
+  geom_density() +
+  coord_cartesian(xlim = c(0,100)) +
+  xlab("RGR, % year-1")
+```
+
+## _A_
+
+Current prior:
+
+```{r}
+rlnorm(n = 10000, meanlog = 5, sdlog = 1.2) %>% 
+  as.tibble() %>% 
+  ggplot(aes(x = value)) +
+    geom_density() +
+    coord_cartesian(xlim = c(0,2000))
+```
+
+New prior:
+
+```{r}
+rlnorm(n = 100000, meanlog = 6, sdlog = 1) %>% 
+  as.tibble() %>% 
+  ggplot(aes(x = value)) +
+  geom_density() +
+  coord_cartesian(xlim = c(0,2000)) +
+  xlab("DBH mm")
+```
+
+## _delay_
+
+I don't think we need to change the prior for _delay_
+
+```{r}
+rstudent_t(n = 100000, df = 5, mu = 0, sigma = 10) %>% 
+  as.tibble() %>% 
+  ggplot(aes(x = value)) +
+  geom_density() +
+  coord_cartesian(xlim = c(-20, 20)) +
+  xlab("years")
+```

@@ -94,8 +94,10 @@ data_dv <-
   select(- subplot) %>%
 
   # Repairing individual cases of missing plant number
-  mutate(plant_no = case_when(is.na(plant_no) & plot == 1 ~ "8",
-                              plant_no == "6.8" & plot == 6 ~ "8",
+  mutate(plant_no = case_when(canopy == "G" & is.na(plant_no) & plot == "1" ~ "8",
+                              canopy == "G" & plant_no == "6.8" & plot == "6" ~ "8",
+                              canopy == "G" & plant_no == "7A" & plot == "2" ~ "7",
+                              canopy == "G" & plant_no == "7" & plot == "18" ~ "7A",
                               .default = plant_no) ) %>%
 
   # Plant nos are unique to species

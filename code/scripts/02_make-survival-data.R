@@ -77,8 +77,11 @@ right_censored <-
 # Combine right and interval censored data --------------------------------
 
 # centre and scale for modelling
+# day zero needs to be slightly > 0 for Weibull
 data_aggregated <-
   bind_rows(interval_censored, right_censored) %>%
+  mutate(time_to_last_alive = ifelse(time_to_last_alive == 0,
+                                     0.0000001, time_to_last_alive)) %>%
   mutate(dbase_mean_sc = scale(dbase_mean),
          dbh_mean_sc = scale(dbh_mean))
 

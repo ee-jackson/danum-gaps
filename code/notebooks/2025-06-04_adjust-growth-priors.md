@@ -1,6 +1,6 @@
 # Adjust growth model priors
 eleanorjackson
-2025-06-05
+2025-06-13
 
 - [*k*](#k)
 - [*A*](#a)
@@ -26,7 +26,7 @@ priors2 <- c(
 priors3 <- c(
   prior(lognormal(6, 1), nlpar = "A", lb = 0),
   prior(student_t(5, 0, 0.5), nlpar = "k", lb = 0),
-  prior(student_t(5, 0, 10), nlpar = "delay"))
+  prior(student_t(5, 0, 5), nlpar = "delay"))
 ```
 
 ## *k*
@@ -44,7 +44,7 @@ rstudent_t(n = 1000, df = 5, mu = 0, sigma = 1) %>%
 Convert *k* to RGR
 
 ``` r
-rstudent_t(n = 10000, df = 5, mu = 0, sigma = 1) %>% 
+rstudent_t(n = 10000, df = 5, mu = 0, sigma = 0.5) %>% 
   as.tibble() %>% 
   mutate(rgr = (value / exp(1))*100) %>% 
   ggplot(aes(x = rgr)) +
@@ -98,15 +98,28 @@ rlnorm(n = 100000, meanlog = 6, sdlog = 1) %>%
 
 ## *delay*
 
-I don’t think we need to change the prior for *delay*
+Current prior:
 
 ``` r
 rstudent_t(n = 100000, df = 5, mu = 0, sigma = 10) %>% 
   as.tibble() %>% 
   ggplot(aes(x = value)) +
   geom_density() +
-  coord_cartesian(xlim = c(-20, 20)) +
+  coord_cartesian(xlim = c(-15, 15)) +
   xlab("years")
 ```
 
 ![](figures/2025-06-04_adjust-growth-priors/unnamed-chunk-8-1.png)
+
+New prior:
+
+``` r
+rstudent_t(n = 100000, df = 5, mu = 0, sigma = 5) %>% 
+  as.tibble() %>% 
+  ggplot(aes(x = value)) +
+  geom_density() +
+  coord_cartesian(xlim = c(-15, 15)) +
+  xlab("years")
+```
+
+![](figures/2025-06-04_adjust-growth-priors/unnamed-chunk-9-1.png)

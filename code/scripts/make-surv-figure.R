@@ -33,7 +33,7 @@ mod_surv <-
                      "survival_model_impute.rds"))
 
 hypothesis(mod_surv,
-           "timetolastalive_forest_typeprimary - timetolastalive_forest_typesecondary = 0")
+           "timetolastalive_forest_typeprimary - timetolastalive_forest_typelogged = 0")
 
 
 # -------------------------------------------------------------------------
@@ -41,11 +41,11 @@ hypothesis(mod_surv,
 pa <-
   mod_surv %>%
   gather_draws(
-    b_timetolastalive_forest_typesecondary,
+    b_timetolastalive_forest_typelogged,
     b_timetolastalive_forest_typeprimary, regex=T) %>%
   mutate(.variable = case_when(
-    .variable == "b_timetolastalive_forest_typesecondary" ~ "Secondary",
-    .variable == "b_timetolastalive_forest_typeprimary" ~ "Primary")) %>%
+    .variable == "b_timetolastalive_forest_typelogged" ~ "Logged",
+    .variable == "b_timetolastalive_forest_typeprimary" ~ "Old growth")) %>%
   rename(forest_type = .variable) %>%
   ggplot(aes(x = .value,
              fill = forest_type)) +
@@ -56,10 +56,10 @@ pa <-
 pb <-
   mod_surv %>%
   spread_draws(
-    b_timetolastalive_forest_typesecondary,
+    b_timetolastalive_forest_typelogged,
     b_timetolastalive_forest_typeprimary, regex=T) %>%
   mutate(diff = b_timetolastalive_forest_typeprimary -
-           b_timetolastalive_forest_typesecondary) %>%
+           b_timetolastalive_forest_typelogged) %>%
   ggplot(aes(x = diff)) +
   stat_halfeye(.width = c(0.95, 0.5), alpha = 0.5) +
   geom_vline(xintercept = 0, linetype = 2) +
@@ -70,15 +70,15 @@ pb <-
 pc <-
   mod_surv %>%
   spread_draws(r_genus_species__timetolastalive[genus_species,forest_type],
-               b_timetolastalive_forest_typesecondary,
+               b_timetolastalive_forest_typelogged,
                b_timetolastalive_forest_typeprimary, regex=T) %>%
   mutate(value = case_when(forest_type == "forest_typeprimary" ~
                              r_genus_species__timetolastalive + b_timetolastalive_forest_typeprimary,
-                           forest_type == "forest_typesecondary" ~
-                             r_genus_species__timetolastalive + b_timetolastalive_forest_typesecondary)) %>%
+                           forest_type == "forest_typelogged" ~
+                             r_genus_species__timetolastalive + b_timetolastalive_forest_typelogged)) %>%
   mutate(forest_type = case_when(
-    forest_type == "forest_typesecondary" ~ "Secondary",
-    forest_type == "forest_typeprimary" ~ "Primary")) %>%
+    forest_type == "forest_typelogged" ~ "Logged",
+    forest_type == "forest_typeprimary" ~ "Old growth")) %>%
   ggplot(aes(y = genus_species, x = value,
              fill = forest_type)) +
   stat_halfeye(.width = c(0.95, 0.5), alpha = 0.5) +
@@ -87,14 +87,14 @@ pc <-
 pd <-
   mod_surv %>%
   spread_draws(r_genus_species__timetolastalive[genus_species,forest_type],
-               b_timetolastalive_forest_typesecondary,
+               b_timetolastalive_forest_typelogged,
                b_timetolastalive_forest_typeprimary, regex=T) %>%
   mutate(value = case_when(forest_type == "forest_typeprimary" ~
                              r_genus_species__timetolastalive + b_timetolastalive_forest_typeprimary,
-                           forest_type == "forest_typesecondary" ~
-                             r_genus_species__timetolastalive + b_timetolastalive_forest_typesecondary)) %>%
+                           forest_type == "forest_typelogged" ~
+                             r_genus_species__timetolastalive + b_timetolastalive_forest_typelogged)) %>%
   pivot_wider(values_from=value, names_from= forest_type, id_cols = c(genus_species, .draw, .chain, .iteration)) %>%
-  mutate(diff = forest_typeprimary - forest_typesecondary) %>%
+  mutate(diff = forest_typeprimary - forest_typelogged) %>%
   ggplot(aes(y = genus_species, x = diff)) +
   stat_halfeye(.width = c(0.95, 0.5), alpha = 0.5) +
   geom_vline(xintercept = 0, linetype = 2) +

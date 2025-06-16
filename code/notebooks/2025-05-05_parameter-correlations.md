@@ -1,37 +1,13 @@
----
-title: "Look at correlations between estimated parameters"
-author: 'eleanorjackson'
-date: '`r format(Sys.time(), "%d %B, %Y")`' 
-format: 
-  gfm:
-    toc: true
-editor: source
-execute:
-  warning: false
----
+# Look at correlations between estimated parameters
+eleanorjackson
+2025-06-16
 
-```{r setup}
-#| include: false
-
-file_name <- knitr::current_input()
-
-knitr::opts_chunk$set(
-  fig.path =
-    paste0("figures/", sub("\\.rmarkdown$", "", basename(file_name)), 
-           "/", sep = "")
-)
-
-set.seed(123)
-ggplot2::theme_set(ggplot2::theme_bw(base_size = 10))
-```
-
-```{r}
+``` r
 library("tidyverse")
 library("tidybayes")
 ```
 
-
-```{r}
+``` r
 mod_gro <-
   readRDS(here::here("output", "models", 
                      "growth_model_base_p3.rds"))
@@ -44,7 +20,7 @@ mod_surv <-
 
 Get growth parameters
 
-```{r}
+``` r
 pc_data_A <-
   mod_gro %>%
   spread_draws(
@@ -127,12 +103,11 @@ growth_params <-
          delay_q3 = median_delay + iqr_delay/2,
          k_q1 = median_k - iqr_k/2,
          k_q3 = median_k + iqr_k/2) 
-
 ```
 
 Get survival parameters
 
-```{r}
+``` r
 surv_params <-
   mod_surv %>%
   spread_draws(r_genus_species__timetolastalive[genus_species,forest_type],
@@ -152,16 +127,15 @@ surv_params <-
   mutate(s_q1 = survival - iqr/2,
          s_q3 = survival + iqr/2) %>% 
   rename(Species = genus_species)
-
 ```
 
-```{r}
+``` r
 all_params <- 
   growth_params %>% 
   full_join(surv_params) 
 ```
 
-```{r}
+``` r
 all_params %>% 
   ggplot(aes(x = median_k, y = survival, colour = forest_type)) +
   geom_point() +
@@ -173,7 +147,9 @@ all_params %>%
        y = "Survival (time to typical mortality (years))")
 ```
 
-```{r}
+![](figures/2025-05-05_parameter-correlations/unnamed-chunk-6-1.png)
+
+``` r
 all_params %>% 
   ggplot(aes(x = median_k, y = survival, colour = forest_type)) +
   geom_point() +
@@ -185,7 +161,9 @@ all_params %>%
        y = "Survival (time to typical mortality (years))")
 ```
 
-```{r}
+![](figures/2025-05-05_parameter-correlations/unnamed-chunk-7-1.png)
+
+``` r
 all_params %>% 
   ggplot(aes(x = median_A, y = survival, colour = forest_type)) +
   geom_point() +
@@ -197,7 +175,9 @@ all_params %>%
        y = "Survival (time to typical mortality (years))")
 ```
 
-```{r}
+![](figures/2025-05-05_parameter-correlations/unnamed-chunk-8-1.png)
+
+``` r
 all_params %>% 
   ggplot(aes(x = median_A, y = survival, colour = forest_type)) +
   geom_point() +
@@ -209,7 +189,9 @@ all_params %>%
        y = "Survival (time to typical mortality (years))")
 ```
 
-```{r}
+![](figures/2025-05-05_parameter-correlations/unnamed-chunk-9-1.png)
+
+``` r
 all_params %>% 
   ggplot(aes(x = median_k, y = median_A, colour = forest_type)) +
   geom_point() +
@@ -221,7 +203,9 @@ all_params %>%
        y = "Predicted adult diameter at base (mm)")
 ```
 
-```{r}
+![](figures/2025-05-05_parameter-correlations/unnamed-chunk-10-1.png)
+
+``` r
 all_params %>% 
   ggplot(aes(x = median_k, y = median_A, colour = forest_type)) +
   geom_point() +
@@ -232,3 +216,5 @@ all_params %>%
   labs(x = "Relative growth rate (% year-1)",
        y = "Predicted adult diameter at base (mm)")
 ```
+
+![](figures/2025-05-05_parameter-correlations/unnamed-chunk-11-1.png)

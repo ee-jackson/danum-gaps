@@ -2,9 +2,17 @@
 eleanorjackson
 2025-06-16
 
+- [Get growth parameters](#get-growth-parameters)
+- [Get survival parameters](#get-survival-parameters)
+- [RGR vs survival](#rgr-vs-survival)
+- [Adult diameter vs survival](#adult-diameter-vs-survival)
+- [Adult diameter vs RGR](#adult-diameter-vs-rgr)
+- [PCA ?](#pca-)
+
 ``` r
 library("tidyverse")
 library("tidybayes")
+library("ggfortify")
 ```
 
 ``` r
@@ -18,7 +26,7 @@ mod_surv <-
                      "survival_model_impute.rds"))
 ```
 
-Get growth parameters
+## Get growth parameters
 
 ``` r
 pc_data_A <-
@@ -105,7 +113,7 @@ growth_params <-
          k_q3 = median_k + iqr_k/2) 
 ```
 
-Get survival parameters
+## Get survival parameters
 
 ``` r
 surv_params <-
@@ -135,6 +143,8 @@ all_params <-
   full_join(surv_params) 
 ```
 
+## RGR vs survival
+
 ``` r
 all_params %>% 
   ggplot(aes(x = median_k, y = survival, colour = forest_type)) +
@@ -162,6 +172,8 @@ all_params %>%
 ```
 
 ![](figures/2025-05-05_parameter-correlations/unnamed-chunk-7-1.png)
+
+## Adult diameter vs survival
 
 ``` r
 all_params %>% 
@@ -191,6 +203,8 @@ all_params %>%
 
 ![](figures/2025-05-05_parameter-correlations/unnamed-chunk-9-1.png)
 
+## Adult diameter vs RGR
+
 ``` r
 all_params %>% 
   ggplot(aes(x = median_k, y = median_A, colour = forest_type)) +
@@ -218,3 +232,41 @@ all_params %>%
 ```
 
 ![](figures/2025-05-05_parameter-correlations/unnamed-chunk-11-1.png)
+
+## PCA ?
+
+``` r
+pca_p <- 
+  prcomp(
+  x = all_params %>% 
+    ungroup() %>% 
+    filter(forest_type == "Primary") %>% 
+    select(median_A, median_k, survival),
+  scale. = TRUE,
+  center = TRUE
+)
+
+autoplot(pca_p,
+         loadings = TRUE, 
+         loadings.label = TRUE)
+```
+
+![](figures/2025-05-05_parameter-correlations/unnamed-chunk-12-1.png)
+
+``` r
+pca_l <- 
+  prcomp(
+  x = all_params %>% 
+    ungroup() %>% 
+    filter(forest_type == "logged") %>% 
+    select(median_A, median_k, survival),
+  scale. = TRUE,
+  center = TRUE
+)
+
+autoplot(pca_l,
+         loadings = TRUE, 
+         loadings.label = TRUE)
+```
+
+![](figures/2025-05-05_parameter-correlations/unnamed-chunk-13-1.png)

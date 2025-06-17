@@ -25,46 +25,16 @@ data <-
   filter(canopy != "U")
 
 
-# no impute ---------------------------------------------------------------
-
-
-priors1 <- c(
-  prior(student_t(5, 0, 5), class = "b"))
-
-
-survival_model <-
-  brm(time_to_last_alive|cens(x = censor, y2 = time_to_dead) ~
-        0 + forest_type + dbase_mean_sc +
-        (0 + forest_type | genus_species),
-      data = data,
-      family = brmsfamily("weibull"),
-      prior = priors1,
-      iter = 5000,
-      cores = 4,
-      chains = 4,
-      seed = 123,
-      init = 0,
-      file_refit = "never",
-      file = "output/models/survival/survival_model")
-
-add_criterion(x = survival_model,
-              newdata = drop_na(data,
-                                dbase_mean, dbh_mean),
-              criterion = "loo")
-
-print("survival_model fit complete")
-rm(survival_model)
-
-
-
-# with impute -------------------------------------------------------------
-
+# Set priors --------------------------------------------------------------
 
 priors3 <- c(
   prior(student_t(5, 0, 5), class = "b", resp = "timetolastalive"),
   prior(student_t(5, 0, 5), class = "b", resp = "dbasemeansc"),
   prior(student_t(5, 0, 5), class = "b", resp = "dbhmeansc")
 )
+
+
+# Define formula ----------------------------------------------------------
 
 bform <-
   bf(
@@ -81,10 +51,14 @@ bform <-
      family = brmsfamily("gaussian")) +
   set_rescor(FALSE)
 
+
+# Fit model ---------------------------------------------------------------
+
 survival_model_impute <-
   brm(bform,
       data = data,
       prior = priors3,
+      sample_prior = "yes",
       iter = 5000,
       cores = 4,
       chains = 4,

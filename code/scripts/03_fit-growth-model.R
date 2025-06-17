@@ -38,10 +38,16 @@ data_sample <-
 
 # Set priors --------------------------------------------------------------
 
-priors1 <- c(
+priors2 <- c(
   prior(lognormal(5, 1.2), nlpar = "A", lb = 0),
   prior(student_t(5, 0, 1), nlpar = "k", lb = 0),
   prior(student_t(5, 0, 10), nlpar = "delay"))
+
+priors3 <- c(
+  prior(lognormal(6, 1), nlpar = "A", lb = 0),
+  prior(student_t(5, 0, 0.5), nlpar = "k", lb = 0),
+  prior(student_t(5, 0, 5), nlpar = "delay"))
+
 
 # Define formula ----------------------------------------------------------
 
@@ -65,15 +71,16 @@ growth_model <-
   brm(gompertz,
       data = data_sample,
       family = brmsfamily("lognormal"),
-      prior = priors1,
+      prior = priors3,
+      sample_prior = "yes",
       cores = 4,
       chains = 4,
       init = 0,
       seed = 123,
       iter = 10000,
       #control = list(adapt_delta = 0.9),
-      file_refit = "never",
-      file = "output/models/priors2/growth_model_base")
+      file_refit = "always",
+      file = "output/models/growth_model_base_p3")
 
 add_criterion(x = growth_model,
               newdata = drop_na(data = data_sample,
@@ -83,44 +90,3 @@ add_criterion(x = growth_model,
 print("growth_model fit complete")
 
 rm(growth_model)
-
-# Fit model with climber cutting ---------------------------------------------------------------
-
-gompertz2 <-
-  bf(dbase_mean ~ log(A) * exp( -exp( -(k * (years - delay) ) ) ),
-     log(A) ~ 0 + forest_type +
-       (0 + forest_type|genus_species) +
-       (1 | plant_id) +
-       (1 | climber_cut),
-     k ~ 0 + forest_type +
-       (0 + forest_type|genus_species) +
-       (1 | plant_id) +
-       (1 | climber_cut),
-     delay ~ 0 + forest_type +
-       (0 + forest_type|genus_species) +
-       (1 | plant_id) +
-       (1 | climber_cut),
-     nl = TRUE)
-
-growth_model_cc <-
-  brm(gompertz2,
-      data = data_sample,
-      family = brmsfamily("lognormal"),
-      prior = priors1,
-      cores = 4,
-      chains = 4,
-      init = 0,
-      seed = 123,
-      iter = 10000,
-      #control = list(adapt_delta = 0.9),
-      file_refit = "always",
-      file = "output/models/priors2/growth_model_base_cc")
-
-add_criterion(x = growth_model_cc,
-              newdata = drop_na(data = data_sample,
-                                dbase_mean),
-              criterion = "loo")
-
-print("growth_model_cc fit complete")
-
-rm(growth_model_cc)

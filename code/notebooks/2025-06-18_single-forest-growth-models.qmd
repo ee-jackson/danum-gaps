@@ -1,0 +1,119 @@
+---
+title: "Single forest growth models"
+author: 'eleanorjackson'
+date: '`r format(Sys.time(), "%d %B, %Y")`' 
+format: 
+  gfm:
+    toc: true
+editor: source
+execute:
+  warning: false
+---
+
+```{r setup}
+#| include: false
+
+file_name <- knitr::current_input()
+
+knitr::opts_chunk$set(
+  fig.path =
+    paste0("figures/", sub("\\.rmarkdown$", "", basename(file_name)), 
+           "/", sep = "")
+)
+
+set.seed(123)
+ggplot2::theme_set(ggplot2::theme_bw(base_size = 10))
+```
+
+I fit some models with _either_ the Danum Valley (old-growth, DV) _or_
+Sabah Biodiversity Experiment (logged, SBE) data, 
+in order to look at how growth might respond to 
+some variables which are only relevant to one forest type.
+
+```{r}
+library("tidyverse")
+library("tidybayes")
+library("brms")
+```
+
+```{r}
+mod_clim <- 
+  readRDS(here::here("output", 
+          "models", 
+          "grow-extra-noft", 
+          "growth_model_climber.rds"))
+
+mod_cohort <- 
+  readRDS(here::here("output", 
+          "models", 
+          "grow-extra-noft", 
+          "growth_model_cohort.rds"))
+
+mod_canopy <- 
+  readRDS(here::here("output", 
+          "models", 
+          "grow-extra-noft", 
+          "growth_model_canopy.rds"))
+```
+
+## SBE - climber cut vs non-climber cut 
+
+```{r}
+plot(mod_clim,
+     variable = "^b_",
+     ask = FALSE,
+     regex = TRUE,
+     newpage = FALSE,
+     nvariables = 2)
+```
+
+Half of the six intensively censused SBE plots recieved
+a climber cutting treatment 
+(see [O’Brien *et al* 2019](https://doi.org/10.1111/1365-2664.13335)).
+
+Estimated parameters look very similar between groups.
+Perhaps _k_ a little higher for seedlings in climber-cut plots.
+
+## SBE - cohort one vs cohort two
+
+```{r}
+plot(mod_cohort,
+     variable = "^b_",
+     ask = FALSE,
+     regex = TRUE,
+     newpage = FALSE,
+     nvariables = 2)
+```
+
+Seedlings in cohort one were allegedly older at the time of planting 
+out into the forest, 
+but the two groups actually had a similar initial size, 
+see [2024-08-07_investigate-initial-size](2024-08-07_investigate-initial-size.md). Likely however that the first cohort of seedlings were more pot-bound.
+
+_A_ is higher for the 1^st^ cohort and
+_k_ looks similar between groups.
+Seedlings in the 2^nd^ cohort reach max RGR a little faster 
+than seedlings in the 1^st^ cohort (_delay_).
+
+
+## DV - understory vs gap
+
+```{r}
+plot(mod_canopy,
+     variable = "^b_",
+     ask = FALSE,
+     regex = TRUE,
+     newpage = FALSE,
+     nvariables = 2)
+```
+
+In DV we have paired canopy gap and understory plots.
+(Although I only use the gap plots in this project.)
+
+This one did not fit so well.
+I got some Rhat warnings and you can see the chains didn't mix well
+for _delay_.
+
+_k_ and _A_ both look higher in the understory, 
+which is counter-intuitive and not what the data looks like, 
+see [2025-05-28_understory-plots](2025-05-28_understory-plots.md).

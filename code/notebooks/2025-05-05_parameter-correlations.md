@@ -1,6 +1,6 @@
 # Look at correlations between estimated parameters
 eleanorjackson
-2025-06-16
+2025-06-19
 
 - [Get growth parameters](#get-growth-parameters)
 - [Get survival parameters](#get-survival-parameters)
@@ -241,7 +241,8 @@ pca_p <-
   x = all_params %>% 
     ungroup() %>% 
     filter(forest_type == "Primary") %>% 
-    select(median_A, median_k, survival),
+    column_to_rownames("Species") %>% 
+    select(median_A, median_k, median_delay),
   scale. = TRUE,
   center = TRUE
 )
@@ -254,12 +255,28 @@ autoplot(pca_p,
 ![](figures/2025-05-05_parameter-correlations/unnamed-chunk-12-1.png)
 
 ``` r
+fortify(pca_p) %>% 
+  rownames_to_column(var = "Species") %>% 
+  left_join(all_params %>% 
+    ungroup() %>% 
+    filter(forest_type == "Primary"),
+    by = "Species") %>% 
+  ggplot(aes(x = PC1, y = PC2, colour = survival))+
+  geom_point()+
+  scale_colour_viridis_c() +
+  ggtitle("old-growth forest")
+```
+
+![](figures/2025-05-05_parameter-correlations/unnamed-chunk-13-1.png)
+
+``` r
 pca_l <- 
   prcomp(
   x = all_params %>% 
     ungroup() %>% 
     filter(forest_type == "logged") %>% 
-    select(median_A, median_k, survival),
+    column_to_rownames("Species") %>% 
+    select(median_A, median_k, median_delay),
   scale. = TRUE,
   center = TRUE
 )
@@ -269,4 +286,19 @@ autoplot(pca_l,
          loadings.label = TRUE)
 ```
 
-![](figures/2025-05-05_parameter-correlations/unnamed-chunk-13-1.png)
+![](figures/2025-05-05_parameter-correlations/unnamed-chunk-14-1.png)
+
+``` r
+fortify(pca_l) %>% 
+  rownames_to_column(var = "Species") %>% 
+  left_join(all_params %>% 
+    ungroup() %>% 
+    filter(forest_type == "logged"),
+    by = "Species") %>% 
+  ggplot(aes(x = PC1, y = PC2, colour = survival)) +
+  geom_point()+
+  scale_colour_viridis_c() +
+  ggtitle("logged forest")
+```
+
+![](figures/2025-05-05_parameter-correlations/unnamed-chunk-15-1.png)

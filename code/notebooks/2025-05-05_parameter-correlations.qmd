@@ -249,7 +249,8 @@ pca_p <-
   x = all_params %>% 
     ungroup() %>% 
     filter(forest_type == "Primary") %>% 
-    select(median_A, median_k, survival),
+    column_to_rownames("Species") %>% 
+    select(median_A, median_k, median_delay),
   scale. = TRUE,
   center = TRUE
 )
@@ -261,12 +262,26 @@ autoplot(pca_p,
 ```
 
 ```{r}
+fortify(pca_p) %>% 
+  rownames_to_column(var = "Species") %>% 
+  left_join(all_params %>% 
+    ungroup() %>% 
+    filter(forest_type == "Primary"),
+    by = "Species") %>% 
+  ggplot(aes(x = PC1, y = PC2, colour = survival))+
+  geom_point()+
+  scale_colour_viridis_c() +
+  ggtitle("old-growth forest")
+```
+
+```{r}
 pca_l <- 
   prcomp(
   x = all_params %>% 
     ungroup() %>% 
     filter(forest_type == "logged") %>% 
-    select(median_A, median_k, survival),
+    column_to_rownames("Species") %>% 
+    select(median_A, median_k, median_delay),
   scale. = TRUE,
   center = TRUE
 )
@@ -275,4 +290,17 @@ autoplot(pca_l,
          loadings = TRUE, 
          loadings.label = TRUE)
 
+```
+
+```{r}
+fortify(pca_l) %>% 
+  rownames_to_column(var = "Species") %>% 
+  left_join(all_params %>% 
+    ungroup() %>% 
+    filter(forest_type == "logged"),
+    by = "Species") %>% 
+  ggplot(aes(x = PC1, y = PC2, colour = survival)) +
+  geom_point()+
+  scale_colour_viridis_c() +
+  ggtitle("logged forest")
 ```

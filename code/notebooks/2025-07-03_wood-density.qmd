@@ -1,0 +1,320 @@
+---
+title: "Wood density"
+author: 'eleanorjackson'
+date: '`r format(Sys.time(), "%d %B, %Y")`' 
+format: 
+  gfm:
+    toc: true
+editor: source
+execute:
+  warning: false
+---
+
+```{r setup}
+#| include: false
+
+file_name <- knitr::current_input()
+
+knitr::opts_chunk$set(
+  fig.path =
+    paste0("figures/", sub("\\.rmarkdown$", "", basename(file_name)), 
+           "/", sep = "")
+)
+
+set.seed(123)
+ggplot2::theme_set(ggplot2::theme_bw(base_size = 10))
+```
+
+```{r}
+library("tidyverse")
+library("tidybayes")
+```
+Wood density data from here: https://doi.org/10.5061/dryad.234
+associated with [Chave et al. (2009)](https://doi.org/10.1111/j.1461-0248.2009.01285.x)
+
+```{r}
+wood_dens_chave <- 
+  readxl::read_excel(
+  here::here(
+    "data",
+    "raw",
+    "GlobalWoodDensityDatabase.xls"
+    ),
+  sheet = 2,
+  na = c("", " ", "NA")
+) %>% 
+  mutate(Species = 
+           str_replace(Binomial, " ", "_"))
+```
+
+Also [Both et al. (2018)](https://doi.org/10.1111/nph.15444)
+
+Trait measurements were taken in old-growth and selectively logged forest.
+Old growth sites were Maliau Basin Conservation Area (two plots) the Danum Valley Conservation Area (two plots) and Kalabakan Forest Reserve (four plots).
+The logged sites are part of the Stability of Altered Forest Ecosystem (SAFE) project.
+
+It might be a good idea to only use the DV sites but there is no metadata,
+so I have no idea which location code/site ID refers to Danum.
+
+```{r}
+wood_dens_both <- 
+  readxl::read_excel(
+  here::here(
+    "data",
+    "raw",
+    "Both_tree_functional_traits_subset RV.xlsx"
+    ),
+  sheet = 4,
+  skip = 6,
+  na = c("", " ", "NA")
+) %>% 
+  mutate(Species = 
+           str_replace(species, "\\.", "_")) %>% 
+  select(tree_id, Species, forest_type, location, WD_B, WD_NB)
+```
+
+```{r}
+mod_gro <-
+  readRDS(here::here("output", "models", 
+                     "growth_model_base_p3.rds"))
+
+
+mod_surv <-
+  readRDS(here::here("output", "models", "survival",
+                     "survival_model_impute.rds"))
+```
+
+## Get growth 
+
+```{r}
+pc_data_A <-
+  mod_gro %>%
+  spread_draws(
+    b_A_forest_typeprimary,
+    b_A_forest_typelogged,
+    `r_genus_species__A.*`, regex = TRUE) %>%
+  rowwise() %>%
+  mutate(across(contains(",forest_typeprimary]"),
+                ~ .x + b_A_forest_typeprimary)) %>%
+  mutate(across(contains(",forest_typelogged]"),
+                ~ .x + b_A_forest_typelogged)) %>%
+  ungroup() %>%
+  pivot_longer(cols = contains("r_genus_species__A")) %>%
+
+  mutate(forest_type = case_when(
+    grepl("logged", name) ~ "logged",
+    grepl("primary", name) ~ "Primary")) %>%
+  mutate(Species = str_split_i(string = name, pattern ="\\[", i = 2)) %>%
+  mutate(Species = str_split_i(string = Species, pattern =",", i = 1)) %>%
+  mutate(Parameter = "A") %>% 
+  select(- b_A_forest_typeprimary, -b_A_forest_typelogged, -name)
+
+pc_data_k <-
+  mod_gro %>%
+  spread_draws(
+    b_k_forest_typeprimary,
+    b_k_forest_typelogged,
+    `r_genus_species__k.*`, regex = TRUE) %>%
+  rowwise() %>%
+  mutate(across(contains(",forest_typeprimary]"),
+                ~ .x + b_k_forest_typeprimary)) %>%
+  mutate(across(contains(",forest_typelogged]"),
+                ~ .x + b_k_forest_typelogged)) %>%
+  ungroup() %>%
+  pivot_longer(cols = contains("r_genus_species__k")) %>%
+
+  mutate(forest_type = case_when(
+    grepl("logged", name) ~ "logged",
+    grepl("primary", name) ~ "Primary")) %>%
+  mutate(Species = str_split_i(string = name, pattern ="\\[", i = 2)) %>%
+  mutate(Species = str_split_i(string = Species, pattern =",", i = 1)) %>%
+  mutate(Parameter = "k") %>% 
+  select(- b_k_forest_typeprimary, -b_k_forest_typelogged, -name)
+
+pc_data_delay <-
+  mod_gro %>%
+  spread_draws(
+    b_delay_forest_typeprimary,
+    b_delay_forest_typelogged,
+    `r_genus_species__delay.*`, regex = TRUE) %>%
+  rowwise() %>%
+  mutate(across(contains(",forest_typeprimary]"),
+                ~ .x + b_delay_forest_typeprimary)) %>%
+  mutate(across(contains(",forest_typelogged]"),
+                ~ .x + b_delay_forest_typelogged)) %>%
+  ungroup() %>%
+  pivot_longer(cols = contains("r_genus_species__delay")) %>%
+
+  mutate(forest_type = case_when(
+    grepl("logged", name) ~ "logged",
+    grepl("primary", name) ~ "Primary")) %>%
+  mutate(Species = str_split_i(string = name, pattern ="\\[", i = 2)) %>%
+  mutate(Species = str_split_i(string = Species, pattern =",", i = 1)) %>%
+  mutate(Parameter = "delay") %>% 
+  select(- b_delay_forest_typeprimary, -b_delay_forest_typelogged, -name)
+
+growth_params <-
+  bind_rows(pc_data_A,
+            pc_data_delay,
+            pc_data_k) %>% 
+  mutate(value = case_when(
+    Parameter == "k" ~ (value / exp(1))*100,
+    .default = value
+  )) %>% 
+  pivot_wider(names_from = forest_type, values_from = value) %>% 
+  rowwise() %>% 
+  mutate(
+    diff = logged - Primary
+  )
+```
+
+## Get survival
+
+```{r}
+surv_params <-
+  mod_surv %>%
+  spread_draws(r_genus_species__timetolastalive[genus_species,forest_type],
+               b_timetolastalive_forest_typelogged,
+               b_timetolastalive_forest_typeprimary, regex=T) %>%
+  mutate(value = case_when(forest_type == "forest_typeprimary" ~
+                             r_genus_species__timetolastalive + b_timetolastalive_forest_typeprimary,
+                           forest_type == "forest_typelogged" ~
+                             r_genus_species__timetolastalive + b_timetolastalive_forest_typelogged)) %>%
+  mutate(forest_type = case_when(
+    forest_type == "forest_typelogged" ~ "logged",
+    forest_type == "forest_typeprimary" ~ "Primary")) %>% 
+  pivot_wider(names_from = forest_type, 
+              id_cols = c(genus_species, .chain, .iteration, .draw),
+              values_from = r_genus_species__timetolastalive) %>% 
+  mutate(diff = Primary - logged,
+         Parameter = "survival") %>% 
+  rename(Species = genus_species)
+```
+
+Combine growth and survival estimates
+
+```{r}
+all_params <- 
+  bind_rows(growth_params, surv_params) 
+```
+
+## Wood density
+
+```{r}
+wood_dens_chave %>% 
+  filter(Species %in% all_params$Species) %>% 
+  distinct(Species) %>% 
+  arrange(Species)
+```
+
+[Chave et al. (2009)](https://doi.org/10.1111/j.1461-0248.2009.01285.x) 
+has 13 of the 15 species.
+Missing Hopea_sangal and Parashorea_tomentella.
+
+```{r}
+wood_dens_both %>% 
+  filter(Species %in% all_params$Species) %>% 
+  distinct(Species) %>% 
+  arrange(Species)
+```
+
+[Both et al. (2018)](https://doi.org/10.1111/nph.15444) has 11 of the 15 species. 
+Missing Dipterocarpus_conformis, Shorea_argentifolia,
+Shorea_beccariana, Shorea_faguetiana.
+
+So between the two datasets we do have a complete species list.
+
+In wood_dens_both, we have:
+
+- WD_B (g/cm^3) Branch wood density from branch segment with bark, Oven-dry mass of a branch section with bark divided by the volume of the same section, when still fresh, volume determined by water-displacement method.
+- WD_NB (g/cm^3) Branch wood density from branch segment without bark (bark removed prior measurement), Oven-dry mass of a branch section without bark divided by the volume of the same section, when still fresh, volume determined by water-displacement method.
+
+In wood_dens_chave, we have:
+
+- Wood density (g/cm^3), oven dry mass/fresh volume
+
+```{r}
+med_dens_both <- 
+  wood_dens_both %>% 
+  filter(Species %in% all_params$Species) %>% 
+  group_by(Species) %>% 
+  summarise(wood_density_both = median(WD_NB, na.rm = TRUE)) 
+```
+
+```{r}
+med_dens_chave <-
+  wood_dens_chave %>% 
+  filter(Species %in% all_params$Species) %>% 
+  group_by(Species) %>% 
+  summarise(wood_density_chave = 
+              median(`Wood density (g/cm^3), oven dry mass/fresh volume`, 
+                     na.rm = TRUE)) 
+```
+
+Preference for Both because the measurements were taken in Danum.
+
+```{r}
+param_traits <- 
+  all_params %>% 
+  left_join(med_dens_both) %>% 
+  left_join(med_dens_chave) %>% 
+  mutate(wood_density = ifelse(is.na(wood_density_both),
+                               wood_density_chave, 
+                               wood_density_both )) 
+
+```
+
+## Plots
+
+```{r}
+param_traits %>%
+  ggplot(aes(x = diff, 
+             y = wood_density,
+             group = Species)) +
+  stat_interval(alpha = 0.5, show_point = TRUE, 
+                point_size = 1, point_fill = "white",
+               point_colour = "black", size = 1.75,
+               shape = 21) +
+  facet_wrap(~Parameter, scales = "free") +
+  geom_vline(xintercept = 0, colour = "red", linetype = 2) +
+  labs(x = "Additional effect of logging
+       \n(logged forest estimate - old-growth forest estimate)",
+       y = "Wood density (g/cm3)")
+```
+
+```{r}
+param_traits %>%
+  ggplot(aes(x = diff, 
+             y = reorder(Species, wood_density),
+             group = Species)) +
+  stat_interval(alpha = 0.5, show_point = TRUE, 
+                point_size = 1, point_fill = "white",
+               point_colour = "black", size = 1.75,
+               shape = 21) +
+  facet_grid(~Parameter, scales = "free_x") +
+  geom_vline(xintercept = 0, colour = "red", linetype = 2) +
+  labs(x = "Additional effect of logging
+       \n(logged forest estimate - old-growth forest estimate)",
+       y = "Decreasing wood density (g/cm3)") +
+  theme(legend.position = "top")
+```
+
+```{r}
+#| fig-height: 7
+#| fig-width: 7
+
+param_traits %>%
+  mutate(genus = str_split_i(Species, "_", 1)) %>% 
+  ggplot(aes(x = diff, 
+             y = Species)) +
+  stat_interval(alpha = 0.5, show_point = TRUE, 
+                point_size = 1, point_fill = "white",
+               point_colour = "black", size = 1.75,
+               shape = 21) +
+  facet_grid(genus~Parameter, drop = TRUE, scales = "free") +
+  geom_vline(xintercept = 0, colour = "red", linetype = 2) +
+  labs(x = "Additional effect of logging
+       \n(logged forest estimate - old-growth forest estimate)",
+       y = "Species") +
+  theme(legend.position = "top")
+```

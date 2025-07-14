@@ -186,7 +186,7 @@ pd_data_A <-
    pivot_wider(names_from = forest_type,
                values_from = value,
                id_cols = c(Species, .draw, .chain, .iteration)) %>%
-   mutate(Difference = abs(Primary - Secondary)) %>%
+   mutate(Difference = abs(Secondary - Primary)) %>%
    mutate(Parameter = "A")
 
 pd_data_k <-
@@ -194,7 +194,7 @@ pd_data_k <-
    pivot_wider(names_from = forest_type,
                values_from = value,
                id_cols = c(Species, .draw, .chain, .iteration)) %>%
-   mutate(Difference = abs(Primary - Secondary)) %>%
+   mutate(Difference = abs(Secondary - Primary)) %>%
    mutate(Parameter = "k")
 
 pd_data_delay <-
@@ -202,7 +202,7 @@ pd_data_delay <-
    pivot_wider(names_from = forest_type,
                values_from = value,
                id_cols = c(Species, .draw, .chain, .iteration)) %>%
-   mutate(Difference = Primary - Secondary) %>%
+   mutate(Difference = Secondary - Primary) %>%
    mutate(Parameter = "delay")
 
 pd_data <-

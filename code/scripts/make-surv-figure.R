@@ -58,8 +58,8 @@ pb <-
   spread_draws(
     b_timetolastalive_forest_typelogged,
     b_timetolastalive_forest_typeprimary, regex=T) %>%
-  mutate(diff = b_timetolastalive_forest_typeprimary -
-           b_timetolastalive_forest_typelogged) %>%
+  mutate(diff = b_timetolastalive_forest_typelogged -
+           b_timetolastalive_forest_typeprimary) %>%
   ggplot(aes(x = diff)) +
   stat_halfeye(.width = c(0.95, 0.5), alpha = 0.5) +
   geom_vline(xintercept = 0, linetype = 2) +
@@ -94,7 +94,7 @@ pd <-
                            forest_type == "forest_typelogged" ~
                              r_genus_species__timetolastalive + b_timetolastalive_forest_typelogged)) %>%
   pivot_wider(values_from=value, names_from= forest_type, id_cols = c(genus_species, .draw, .chain, .iteration)) %>%
-  mutate(diff = forest_typeprimary - forest_typelogged) %>%
+  mutate(diff = forest_typelogged - forest_typeprimary) %>%
   ggplot(aes(y = genus_species, x = diff)) +
   stat_halfeye(.width = c(0.95, 0.5), alpha = 0.5) +
   geom_vline(xintercept = 0, linetype = 2) +

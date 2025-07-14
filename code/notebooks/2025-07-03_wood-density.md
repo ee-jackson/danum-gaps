@@ -163,16 +163,18 @@ surv_params <-
                b_timetolastalive_forest_typelogged,
                b_timetolastalive_forest_typeprimary, regex=T) %>%
   mutate(value = case_when(forest_type == "forest_typeprimary" ~
-                             r_genus_species__timetolastalive + b_timetolastalive_forest_typeprimary,
+                             r_genus_species__timetolastalive +
+                             b_timetolastalive_forest_typeprimary,
                            forest_type == "forest_typelogged" ~
-                             r_genus_species__timetolastalive + b_timetolastalive_forest_typelogged)) %>%
+                             r_genus_species__timetolastalive +
+                             b_timetolastalive_forest_typelogged)) %>%
   mutate(forest_type = case_when(
     forest_type == "forest_typelogged" ~ "logged",
     forest_type == "forest_typeprimary" ~ "Primary")) %>% 
   pivot_wider(names_from = forest_type, 
               id_cols = c(genus_species, .chain, .iteration, .draw),
-              values_from = r_genus_species__timetolastalive) %>% 
-  mutate(diff = Primary - logged,
+              values_from = value) %>% 
+  mutate(diff = logged - Primary,
          Parameter = "survival") %>% 
   rename(Species = genus_species)
 ```

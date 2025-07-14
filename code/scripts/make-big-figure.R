@@ -47,8 +47,8 @@ mod_surv <-
                      "survival_model_impute.rds"))
 
 mod_gro <-
-  readRDS(here::here("output", "models", "priors2",
-                     "growth_model_impute_base_nodbh.rds"))
+  readRDS(here::here("output", "models",
+                     "growth_model_base_p3.rds"))
 
 # -------------------------------------------------------------------------
 
@@ -61,13 +61,13 @@ pred_df_sz <-
   mutate(.draw = NA) %>%
   mutate(.iteration = NA) %>%
   mutate(b_timetolastalive_forest_typeprimary = NA) %>%
-  mutate(b_timetolastalive_forest_typesecondary = NA)
+  mutate(b_timetolastalive_forest_typelogged = NA)
 
 # put together the relevant estimates from the mcmc chains
 mcmc_df_sz <-
   mod_surv %>%
   spread_draws(b_timetolastalive_forest_typeprimary,
-               b_timetolastalive_forest_typesecondary,
+               b_timetolastalive_forest_typelogged,
                shape_timetolastalive) %>%
   mutate(bsp_timetolastalive_midbase_mean_sc = NA)
 
@@ -81,7 +81,7 @@ curves_df_sz <-
       .iteration,
       .draw,
       b_timetolastalive_forest_typeprimary,
-      b_timetolastalive_forest_typesecondary,
+      b_timetolastalive_forest_typelogged,
       shape_timetolastalive
     ),
     bsp_timetolastalive_midbase_mean_sc
@@ -91,19 +91,19 @@ curves_df_sz <-
   # survival curves
   mutate (primary = exp (-(((bsp_timetolastalive_midbase_mean_sc - 0) /
                                           exp (b_timetolastalive_forest_typeprimary))^shape_timetolastalive))) %>%
-  mutate (secondary = exp (-(((bsp_timetolastalive_midbase_mean_sc - 0) /
-                                            exp (b_timetolastalive_forest_typesecondary))^shape_timetolastalive)))
+  mutate (logged = exp (-(((bsp_timetolastalive_midbase_mean_sc - 0) /
+                                            exp (b_timetolastalive_forest_typelogged))^shape_timetolastalive)))
 
 pb <-
   curves_df_sz %>%
-  pivot_longer(c(primary, secondary)) %>%
+  pivot_longer(c(primary, logged)) %>%
   ggplot(aes(x = bsp_timetolastalive_midbase_mean_sc,
              y = value,
              colour = name,
              fill = name)) +
   stat_lineribbon (.width= .95, alpha = 0.5) +
   ylab("Survival probability") +
-  xlab("Basal diameter /cm")
+  xlab("Basal diameter /mm")
 
 
 # -------------------------------------------------------------------------
@@ -121,7 +121,7 @@ pred_df_sz_sp <-
   mutate(.draw = NA) %>%
   mutate(.iteration = NA) %>%
   mutate(b_timetolastalive_forest_typeprimary = NA) %>%
-  mutate(b_timetolastalive_forest_typesecondary = NA)
+  mutate(b_timetolastalive_forest_typelogged = NA)
 
 pred_df_sz_sp[grp_eff_im] <- NA
 
@@ -129,15 +129,15 @@ mcmc_df_sz_sp <-
   mod_surv %>%
   spread_draws(shape_timetolastalive, `r_.*`,
                b_timetolastalive_forest_typeprimary,
-               b_timetolastalive_forest_typesecondary,
+               b_timetolastalive_forest_typelogged,
                bsp_timetolastalive_midbase_mean_sc,
                regex = TRUE) %>%
   mutate(bsp_timetolastalive_midbase_mean_sc = NA)  %>%
   rowwise() %>%
   mutate(across(contains(",forest_typeprimary]"),
                 ~ .x + b_timetolastalive_forest_typeprimary)) %>%
-  mutate(across(contains(",forest_typesecondary]"),
-                ~ .x + b_timetolastalive_forest_typesecondary))
+  mutate(across(contains(",forest_typelogged]"),
+                ~ .x + b_timetolastalive_forest_typelogged))
 
 curves_df_sz_sp <-
   union(pred_df_sz_sp, mcmc_df_sz_sp) %>%
@@ -147,7 +147,7 @@ curves_df_sz_sp <-
       .iteration,
       .draw,
       b_timetolastalive_forest_typeprimary,
-      b_timetolastalive_forest_typesecondary,
+      b_timetolastalive_forest_typelogged,
       shape_timetolastalive,
       `r_genus_species__timetolastalive[Dipterocarpus_conformis,forest_typeprimary]`,
       `r_genus_species__timetolastalive[Dryobalanops_lanceolata,forest_typeprimary]`,
@@ -164,21 +164,21 @@ curves_df_sz_sp <-
       `r_genus_species__timetolastalive[Shorea_macroptera,forest_typeprimary]`,
       `r_genus_species__timetolastalive[Shorea_ovalis,forest_typeprimary]`,
       `r_genus_species__timetolastalive[Shorea_parvifolia,forest_typeprimary]`,
-      `r_genus_species__timetolastalive[Dipterocarpus_conformis,forest_typesecondary]`,
-      `r_genus_species__timetolastalive[Dryobalanops_lanceolata,forest_typesecondary]`,
-      `r_genus_species__timetolastalive[Hopea_sangal,forest_typesecondary]`,
-      `r_genus_species__timetolastalive[Parashorea_malaanonan,forest_typesecondary]`,
-      `r_genus_species__timetolastalive[Parashorea_tomentella,forest_typesecondary]`,
-      `r_genus_species__timetolastalive[Shorea_argentifolia,forest_typesecondary]`,
-      `r_genus_species__timetolastalive[Shorea_beccariana,forest_typesecondary]`,
-      `r_genus_species__timetolastalive[Shorea_faguetiana,forest_typesecondary]`,
-      `r_genus_species__timetolastalive[Shorea_gibbosa,forest_typesecondary]`,
-      `r_genus_species__timetolastalive[Shorea_johorensis,forest_typesecondary]`,
-      `r_genus_species__timetolastalive[Shorea_leprosula,forest_typesecondary]`,
-      `r_genus_species__timetolastalive[Shorea_macrophylla,forest_typesecondary]`,
-      `r_genus_species__timetolastalive[Shorea_macroptera,forest_typesecondary]`,
-      `r_genus_species__timetolastalive[Shorea_ovalis,forest_typesecondary]`,
-      `r_genus_species__timetolastalive[Shorea_parvifolia,forest_typesecondary]`
+      `r_genus_species__timetolastalive[Dipterocarpus_conformis,forest_typelogged]`,
+      `r_genus_species__timetolastalive[Dryobalanops_lanceolata,forest_typelogged]`,
+      `r_genus_species__timetolastalive[Hopea_sangal,forest_typelogged]`,
+      `r_genus_species__timetolastalive[Parashorea_malaanonan,forest_typelogged]`,
+      `r_genus_species__timetolastalive[Parashorea_tomentella,forest_typelogged]`,
+      `r_genus_species__timetolastalive[Shorea_argentifolia,forest_typelogged]`,
+      `r_genus_species__timetolastalive[Shorea_beccariana,forest_typelogged]`,
+      `r_genus_species__timetolastalive[Shorea_faguetiana,forest_typelogged]`,
+      `r_genus_species__timetolastalive[Shorea_gibbosa,forest_typelogged]`,
+      `r_genus_species__timetolastalive[Shorea_johorensis,forest_typelogged]`,
+      `r_genus_species__timetolastalive[Shorea_leprosula,forest_typelogged]`,
+      `r_genus_species__timetolastalive[Shorea_macrophylla,forest_typelogged]`,
+      `r_genus_species__timetolastalive[Shorea_macroptera,forest_typelogged]`,
+      `r_genus_species__timetolastalive[Shorea_ovalis,forest_typelogged]`,
+      `r_genus_species__timetolastalive[Shorea_parvifolia,forest_typelogged]`
     ),
     bsp_timetolastalive_midbase_mean_sc
   ) %>%
@@ -194,7 +194,7 @@ plotting_data_sp <-
   mutate(genus_species = str_split_i(string = name, pattern ="\\[", i = 2)) %>%
   mutate(genus_species = str_split_i(string = genus_species, pattern =",", i = 1)) %>%
   mutate(forest_type = str_split_i(string = name, pattern =",", i = 2)) %>%
-  mutate(forest_type = ifelse(forest_type== "forest_typeprimary]", "primary", "secondary"))
+  mutate(forest_type = ifelse(forest_type== "forest_typeprimary]", "primary", "logged"))
 
 pd <-
   plotting_data_sp %>%
@@ -204,7 +204,7 @@ pd <-
                fill = forest_type)) +
   stat_lineribbon (.width = 0.95, alpha = 0.5) +
   ylab("Survival probability")+
-  xlab("Basal diameter /cm") +
+  xlab("Basal diameter /mm") +
   facet_wrap(~genus_species, nrow = 1) +
   theme(legend.position = "bottom")
 
@@ -225,23 +225,34 @@ agr <-
   point_interval(.epred,
                  .width = 0.95,
                  .point = median,
-                 .interval = hdi,
+                 .interval = qi,
                  na.rm = TRUE) %>%
   group_by(forest_type) %>%
-  mutate(lag_dbh_pred = lag(.epred, n = 1, order_by = years)) %>%
+  mutate(lag_dbh_pred = lag(.epred, n = 1, order_by = years),
+         lag_dbh_pred_low = lag(.lower, n = 1, order_by = years),
+         lag_dbh_pred_up = lag(.upper, n = 1, order_by = years)) %>%
   rowwise() %>%
-  mutate(growth_cmyr = .epred - lag_dbh_pred) %>%
+  mutate(growth_cmyr = .epred - lag_dbh_pred,
+         growth_cmyr_low = .lower - lag_dbh_pred_low,
+         growth_cmyr_up = .upper - lag_dbh_pred_up) %>%
   ungroup()
 
 pa <-
   agr %>%
-  ggplot(aes(x = .epred, y = growth_cmyr,
-             xmin = .lower, xmax = .upper,
-             colour = forest_type, fill = forest_type)) +
-  geom_pointinterval(alpha = 0.5) +
-  xlab("Basal diameter (cm)") +
-  ylab("Basal diamter growth (cm/yr)")
+  ggplot() +
+  geom_pointinterval(aes(x = .epred, y = growth_cmyr,
+                         xmin = .lower, xmax = .upper,
+                         colour = forest_type, fill = forest_type),
+                     alpha = 0.5) +
+  geom_pointinterval(aes(x = .epred, y = growth_cmyr,
+                         ymin = growth_cmyr_low, ymax = growth_cmyr_up,
+                         colour = forest_type, fill = forest_type),
+                     alpha = 0.5) +
+  xlab("Basal diameter (mm)") +
+  ylab("Basal diamter growth (mm/yr)")
 
+
+# sp level growth ---------------------------------------------------------
 
 
 tidy_epred_sp <-
@@ -260,26 +271,38 @@ agr_sp <-
   point_interval(.epred,
                  .width = 0.95,
                  .point = median,
-                 .interval = hdi,
+                 .interval = qi,
                  na.rm = TRUE) %>%
   group_by(forest_type, genus_species) %>%
-  mutate(lag_epred = lag(.epred, n = 1, order_by = years)) %>%
+  mutate(lag_epred = lag(.epred, n = 1, order_by = years),
+         lag_epred_low = lag(.lower, n = 1, order_by = years),
+         lag_epred_up = lag(.upper, n = 1, order_by = years)) %>%
   rowwise() %>%
-  mutate(growth_cmyr = .epred - lag_epred) %>%
+  mutate(growth_cmyr = .epred - lag_epred,
+         growth_cmyr_low = .lower - lag_epred_low,
+         growth_cmyr_up = .upper - lag_epred_up) %>%
   ungroup()
 
 pc <-
   agr_sp %>%
-  ggplot(aes(x = .epred, y = growth_cmyr,
-             xmin = .lower, xmax = .upper,
-             colour = forest_type)) +
-  geom_pointinterval(point_alpha = 1,
+  ggplot() +
+  geom_pointinterval(aes(x = .epred, y = growth_cmyr,
+                         xmin = .lower, xmax = .upper,
+                         colour = forest_type),
+                     point_alpha = 1,
                      point_size = 0.75,
                      interval_alpha = 0.5,
                      interval_linewidth = 0.5) +
-  facet_wrap(~genus_species, scales = "free", nrow = 1) +
-  xlab("Basal diameter (cm)") +
-  ylab("Basal diamter growth (cm/yr)") +
+  geom_pointinterval(aes(x = .epred, y = growth_cmyr,
+                         ymin = growth_cmyr_low, ymax = growth_cmyr_up,
+                         colour = forest_type),
+                     point_alpha = 1,
+                     point_size = 0.75,
+                     interval_alpha = 0.5,
+                     interval_linewidth = 0.5) +
+  facet_wrap(~genus_species, scales = "fixed", nrow = 1) +
+  xlab("Basal diameter (mm)") +
+  ylab("Basal diamter growth (mm/yr)") +
   theme(legend.position = "bottom")
 
 # combine -----------------------------------------------------------------
@@ -300,7 +323,7 @@ gro_sp <-
   mutate(type = "growth") %>%
   rename(basal = .epred,
          value = growth_cmyr) %>%
-  select(- lag_epred, -years)
+  select(- lag_epred, -years, -lag_epred_low, -growth_cmyr_up)
 
 
 surv_sp <-
@@ -308,19 +331,22 @@ surv_sp <-
   mutate(across(c(genus_species,forest_type), as.factor)) %>%
   rename(basal = bsp_timetolastalive_midbase_mean_sc) %>%
   select(-b_timetolastalive_forest_typeprimary,
-         - b_timetolastalive_forest_typesecondary,
+         - b_timetolastalive_forest_typelogged,
          -shape_timetolastalive,
          -name) %>%
   group_by(forest_type, genus_species,basal) %>%
   point_interval(value, .point = median,
                  .interval = hdi) %>%
-  mutate(type = "survival")
+  mutate(type = "survival",
+         growth_cmyr_low = NA,
+         growth_cmyr_up = NA)
 
 gro_sp %>%
-  ggplot(aes(x = basal, y = value,
-             ymin = .lower, ymax = .upper,
-             colour = forest_type, fill = forest_type)) +
-  geom_lineribbon(alpha = 0.5) +
+  ggplot() +
+  geom_lineribbon(aes(x = basal, y = value,
+                      ymin = .lower, ymax = .upper,
+                      colour = forest_type, fill = forest_type),
+                  alpha = 0.5) +
   facet_grid(~genus_species,
              scales = "free_y")
 
@@ -330,12 +356,20 @@ p3 <- gro_sp %>%
          .upperx = .upper) %>%
   bind_rows(surv_sp) %>%
   ggplot() +
-  geom_lineribbon(aes(y = value, x = basal, #growth
-                      xmin = .lowerx,
-                      xmax = .upperx,
-                      colour = forest_type,
-                      fill = forest_type),
-                  alpha = 0.5)+
+  geom_pointinterval(aes(x = basal, y = value, # grow
+                         xmin = .lowerx, xmax = .upperx,
+                         colour = forest_type),
+                     point_alpha = 1,
+                     point_size = 0.75,
+                     interval_alpha = 0.5,
+                     interval_linewidth = 0.5) +
+  geom_pointinterval(aes(x = basal, y = value,
+                         ymin = growth_cmyr_low, ymax = growth_cmyr_up,
+                         colour = forest_type),
+                     point_alpha = 1,
+                     point_size = 0.75,
+                     interval_alpha = 0.5,
+                     interval_linewidth = 0.5) +
   geom_lineribbon(aes(x = basal, y = value, # surv
                       ymin = .lower,
                       ymax = .upper,
@@ -345,7 +379,7 @@ p3 <- gro_sp %>%
   facet_grid(type~genus_species,
              scales = "free_y") +
   xlim(0,100) +
-  xlab("Basal diameter (cm)") +
+  xlab("Basal diameter (mm)") +
   theme(legend.position = "none")
 
 

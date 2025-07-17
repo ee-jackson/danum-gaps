@@ -1,0 +1,72 @@
+---
+title: "TRY traits"
+author: 'eleanorjackson'
+date: '`r format(Sys.time(), "%d %B, %Y")`' 
+format: 
+  gfm:
+    toc: true
+editor: source
+execute:
+  warning: false
+---
+
+```{r setup}
+#| include: false
+
+file_name <- knitr::current_input()
+
+knitr::opts_chunk$set(
+  fig.path =
+    paste0("figures/", sub("\\.rmarkdown$", "", basename(file_name)), 
+           "/", sep = "")
+)
+
+set.seed(123)
+ggplot2::theme_set(ggplot2::theme_bw(base_size = 10))
+```
+
+Which of our species are in the TRY database?
+
+```{r}
+library("tidyverse")
+library("tidybayes")
+```
+
+```{r}
+try_sp <- 
+  read_tsv(here::here("data", "raw", "TryAccSpecies.txt")) %>% 
+  mutate(genus_species = str_replace(AccSpeciesName, " ", "_")) 
+```
+
+```{r}
+our_sp <- readRDS(here::here("data", "derived", "data_cleaned.rds")) %>% 
+  select(genus_species) %>% 
+  distinct()
+
+our_sp
+```
+
+
+```{r}
+inner_join(our_sp, try_sp) %>% glimpse
+```
+
+One of our species is not in the TRY database: `Parashorea_tomentella`
+
+```{r}
+inner_join(our_sp, try_sp) %>% 
+  pull(AccSpeciesID) 
+```
+
+the `AccSpeciesID`'s we want:
+
+49981, 49988, 19393, 49960, 50006, 49952, 49933, 18749, 49987, 40272, 49927, 50001, 29483, 49973
+
+and the trait IDs:
+
+- 4083	Leaf area per leaf dry mass (specific leaf area, SLA or 1/LMA) of total leaf area	
+- 3086	Leaf area per leaf dry mass (specific leaf area, SLA or 1/LMA) petiole, rhachis and midrib excluded
+- 3115	Leaf area per leaf dry mass (specific leaf area, SLA or 1/LMA): petiole excluded	
+- 3116	Leaf area per leaf dry mass (specific leaf area, SLA or 1/LMA): petiole included	
+- 3117	Leaf area per leaf dry mass (specific leaf area, SLA or 1/LMA): undefined if petiole is in- or excluded
+- 4	Stem specific density (SSD, stem dry mass per stem fresh volume) or wood density

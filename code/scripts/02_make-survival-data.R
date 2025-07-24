@@ -15,7 +15,8 @@ library("here")
 # Get data ----------------------------------------------------------------
 
 data <-
-  readRDS(here::here("data", "derived", "data_cleaned.rds"))
+  readRDS(here::here("data", "derived", "data_cleaned.rds")) %>%
+  filter(! if_all(c(dbh_mean, dbase_mean), is.na))
 
 
 # Remove left censored data -----------------------------------------------

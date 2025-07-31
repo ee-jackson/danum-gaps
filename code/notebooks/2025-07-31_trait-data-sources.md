@@ -1,0 +1,120 @@
+# Where should we get our plant trait data from?
+eleanorjackson
+2025-07-31
+
+``` r
+library("tidyverse")
+library("patchwork")
+library("rtry")
+```
+
+``` r
+sp <-
+  readRDS(here::here("data", "derived", "data_cleaned.rds")) %>% 
+  distinct(genus_species) %>% 
+  rename(Species = genus_species)
+```
+
+Data from [Both et al. (2018)](https://doi.org/10.1111/nph.15444) are
+likely to be best since from Danum.
+
+``` r
+traits_both <-
+  readxl::read_excel(
+    here::here(
+      "data",
+      "raw",
+      "traits",
+      "Both_tree_functional_traits_subset RV.xlsx"
+    ),
+    sheet = 4,
+    skip = 6,
+    na = c("", " ", "NA")
+  ) %>%
+  mutate(Species =
+           str_replace(species, "\\.", "_")) %>%
+  select(tree_id, Species, forest_type, location,
+         WD_NB, LA_cm2_mean, dry_weight_mg_mean)
+```
+
+Get median trait values across individuals of the same species.
+
+``` r
+med_both <-
+  traits_both %>%
+  filter(forest_type == "OG") %>% # Only Danum and Maliau Basin 
+  filter(Species %in% sp$Species) %>%
+  mutate(LA_mm2_mean = LA_cm2_mean * 100) %>% # make units match TRY data
+  mutate(sla = LA_mm2_mean / dry_weight_mg_mean) %>%
+  group_by(Species) %>%
+  summarise(sla = median(sla, na.rm = TRUE),
+            wood_density = median(WD_NB, na.rm = TRUE)) %>% 
+  mutate(Dataset = "Both et al. 2019")
+```
+
+Four of our species are missing from the Both data. We can use
+[TRY](https://www.try-db.org/TryWeb/Home.php) to fill the gaps. See
+[this note](2025-07-17_check-TRY-data.md) for the species and traits I
+requested from TRY.
+
+``` r
+# get TRY traits
+traits_try <-
+  read_tsv(here::here("data", "raw", "traits", "43247.txt"),
+           na = c("", " ", "NA")) %>%
+  filter(DatasetID != 761) %>%
+  rtry::rtry_remove_dup() %>%
+  mutate(Species =
+           str_replace(AccSpeciesName, " ", "_")) %>%
+  mutate(
+    trait = case_when(
+      DataName == "Wood density; stem specific density; wood specific gravity (SSD)" ~
+        "wood_density",
+      DataName == "SLA: undefined if petiole in- or excluded" |
+        DataName == "SLA: petiole  excluded" ~ "sla"
+    )
+  ) %>%
+  drop_na(trait)
+```
+
+``` r
+med_both %>% 
+  pivot_longer(c(wood_density, sla),
+               names_to = "trait", values_to = "StdValue") %>% 
+  bind_rows(traits_try) %>% 
+  ggplot(aes(y = Species, x = StdValue, colour = Dataset)) +
+  geom_jitter(height = 0.25, size = 2.5, alpha = 0.7, shape = 16) +
+  facet_wrap(~trait, scales = "free") 
+```
+
+![](figures/2025-07-31_trait-data-sources/unnamed-chunk-6-1.png)
+
+Get a median TRY value:
+
+``` r
+med_try <- 
+  traits_try %>% 
+  pivot_wider(names_from = trait, 
+              values_from = StdValue) %>% 
+  group_by(Species) %>% 
+  summarise(sla = median(sla, na.rm = TRUE),
+            wood_density = median(wood_density, na.rm = TRUE)) %>% 
+  mutate(Dataset = "TRY")
+```
+
+Compare the TRY median with Both median.
+
+``` r
+med_try %>% 
+  bind_rows(med_both) %>% 
+  ggplot(aes(y = Species, x = sla, colour = Dataset)) +
+  geom_point(size = 2.5, alpha = 0.7, shape = 16) +
+  med_try %>% 
+  bind_rows(med_both) %>% 
+  ggplot(aes(y = Species, x = wood_density, colour = Dataset)) +
+  geom_point(size = 2.5, alpha = 0.7, shape = 16) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom")
+```
+
+![](figures/2025-07-31_trait-data-sources/unnamed-chunk-8-1.png)

@@ -21,7 +21,8 @@ options(brms.file_refit = "on_change")
 # Get data ----------------------------------------------------------------
 
 data <-
-  readRDS("data/derived/data_cleaned.rds")
+  readRDS("data/derived/data_cleaned.rds") %>%
+  filter(survival == 1)
 
 well_sampled_trees <-
   data %>%
@@ -31,9 +32,7 @@ well_sampled_trees <-
 
 data_sample <-
   data %>%
-  filter(survival == 1) %>%
-  filter(plant_id %in% well_sampled_trees$plant_id) %>%
-  filter(canopy != "U")
+  filter(plant_id %in% well_sampled_trees$plant_id)
 
 
 # Set priors --------------------------------------------------------------
@@ -77,10 +76,10 @@ growth_model <-
       chains = 4,
       init = 0,
       seed = 123,
-      iter = 10000,
+      iter = 15000,
       #control = list(adapt_delta = 0.9),
       file_refit = "always",
-      file = "output/models/growth_model_base_p3")
+      file = "output/models/growth_model_base_p3_allo")
 
 add_criterion(x = growth_model,
               newdata = drop_na(data = data_sample,

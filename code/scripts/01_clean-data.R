@@ -16,7 +16,8 @@ library("janitor")
 # Get data ----------------------------------------------------------------
 
 data_comb <-
-  read_csv(here::here("data", "derived", "data_combined.csv"))
+  read_csv(here::here("data", "derived", "data_combined.csv")) %>%
+  filter(canopy != "U") # now removing understory plots
 
 
 # Clean species -----------------------------------------------------------
@@ -334,11 +335,69 @@ data_backfilled <-
   ))
 
 
+# Predict missing basal diameter ------------------------------------------
+
+
+n_missing_base <-
+  data_backfilled %>%
+  filter(is.na(dbase_mean) & !is.na(dbh_mean)) %>%
+  nrow()
+
+paste(
+  round(n_missing_base /
+          nrow(filter(data_backfilled, survival == 1))
+        * 100, digits = 2),
+  "% trees are missing basal diameter",
+  sep = " "
+  )
+
+# Taper model 1 from Cushman et al. 2014, doi: 10.1111/2041-210X.12187
+get_basal <- function(dbh, pom, b1) {
+  dbh /
+    exp(b1 * (pom - 1))
+}
+
+# Choose b1 parameter which minimises RMSE in basal diameter for our data
+get_rmse <- function(df, b1){
+
+  # make predictions for basal diameter
+  predictions <-
+    with(df, get_basal(dbh = dbh_mean, pom = 1.3, b1))
+
+  # get model errors
+  errors <-
+    with(df, dbase_mean - predictions)
+
+  # return the rmse
+  return( sqrt( sum(errors^2, na.rm = TRUE) / (length(errors)) ) )
+
+}
+
+optimiser_results <-
+  optim(
+    method = "Brent",
+    par = c(0),
+    lower = -5,
+    upper = 5,
+    fn = function(x) {
+      get_rmse(df = data_backfilled, x[1])
+    }
+  )
+
+
+data_backfilled <-
+  data_backfilled %>%
+  mutate(dbase_mean = case_when(
+    is.na(dbase_mean) & !is.na(dbh_mean) ~
+      get_basal(dbh = dbh_mean, pom = 1.3, b1 = optimiser_results$par),
+    .default = dbase_mean
+  ))
+
+
 # Save --------------------------------------------------------------------
 
 data_backfilled <-
   data_backfilled %>%
-  filter(canopy != "U") %>% # now removing understory plots
   select(plant_id, forest_type, climber_cut,
          genus, species, genus_species,
          plot, line, position, cohort, plant_no,

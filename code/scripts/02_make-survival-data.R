@@ -15,8 +15,7 @@ library("here")
 # Get data ----------------------------------------------------------------
 
 data <-
-  readRDS(here::here("data", "derived", "data_cleaned.rds")) %>%
-  filter(! if_all(c(dbh_mean, dbase_mean), is.na))
+  readRDS(here::here("data", "derived", "data_cleaned.rds"))
 
 
 # Remove left censored data -----------------------------------------------
@@ -43,7 +42,7 @@ interval_censored <-
   slice_min(survey_date, with_ties = FALSE) %>%
   ungroup() %>%
   rename(time_to_dead = years) %>%
-  select(plant_id, genus_species, plot, canopy,
+  select(plant_id, genus_species, plot,
          forest_type, cohort, time_to_dead) %>%
   mutate(censor = "interval")
 
@@ -70,7 +69,7 @@ right_censored <-
   slice_max(survey_date, with_ties = FALSE) %>%
   ungroup() %>%
   rename(time_to_last_alive = years) %>%
-  select(plant_id, genus_species, plot, canopy, forest_type,
+  select(plant_id, genus_species, plot, forest_type,
          cohort, time_to_last_alive, dbh_mean, dbase_mean) %>%
   mutate(censor = "right")
 
@@ -78,7 +77,7 @@ right_censored <-
 # Combine right and interval censored data --------------------------------
 
 # centre and scale for modelling
-# day zero needs to be slightly > 0 for Weibull
+# day zero needs to be slightly > 0 for Weibull model
 data_aggregated <-
   bind_rows(interval_censored, right_censored) %>%
   mutate(time_to_last_alive = ifelse(time_to_last_alive == 0,

@@ -218,23 +218,34 @@ param_traits <-
 
 # Plot --------------------------------------------------------------------
 
+param_traits_median <-
+  param_traits %>%
+  summarise(
+            iqr = IQR(diff, na.rm = TRUE),
+            diff = median(diff, na.rm = TRUE),
+            .by = c(Species, Parameter, names, sla_Both, wood_density_Both))
+
 # SLA
 fig_sla <-
   param_traits %>%
   ggplot(aes(y = diff,
              x = sla_Both,
              group = Species)) +
-  stat_interval(alpha = 0.5, show_point = TRUE,
+  stat_interval(interval_alpha = 0.5, show_point = TRUE,
                 point_size = 1, point_fill = "white",
                 point_colour = "black", size = 1.75,
-                shape = 21, show.legend = FALSE) +
+                shape = 21, show.legend = FALSE,
+                stroke = 0.5) +
   geom_smooth(aes(y = diff,
                   x = sla_Both,
                   group = Parameter),
+              se = TRUE,
+              level = 0.95,
               method = "lm",
-              weight = 0.5) +
+              fill = "grey", linewidth = 0.5,
+              data = param_traits_median) +
   facet_wrap(~names, scales = "free") +
-  geom_hline(yintercept = 0, colour = "red", linetype = 2) +
+  geom_hline(yintercept = 0, colour = "red", linetype = 2, linewidth = 0.25) +
   labs(y = "Additional effect of logging
        <br>(logged forest estimate - old-growth forest estimate)",
        x = "Specific leaf area (mm<sup>2</sup>/mg)") +
@@ -263,17 +274,19 @@ fig_wd <-
   ggplot(aes(y = diff,
              x = wood_density_Both,
              group = Species)) +
-  stat_interval(alpha = 0.5, show_point = TRUE,
+  stat_interval(interval_alpha = 0.5, show_point = TRUE,
                 point_size = 1, point_fill = "white",
                 point_colour = "black", size = 1.75,
-                shape = 21, show.legend = FALSE) +
+                shape = 21, show.legend = FALSE,
+                stroke = 0.5) +
   geom_smooth(aes(y = diff,
-                  x = wood_density_g_cm3,
+                  x = wood_density_Both,
                   group = names),
               method = "lm",
-              weight = 0.5) +
+              fill = "grey", linewidth = 0.5,
+              data = param_traits_median) +
   facet_wrap(~names, scales = "free") +
-  geom_hline(yintercept = 0, colour = "red", linetype = 2) +
+  geom_hline(yintercept = 0, colour = "red", linetype = 2, linewidth = 0.25) +
   labs(y = "Additional effect of logging
        <br>(logged forest estimate - old-growth forest estimate)",
        x = "Wood density (g/cm<sup>3</sup>)") +

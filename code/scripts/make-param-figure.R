@@ -25,22 +25,22 @@ mod_gro <-
 
 mod_surv <-
   readRDS(here::here("output", "models", "survival",
-                     "survival_model_allo.rds"))
+                     "survival_model_allo_nocenter.rds"))
 
 
 # Test hypotheses ---------------------------------------------------------
 
 hypothesis(mod_surv,
-           "forest_typeprimary - forest_typelogged = 0")
+           "forest_typelogged - forest_typeprimary = 0")
 
 hypothesis(mod_gro,
            "A_forest_typelogged - A_forest_typeprimary = 0")
 
 hypothesis(mod_gro,
-           "k_forest_typeprimary - k_forest_typelogged = 0")
+           "k_forest_typelogged - k_forest_typeprimary = 0")
 
 hypothesis(mod_gro,
-           "delay_forest_typeprimary - delay_forest_typelogged = 0")
+           "delay_forest_typelogged - delay_forest_typeprimary = 0")
 
 
 
@@ -66,7 +66,8 @@ ft_ests_grow <-
   mutate(.value = case_when(
     parameter == "k" ~ (.value / exp(1))*100,
     .default = .value
-  ))
+  )) %>%
+  select(-.variable)
 
 # survival model parameter estimates
 ft_ests_surv <-
@@ -86,7 +87,7 @@ ft_ests <-
     parameter == "A" ~ "<i>A</i>, Adult basal diameter (mm)",
     parameter == "k" ~ "<i>k / e</i>, Maximum relative growth rate (% year<sup>-1</sup>)",
     parameter == "delay" ~ "<i>delay</i>, Time to reach max RGR (years)",
-    parameter == "survival" ~ "<i>survival</i>, Typical mortality (years)"
+    parameter == "survival" ~ "Effect of forest type on <i>time to mortality</i> (years)"
   ))
 
 
@@ -166,7 +167,7 @@ sp_ests_surv <-
   mod_surv %>%
   spread_draws(r_genus_species[genus_species,forest_type],
                b_forest_typelogged,
-               b_forest_typeprimary, regex=T) %>%
+               b_forest_typeprimary, regex = TRUE) %>%
   mutate(value = case_when(forest_type == "forest_typeprimary" ~
                              r_genus_species + b_forest_typeprimary,
                            forest_type == "forest_typelogged" ~
@@ -188,7 +189,7 @@ sp_ests <-
     parameter == "A" ~ "<i>A</i>, Adult basal diameter (mm)",
     parameter == "k" ~ "<i>k / e</i>, Maximum relative growth rate (% year<sup>-1</sup>)",
     parameter == "delay" ~ "<i>delay</i>, Time to reach max RGR (years)",
-    parameter == "survival" ~ "<i>survival</i>, Typical mortality (years)"
+    parameter == "survival" ~ "Effect of forest type on <i>time to mortality</i> (years)"
   )) %>%
   mutate(Species = str_replace(Species, "_", " ")) %>%
   mutate(Species = paste0("<i>", Species, "</i>", sep = ""))
@@ -203,7 +204,7 @@ pa <-
   ft_ests %>%
   ggplot(aes(x = .value,
              fill = forest_type)) +
-  stat_halfeye(.width = c(0.95, 0.5), slab_alpha = 0.5,
+  stat_halfeye(.width = 0.95, slab_alpha = 0.5,
                size = 0.25, normalize = "panels", show.legend = FALSE) +
   theme(legend.position = "bottom") +
   facet_wrap(~name, scales = "free", nrow = 4) +
@@ -218,11 +219,11 @@ pb <-
               values_from = .value) %>%
   mutate(diff = Logged - `Old-growth`) %>%
   ggplot(aes(x = diff)) +
-  stat_halfeye(.width = c(0.95, 0.5), slab_alpha = 0.5,
+  stat_halfeye(.width = 0.95, slab_alpha = 0.5,
                size = 0.25, normalize = "panels") +
   theme(legend.position = "bottom") +
   facet_wrap(~name, scales = "free", nrow = 4) +
-  geom_vline(xintercept = 0, linetype = 2, colour = "red") +
+  geom_vline(xintercept = 0, linetype = 2, colour = "red", linewidth = 0.5) +
   labs(x = "Additional effect of logging
        <br>(logged forest estimate - old-growth forest estimate)",
        y = "Density")
@@ -231,8 +232,8 @@ pc <-
   sp_ests %>%
   ggplot(aes(x = value, y = Species,
              fill = forest_type)) +
-  stat_halfeye(.width = c(0.95, 0.5), slab_alpha = 0.5,
-               size = 0.01, normalize = "groups") +
+  stat_halfeye(.width = 0.95, slab_alpha = 0.5, interval_size = 0.05,
+               normalize = "groups", point_size = 0.25) +
   theme(legend.position = "bottom") +
   facet_wrap(~name, scales = "free", nrow = 4) +
   scale_fill_manual(values = pal) +
@@ -245,11 +246,11 @@ pd <-
               values_from = value) %>%
   mutate(diff = Logged - `Old-growth`) %>%
   ggplot(aes(x = diff, y = Species)) +
-  stat_halfeye(.width = c(0.95, 0.5), slab_alpha = 0.5,
-               size = 0.01, normalize = "groups") +
+  stat_halfeye(.width = 0.95, slab_alpha = 0.5, interval_size = 0.05,
+               normalize = "groups", point_size = 0.25) +
   theme(legend.position = "bottom") +
   facet_wrap(~name, scales = "free", nrow = 4) +
-  geom_vline(xintercept = 0, linetype = 2, colour = "red") +
+  geom_vline(xintercept = 0, linetype = 2, colour = "red", linewidth = 0.25) +
   labs(x = "Additional effect of logging
        <br>(logged forest estimate - old-growth forest estimate)",
        y = "Species")

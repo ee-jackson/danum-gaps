@@ -27,7 +27,7 @@ data <-
 # Set priors --------------------------------------------------------------
 
 priors3 <- c(
-  prior(student_t(5, 0, 5), class = "b")
+  prior(student_t(3, 0, 2.5), class = "b")
 )
 
 
@@ -55,7 +55,7 @@ survival_model <-
       seed = 123,
       init = 0,
       file_refit = "always",
-      file = "output/models/survival/survival_model_allo")
+      file = "output/models/survival/survival_model_allo_nocenter")
 
 add_criterion(survival_model,
               criterion = "loo")

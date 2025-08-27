@@ -107,7 +107,7 @@ growth_params <-
 
 mod_surv <-
   readRDS(here::here("output", "models", "survival",
-                     "survival_model_allo.rds"))
+                     "survival_model_allo_nocenter.rds"))
 
 surv_params <-
   mod_surv %>%

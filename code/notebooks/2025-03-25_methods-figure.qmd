@@ -26,10 +26,10 @@ ggplot2::theme_set(ggplot2::theme_classic(base_size = 20))
 ```
 
 ```{r}
-library("tidyverse")
 library("patchwork")
 library("tidybayes")
 library("modelr")
+library("tidyverse")
 ```
 
 
@@ -37,28 +37,28 @@ library("modelr")
 
 ```{r}
 data <-
-  readRDS(here::here("data",
-                     "derived",
-                     "data_cleaned.rds"))
+  readRDS(here::here("data", "derived", "data_cleaned.rds"))
 
-well_sampled_trees <-
-  data %>%
-  group_by(plant_id) %>%
-  summarise(records = sum(!is.na(dbase_mean))) %>%
-  filter(records > 2)
-
-growth_data <-
+alive_trees <-
   data %>%
   filter(survival == 1) %>%
-  drop_na(dbase_mean) %>% 
-  filter(plant_id %in% well_sampled_trees$plant_id)
+  filter(! if_all(c(dbh_mean, dbase_mean), is.na))
+
+well_sampled_alive_trees <-
+  alive_trees %>%
+  group_by(plant_id) %>%
+  summarise(n = n()) %>%
+  filter(n > 2)
+
+growth_data <-
+  alive_trees %>%
+  filter(plant_id %in% well_sampled_alive_trees$plant_id)
 ```
 
 ```{r}
 growth_model <- readRDS(here::here("output",
                                    "models",
-                                   "priors2",
-                                   "growth_model_impute_base_nodbh.rds"))
+                                   "growth_model_base_p3_allo.rds"))
 ```
 
 ```{r}
@@ -68,7 +68,7 @@ sp_n <-
   summarise(n = n_distinct(plant_id),
             .groups = "drop") %>% 
   pivot_wider(names_from = forest_type, values_from = n) %>% 
-  arrange(-secondary)
+  arrange(-logged)
 
 sp_n
 
@@ -92,11 +92,11 @@ growth_data_sp1 <-
 
 sp1_preds <- 
   growth_data_sp1 %>%
-  data_grid(years = seq_range(years, n = 20),
+  data_grid(years = seq_range(years, n = 10),
             genus_species = sp_1,
             plant_id = droplevels(unique(keys$plant_id))) %>%
   left_join(keys) %>%
-  filter(forest_type == "secondary") %>% 
+  filter(forest_type == "logged") %>% 
   add_epred_draws(growth_model,
                   allow_new_levels = FALSE) 
 ```
@@ -106,11 +106,11 @@ sp1_preds <-
 ```{r}
 plant_1 <- 
   growth_data_sp1 %>% 
-  filter(forest_type == "secondary") %>% 
+  filter(forest_type == "logged") %>% 
   group_by(plant_id) %>% 
   summarise(n = n()) %>% 
   arrange(-n) %>% 
-  pluck(1, 5) %>% 
+  pluck(1, 14) %>% 
   paste()
 
 growth_data_pl1 <-
@@ -135,7 +135,7 @@ p1 <-
              shape = 4, stroke = 0.75, size = 2,
              colour = "forestgreen") +
   theme(legend.position = "none") +
-  ylab("Basal diameter cm") +
+  ylab("Basal diameter mm") +
   xlab("Years") +
   scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0))
@@ -149,11 +149,11 @@ p1
 
 growth_data_sp1_s <-
   growth_data_sp1 %>% 
-  filter(forest_type == "secondary")
+  filter(forest_type == "logged")
 
 sp1_preds_s <-
   sp1_preds %>% 
-  filter(forest_type == "secondary")
+  filter(forest_type == "logged")
 
 p2 <- 
   ggplot() +
@@ -171,7 +171,7 @@ p2 <-
                   alpha = 1,
                   linetype = 2) +
   theme(legend.position = "none") +
-  ylab("Basal diameter cm") +
+  ylab("Basal diameter mm") +
   xlab("Years") +
   scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0))
@@ -215,8 +215,8 @@ all_gr %>%
   geom_path(linewidth = 1,
             alpha = 1,
             linetype = 2) +
-  xlab("Basal diameter cm") +
-  ylab("Growth rate cm/yr") +
+  xlab("Basal diameter mm") +
+  ylab("Growth rate mm/yr") +
   scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0))
 ```
@@ -245,8 +245,8 @@ sp1_gr_s %>%
             colour = "forestgreen",
             linewidth = 1,
             stat = "smooth") +
-  xlab("Basal diameter cm") +
-  ylab("Growth rate cm/yr") +
+  xlab("Basal diameter mm") +
+  ylab("Growth rate mm/yr") +
   scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(limit = c(0, NA), expand = c(0, 0))
 ```
@@ -254,7 +254,7 @@ sp1_gr_s %>%
 ```{r}
 all_gr_sp1_s <- 
   all_gr %>% 
-  filter(genus_species == sp_1 & forest_type == "secondary")
+  filter(genus_species == sp_1 & forest_type == "logged")
 
 p3 <- 
   ggplot() +
@@ -270,8 +270,8 @@ p3 <-
             linewidth = 1,
             alpha = 1,
             linetype = 2) +
-  xlab("Basal diameter cm") +
-  ylab("Growth rate cm/yr") +
+  xlab("Basal diameter mm") +
+  ylab("Growth rate mm/yr") +
   scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(limit = c(0, NA), expand = c(0, 0))
 
@@ -283,7 +283,7 @@ p3
 ```{r}
 survival_model <- 
   readRDS(here::here("output", "models", 
-                     "survival", "survival_model_impute.rds"))
+                     "survival", "survival_model_allo_nocenter.rds"))
 ```
 
 
@@ -298,7 +298,7 @@ survival_data <-
 p4 <- 
   data %>% 
   filter(genus_species == sp_1 & 
-           forest_type == "secondary" & cohort == 1) %>% 
+           forest_type == "logged" & cohort == 1) %>% 
   filter(plant_id %in% 
            sample(unique(growth_data_sp1_s$plant_id), 30)) %>% 
   mutate(survival = ifelse(survival == 0, "Dead", "Alive")) %>% 
@@ -318,7 +318,7 @@ p4
 ## Fifth panel
 
 ```{r}
-survival_data %>% 
+data %>% 
   mutate(survival = 0) %>% 
   filter(genus_species == sp_1) %>%
   ggplot(aes(x = dbase_mean)) +
@@ -328,85 +328,12 @@ survival_data %>%
             overlaps = "nudge") +
   scale_x_continuous(expand = c(0, 0)) +
   scale_y_continuous(expand = c(0, 0), breaks = c(0,1)) +
-  ylab("Survival") +
-  xlab("Basal diameter")
+  facet_wrap(~forest_type) +
+  ylab("Count of mortalities") +
+  xlab("Basal diameter mm")
 
 ```
 
-```{r}
-grp_eff_im <- 
-  get_variables(survival_model) %>%
-  str_subset(pattern = "^r_genus_species")
-
-pred_df_sz_sp <- 
-  survival_data %>%
-  data_grid(bsp_timetolastalive_midbase_mean_sc = 
-              seq(0.1, 200.1, 1)) %>%
-  mutate(.chain = NA) %>%
-  mutate(shape_timetolastalive = NA) %>%
-  mutate(.draw = NA) %>%
-  mutate(.iteration = NA) %>%
-  mutate(b_timetolastalive_forest_typeprimary = NA) %>%
-  mutate(b_timetolastalive_forest_typesecondary = NA)
-
-pred_df_sz_sp[grp_eff_im] <- NA
-
-mcmc_df_sz_sp <-
-  survival_model %>%
-  spread_draws(shape_timetolastalive, `r_.*`, 
-               b_timetolastalive_forest_typeprimary,
-               b_timetolastalive_forest_typesecondary,
-               bsp_timetolastalive_midbase_mean_sc,
-                 regex = TRUE) %>% 
-  mutate(bsp_timetolastalive_midbase_mean_sc = NA)  %>% 
-  rowwise() %>% 
-  mutate(across(contains(",forest_typeprimary]"),
-                 ~ .x + b_timetolastalive_forest_typeprimary)) %>% 
-  mutate(across(contains(",forest_typesecondary]"),
-                 ~ .x + b_timetolastalive_forest_typesecondary))
-
-curves_df_sz_sp <-
-  union(pred_df_sz_sp, mcmc_df_sz_sp) %>%
-  expand(
-    nesting(
-      .chain,
-      .iteration,
-      .draw,
-      b_timetolastalive_forest_typeprimary,
-      b_timetolastalive_forest_typesecondary,
-      shape_timetolastalive,
-      `r_genus_species__timetolastalive[Hopea_sangal,forest_typeprimary]`,
-      `r_genus_species__timetolastalive[Hopea_sangal,forest_typesecondary]`
-    ),
-    bsp_timetolastalive_midbase_mean_sc
-  ) %>%
-  filter(!is.na(bsp_timetolastalive_midbase_mean_sc)) %>%
-  filter (!is.na(.draw)) %>%
-  # survival curves
-  mutate(across(contains("r_genus_species__timetolastalive["),
-                 ~ exp (-(((bsp_timetolastalive_midbase_mean_sc - 0) / exp (.x))^shape_timetolastalive)))) 
-  
-plotting_data_sp <- 
-  curves_df_sz_sp %>% 
-  pivot_longer(contains("r_genus_species__")) %>% 
-  mutate(genus_species = str_split_i(string = name, pattern ="\\[", i = 2)) %>% 
-  mutate(genus_species = str_split_i(string = genus_species, pattern =",", i = 1)) %>% 
-  mutate(forest_type = str_split_i(string = name, pattern =",", i = 2)) %>% 
-  mutate(forest_type = ifelse(forest_type== "forest_loggedprimary]", "primary", "secondary")) 
-```
-
-```{r}
-plotting_data_sp %>% 
-  ggplot (aes (x = bsp_timetolastalive_midbase_mean_sc, 
-               y = value, 
-               colour = forest_type, 
-               fill = forest_type)) +
-  stat_lineribbon (.width = 0.95, alpha = 0.5) +
-  ylab("Survival probability")+
-  xlab("Basal diameter /cm") +
-  facet_wrap(~genus_species, ncol = 3) +
-  theme(legend.position = "bottom")
-```
 
 ```{r}
 surv_sp1 <-
@@ -416,28 +343,88 @@ surv_sp1 <-
 
 p5 <-
   ggplot() +
-  geom_dots(data = filter(surv_sp1, forest_type == "secondary"),
-         aes(x = dbh_mean, y = survival,
+  geom_dots(data = filter(surv_sp1, forest_type == "logged"),
+         aes(x = dbase_mean, y = survival,
                 side = ifelse(survival == 0, "top", "bottom")), 
             pch = 19, color = "grey20",
-            overlaps = "nudge"
+            overlaps = "nudge", 
          ) +
-  stat_lineribbon(data = filter(plotting_data_sp, forest_type == "secondary"), 
-    aes(x = bsp_timetolastalive_midbase_mean_sc, 
-               y = value), colour = "forestgreen", fill = "forestgreen",
-               .width = 0.95, alpha = 0.7, show.legend = FALSE) +
-  stat_lineribbon(data = filter(plotting_data_sp, forest_type == "secondary"), 
-    aes(x = bsp_timetolastalive_midbase_mean_sc, 
-               y = value), colour = "forestgreen", 
-               .width = 0, show.legend = FALSE) +
-  ylab("Survival")+
-  xlab("Basal diameter cm") +
+  ylab("Count of mortalities")+
+  xlab("Basal diameter mm") +
   theme(legend.position = "bottom") +
-  scale_x_continuous(limits = c(0, 200), expand = c(0, 0)) +
-  scale_y_continuous(expand = c(0, 0), breaks = c(0, 1)) 
+  scale_x_continuous(limits = c(0, 200), expand = c(0, 2)) +
+  scale_y_continuous(expand = c(0, 0), breaks = c(0)) 
 
 p5
 ```
+
+
+## Sixth panel
+
+```{r}
+sp_sizes <-
+  survival_data %>%
+  group_by(genus_species) %>%
+  summarise(min = min(dbase_mean_sc, na.rm = T),
+            max = max(dbase_mean_sc, na.rm = T)) %>%
+  mutate(dbase_mean_sc = map2(min, max, .f = seq, length.out = 50)) %>%
+  select(-c(min, max))
+
+surv_pred_sp <-
+  tibble(genus_species = sp_1,
+         forest_type = "logged") %>%
+  left_join(sp_sizes, by = c("genus_species")) %>%
+  unnest(dbase_mean_sc) %>%
+  add_linpred_draws(object = survival_model, ndraws = NULL,
+                    re_formula = NULL, dpar = TRUE
+  ) %>%
+  rowwise() %>%
+  mutate(scale = mu/gamma(1+(1/shape))) %>%
+  mutate(surv = exp(-(dbase_mean_sc/scale)^shape))
+```
+
+```{r}
+scale_basal <- function(x) {
+  x / attr(survival_data$dbase_mean_sc, "scaled:scale")
+}
+
+unscale_basal <- function(x) {
+  x*attr(survival_data$dbase_mean_sc, "scaled:scale")
+}
+```
+
+
+```{r}
+surv_pred_sp %>% 
+  ggplot (aes (x = unscale_basal(dbase_mean_sc), 
+               y = surv)) +
+  stat_lineribbon (.width = 0.95, alpha = 0.5) +
+  ylab("Survival probability")+
+  xlab("Basal diameter mm") +
+  facet_wrap(~genus_species, ncol = 3) +
+  theme(legend.position = "none")
+```
+
+```{r}
+p6 <-
+  ggplot() +
+  stat_lineribbon(data = surv_pred_sp, 
+    aes(x = unscale_basal(dbase_mean_sc), 
+               y = surv), colour = "forestgreen", fill = "forestgreen",
+               .width = 0.95, alpha = 0.5, show.legend = FALSE) +
+  stat_lineribbon(data = surv_pred_sp, 
+    aes(x = unscale_basal(dbase_mean_sc), 
+               y = surv), colour = "forestgreen", 
+               .width = 0, show.legend = FALSE) +
+  ylab("Survival probability")+
+  xlab("Basal diameter mm") +
+  theme(legend.position = "bottom") +
+  scale_x_continuous(limits = c(0, 200), expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) 
+
+p6
+```
+
 
 # Combined panels
 
@@ -445,12 +432,12 @@ p5
 #| fig-width: 15
 #| fig-height: 10
 
-p1 + p2 + p3 + p4 + p5 +
+p1 + p2 + p3 + p4 + p5 + p6 +
   patchwork::plot_layout(ncol = 3) +
   patchwork::plot_annotation(
     tag_levels = "a",
     title = "Hopea sangal",
-    subtitle = "Secondary forest",
+    subtitle = "Enriched logged forest",
     theme = theme(
       plot.title = element_text(face = "italic")
       )

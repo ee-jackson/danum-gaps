@@ -52,6 +52,7 @@ data_gro <-
 
 # Get forest type predictions of survival ---------------------------------
 
+# Functions to scale and unscale basal diameter values
 scale_basal <- function(x) {
   x / attr(data_surv$dbase_mean_sc, "scaled:scale")
 }
@@ -60,21 +61,48 @@ unscale_basal <- function(x) {
   x*attr(data_surv$dbase_mean_sc, "scaled:scale")
 }
 
-start_value <- min(data_surv$dbase_mean_sc, na.rm = T)
-initial_step <- 0.06
-scaling_factor <- 1.2
-num_steps <- 20
+# Function to generate a sequence with increasing step sizes
+increasing_step_sequence <- function(min_val, max_val, n_steps, growth_rate = 1.2) {
+  # Input validation
+  if (min_val >= max_val) {
+    stop("min_val must be less than max_val")
+  }
+  if (n_steps < 2) {
+    stop("n_steps must be at least 2")
+  }
+  if (growth_rate <= 1) {
+    stop("growth_rate must be greater than 1")
+  }
 
-my_sequence <- vector("numeric", length = num_steps)
-my_sequence[1] <- start_value
-current_step <- initial_step
+  # Initialize the sequence with the starting value
+  sequence <- numeric(n_steps)
+  sequence[1] <- min_val
 
-for (i in 2:num_steps) {
-  current_step <- current_step * scaling_factor
-  my_sequence[i] <- my_sequence[i-1] + current_step
+  # Calculate total distance to cover
+  total_distance <- max_val - min_val
+
+  # Generate weights that increase exponentially
+  weights <- growth_rate ^ (0:(n_steps-2))
+
+  # Normalize weights so they sum to the total distance
+  step_sizes <- weights * (total_distance / sum(weights))
+
+  # Build the sequence by adding decreasing steps
+  for (i in 2:n_steps) {
+    sequence[i] <- sequence[i-1] + step_sizes[i-1]
+  }
+
+  # Ensure the last value exactly equals max_val (handle floating point precision)
+  sequence[n_steps] <- max_val
+
+  return(sequence)
 }
 
-print(my_sequence)
+my_sequence <-
+  increasing_step_sequence(
+    min_val = min(data_surv$dbase_mean_sc, na.rm = T),
+    max_val = max(data_surv$dbase_mean_sc, na.rm = T),
+    n_steps = 20)
 
 surv_pred <-
   data_surv %>%
@@ -106,7 +134,10 @@ sp_sizes <-
   group_by(genus_species) %>%
   summarise(min = min(dbase_mean_sc, na.rm = T),
             max = max(dbase_mean_sc, na.rm = T)) %>%
-  mutate(dbase_mean_sc = map2(min, max, .f = seq, length.out = 10))
+  mutate(dbase_mean_sc = map2(min, max,
+                              .f = increasing_step_sequence,
+                              n_steps = 10,
+                              growth_rate = 1.5))
 
 sp_sizes_l <- sp_sizes %>% mutate(forest_type = "logged")
 sp_sizes_p <- sp_sizes %>% mutate(forest_type = "primary")

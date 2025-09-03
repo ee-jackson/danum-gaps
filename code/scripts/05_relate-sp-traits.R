@@ -310,6 +310,23 @@ jpeg(
 fig_wd
 dev.off()
 
+# Combined figure
+
+jpeg(
+  here::here("output", "figures", "figure_03.jpeg"),
+  width = 8,
+  height = 16,
+  res = 600,
+  pointsize = 6,
+  units = "cm",
+  type = "cairo"
+)
+
+fig_sla + fig_wd +
+  plot_layout(ncol = 1) +
+  plot_annotation(tag_levels = "a")
+
+dev.off()
 
 # Fit linear models -------------------------------------------------------
 

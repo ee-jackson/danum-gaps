@@ -1,0 +1,132 @@
+---
+title: "Visualise growth curves with different trait values"
+author: 'eleanorjackson'
+date: '`r format(Sys.time(), "%d %B, %Y")`' 
+format: 
+  gfm:
+    toc: true
+editor: source
+execute:
+  warning: false
+---
+
+```{r setup}
+#| include: false
+
+file_name <- knitr::current_input()
+
+knitr::opts_chunk$set(
+  fig.path =
+    paste0("figures/", sub("\\.rmarkdown$", "", basename(file_name)), 
+           "/", sep = "")
+)
+
+set.seed(123)
+ggplot2::theme_set(ggplot2::theme_bw(base_size = 10))
+```
+
+```{r}
+library("tidyverse")
+library("patchwork")
+library("tidybayes")
+library("brms")
+library("modelr")
+```
+
+```{r}
+growth_model <- readRDS(here::here("output",
+                                   "models",
+                                   "growth_model_base_p3_allo.rds"))
+
+data <-
+  readRDS(here::here("data", "derived", "data_cleaned.rds"))
+
+alive_trees <-
+  data %>%
+  filter(survival == 1) %>%
+  filter(! if_all(c(dbh_mean, dbase_mean), is.na))
+
+well_sampled_alive_trees <-
+  alive_trees %>%
+  group_by(plant_id) %>%
+  summarise(n = n()) %>%
+  filter(n > 2)
+
+growth_data <-
+  alive_trees %>%
+  filter(plant_id %in% well_sampled_alive_trees$plant_id)
+```
+
+```{r}
+traits_both <-
+  readxl::read_excel(
+    here::here(
+      "data",
+      "raw",
+      "traits",
+      "Both_tree_functional_traits_subset RV.xlsx"
+    ),
+    sheet = 4,
+    skip = 6,
+    na = c("", " ", "NA")
+  ) %>%
+  mutate(Species =
+           str_replace(species, "\\.", "_")) %>%
+  select(tree_id, Species, forest_type, location,
+         WD_NB, LA_cm2_mean, dry_weight_mg_mean) %>%
+  filter(forest_type == "OG") %>%
+  filter(Species %in% data$genus_species) %>%
+  mutate(LA_mm2_mean = LA_cm2_mean * 100) %>% # make units match TRY data
+  mutate(sla = LA_mm2_mean / dry_weight_mg_mean) %>%
+  group_by(Species) %>%
+  summarise(sla = median(sla, na.rm = TRUE),
+            wood_density = median(WD_NB, na.rm = TRUE))
+
+traits_both
+```
+
+## SLA
+
+_Shorea ovalis_ has the lowest SLA and _Shorea macroptera_ the 2nd highest.
+
+```{r}
+preds <- 
+  data_grid(growth_data,
+            genus_species,
+            years = seq(0, 60, 5),
+            forest_type = "logged") %>%
+  filter(genus_species %in% c("Shorea_ovalis", "Shorea_macroptera")) %>% 
+  add_epred_draws(growth_model,
+                  re_formula = ~ (0 + forest_type | genus_species))
+
+ggplot() +
+  stat_lineribbon(data = preds,
+                  aes(x = years, y = .epred, colour = genus_species),
+                  .width = 0,
+                  linewidth = 1) 
+```
+
+_Shorea ovalis_ (blue) should have high A, low rate, high delay.
+
+## Wood density
+
+_Shorea johorensis_ has the lowest wood density and _Hopea sangal_ the highest.
+
+```{r}
+preds <- 
+  data_grid(growth_data,
+            genus_species,
+            years = seq(0, 60, 5),
+            forest_type = "logged") %>%
+  filter(genus_species %in% c("Shorea_johorensis", "Hopea_sangal")) %>% 
+  add_epred_draws(growth_model,
+                  re_formula = ~ (0 + forest_type | genus_species))
+
+ggplot() +
+  stat_lineribbon(data = preds,
+                  aes(x = years, y = .epred, colour = genus_species),
+                  .width = 0,
+                  linewidth = 1) 
+```
+
+_Shorea johorensis_ (blue) should have high A, low rate, low delay

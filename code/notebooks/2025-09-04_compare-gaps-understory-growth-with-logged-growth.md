@@ -13,7 +13,7 @@ library("modelr")
 
 I fit a model with only old-growth forest (Danum data) to compare growth
 of gap and understory seedlings (see
-[here](code/notebooks/2025-05-28_understory-plots.md)).
+[here](2025-05-28_understory-plots.md)).
 
 I want to compare the understory plot seedlings to the logged forest
 (SBE) seedlings.

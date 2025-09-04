@@ -1,0 +1,118 @@
+---
+title: "Compare growth of understory and gap seedlings with logged forest seedlings"
+author: 'eleanorjackson'
+date: '`r format(Sys.time(), "%d %B, %Y")`' 
+format: 
+  gfm:
+    toc: true
+editor: source
+execute:
+  warning: false
+---
+
+```{r setup}
+#| include: false
+
+file_name <- knitr::current_input()
+
+knitr::opts_chunk$set(
+  fig.path =
+    paste0("figures/", sub("\\.rmarkdown$", "", basename(file_name)), 
+           "/", sep = "")
+)
+
+set.seed(123)
+ggplot2::theme_set(ggplot2::theme_bw(base_size = 10))
+```
+
+```{r}
+library("tidyverse")
+library("patchwork")
+library("tidybayes")
+library("brms")
+library("modelr")
+```
+
+
+I fit a model with only old-growth forest (Danum data) 
+to compare growth of gap and understory seedlings
+(see [here](code/notebooks/2025-05-28_understory-plots.md)).
+
+I want to compare the understory plot seedlings to the logged forest (SBE) seedlings.
+
+```{r}
+growth_model <- readRDS(here::here("output",
+                                   "models",
+                                   "growth_model_base_p3_allo.rds"))
+
+data <-
+  readRDS(here::here("data", "derived", "data_cleaned.rds"))
+
+alive_trees <-
+  data %>%
+  filter(survival == 1) %>%
+  filter(! if_all(c(dbh_mean, dbase_mean), is.na))
+
+well_sampled_alive_trees <-
+  alive_trees %>%
+  group_by(plant_id) %>%
+  summarise(n = n()) %>%
+  filter(n > 2)
+
+growth_data <-
+  alive_trees %>%
+  filter(plant_id %in% well_sampled_alive_trees$plant_id)
+```
+
+
+```{r}
+growth_model_canopy <-
+  readRDS(
+    here::here(
+      "code",
+      "notebooks",
+      "models",
+      "2025-05-28_understory-plots",
+      "growth_canopy.rds"
+    )
+  )
+```
+
+```{r}
+preds <- 
+  data_grid(growth_data,
+            years = 0:20,
+            forest_type = c("primary", "logged")) %>%
+  add_epred_draws(growth_model,
+                  re_formula = NA) %>% 
+  rename(type = forest_type)
+```
+
+```{r}
+preds_canopy <- 
+  data_grid(growth_data,
+            years = 0:20,
+            canopy = c("G", "U")) %>%
+  add_epred_draws(growth_model_canopy,
+                  re_formula = NA) %>% 
+  rename(type = canopy)
+```
+
+```{r}
+bind_rows(preds, preds_canopy) %>% 
+  filter(type != "G") %>% 
+  mutate(type = case_when(
+    type == "U" ~ "Old-growth forest understory",
+    type == "primary" ~ "Old-growth forest gap",
+    type == "logged" ~ "Logged forest planting line",
+  )) %>% 
+  ggplot() +
+  stat_lineribbon(aes(x = years, y = .epred,
+                      colour = type, fill = type),
+                  .width = 0.95,
+                  alpha = 0.6,
+                  linewidth = 1) +
+  labs(y = "Basal diameter (mm)",
+       x = "Time since first survey (years)")
+```
+

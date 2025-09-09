@@ -1,0 +1,121 @@
+---
+title: "Fit supplementary survival models"
+author: 'eleanorjackson'
+date: '`r format(Sys.time(), "%d %B, %Y")`' 
+format: 
+  gfm:
+    toc: true
+editor: source
+execute:
+  warning: false
+---
+
+```{r setup}
+#| include: false
+
+file_name <- knitr::current_input()
+
+knitr::opts_chunk$set(
+  fig.path =
+    paste0("figures/", sub("\\.rmarkdown$", "", basename(file_name)), 
+           "/", sep = "")
+)
+
+set.seed(123)
+ggplot2::theme_set(ggplot2::theme_bw(base_size = 10))
+```
+
+```{r}
+library("tidyverse")
+library("brms")
+```
+
+```{r}
+data <-
+  readRDS(here::here("data", "derived", "data_survival.rds"))
+```
+
+```{r}
+priors3 <- c(
+  prior(student_t(3, 0, 2.5), class = "b")
+)
+```
+
+```{r}
+bform <-
+  bf(
+    time_to_last_alive | cens(x = censor, y2 = time_to_dead) ~
+      0 + forest_type + dbase_mean_sc + climber_cut +
+      (0 + forest_type | genus_species),
+    family = brmsfamily("weibull")
+  )
+```
+
+```{r}
+#| output: FALSE
+
+survival_model_cc <-
+  brm(bform,
+      data = data,
+      prior = priors3,
+      sample_prior = "no",
+      iter = 3000,
+      cores = 4,
+      chains = 4,
+      seed = 123,
+      init = 0,
+      file_refit = "on_change",
+      file = here::here("code",
+                        "notebooks",
+                        "models",
+                        "2025-09-09_extra-survival-models",
+                        "survival_climber_cut"))
+```
+
+```{r}
+survival_model_cc
+```
+
+```{r}
+data_canopy <-
+  readRDS(here::here("data", 
+                     "derived", 
+                     "data_survival_incl_understory.rds")) 
+```
+
+```{r}
+bform_canopy <-
+  bf(
+    time_to_last_alive | cens(x = censor, y2 = time_to_dead) ~
+      0  + canopy + dbase_mean_sc + 
+      (0 + canopy | genus_species),
+    family = brmsfamily("weibull")
+  )
+```
+
+```{r}
+#| output: FALSE
+
+survival_model_cc <-
+  brm(bform_canopy,
+      data = data_canopy,
+      prior = priors3,
+      sample_prior = "no",
+      iter = 3000,
+      cores = 4,
+      chains = 4,
+      seed = 123,
+      init = 0,
+      file_refit = "on_change",
+      file = here::here("code",
+                        "notebooks",
+                        "models",
+                        "2025-09-09_extra-survival-models",
+                        "survival_canopy"))
+```
+
+
+```{r}
+survival_model_cc
+```
+

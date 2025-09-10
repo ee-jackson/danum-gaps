@@ -1,0 +1,100 @@
+---
+title: "Check taxonomy for the supp info"
+author: 'eleanorjackson'
+date: '`r format(Sys.time(), "%d %B, %Y")`' 
+format: 
+  gfm:
+    toc: true
+editor: source
+execute:
+  warning: false
+---
+
+```{r setup}
+#| include: false
+
+file_name <- knitr::current_input()
+
+knitr::opts_chunk$set(
+  fig.path =
+    paste0("figures/", sub("\\.rmarkdown$", "", basename(file_name)), 
+           "/", sep = "")
+)
+
+set.seed(123)
+ggplot2::theme_set(ggplot2::theme_bw(base_size = 13))
+```
+
+```{r}
+library("tidyverse")
+library("WorldFlora") 
+```
+
+```{r}
+sp_data <- 
+  readRDS(
+  here::here(
+    "data",
+    "derived",
+    "data_cleaned.rds"
+    )
+  ) %>% 
+  distinct(genus_species) %>% 
+  mutate(genus_species = as.character(genus_species)) %>% 
+  mutate(genus_species = str_replace(genus_species, "_", " ")) %>% 
+  as.data.frame()
+```
+
+World Flora Online Taxonomic Backbone	v.2024.12 Taxonomic classification.	[zenodo.14538251](https://doi.org/10.5281/zenodo.14538251)
+
+Download the latest version:
+
+```{r}
+#| eval: false
+
+WFO.download(
+  WFO.url =
+    paste0(
+      "https://files.worldfloraonline.org/files/WFO_Backbone/",
+      "_WFOCompleteBackbone/WFO_Backbone.zip"
+    ),
+  save.dir = here::here("data", "raw")
+)
+```
+
+```{r}
+wfo <- 
+  WFO.match(spec.data = sp_data,
+            WFO.file = here::here("data", "raw", "classification.csv"),
+            spec.name = "genus_species")
+```
+
+```{r}
+# finds one unique matching name for each submitted name
+wfo_sp <- 
+  WFO.one(wfo, priority = "Accepted") %>% 
+  select(genus_species.ORIG,
+         Old.ID,
+         taxonID,
+         scientificName,
+         scientificNameAuthorship,
+         family,
+         subfamily,
+         tribe,
+         genus,
+         specificEpithet) %>% 
+  remove_rownames()
+```
+
+```{r}
+knitr::kable(wfo_sp)
+```
+
+```{r}
+write_csv(wfo_sp,
+        here::here(
+          "data",
+          "derived",
+          "taxonomy.csv"),)
+```
+

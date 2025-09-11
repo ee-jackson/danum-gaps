@@ -1,6 +1,6 @@
 # Estimate basal diameter with allometry
 eleanorjackson
-2025-07-30
+2025-09-11
 
 - [Species level optimisation](#species-level-optimisation)
 
@@ -85,7 +85,7 @@ get_rmse <- function(df, b1){
 get_rmse(df = data, b1 = -0.029)
 ```
 
-    [1] 3.803297
+    [1] 3.911765
 
 ``` r
 optimiser_results <- 
@@ -103,10 +103,10 @@ optimiser_results
 ```
 
     $par
-    [1] -0.4199829
+    [1] -0.4194395
 
     $value
-    [1] 3.283023
+    [1] 3.337908
 
     $counts
     function gradient 
@@ -128,8 +128,8 @@ data %>%
   ggplot(aes(y = dbase_est, x = dbase_mean)) +
   geom_point(alpha = 0.5, shape = 16) +
   geom_abline(intercept = 0, colour = "red") +
-  labs(x = "true basal diameter", 
-       y = "estimated basal diameter") +
+  labs(x = "True basal diameter", 
+       y = "Estimated basal diameter") +
   
   data %>% 
   mutate(dbase_est = get_basal(dbh_mean, 
@@ -139,7 +139,11 @@ data %>%
   ggplot(aes(x = error)) +
   geom_density() +
   geom_vline(xintercept = 0, colour = "red") +
-  xlim(-100, 100)
+  xlim(-100, 100) +
+  labs(x = "Error", 
+       y = "Density") +
+  
+  plot_annotation(tag_levels = "a")
 ```
 
 ![](figures/2025-07-28_estimate-basal-diameter/unnamed-chunk-7-1.png)
@@ -260,7 +264,7 @@ data_b1 %>%
     # A tibble: 1 × 1
       rmse_sp
         <dbl>
-    1    3.18
+    1    3.24
 
 RMSE **without** estimating per-species *b1* values:
 
@@ -268,7 +272,7 @@ RMSE **without** estimating per-species *b1* values:
 optimiser_results$value
 ```
 
-    [1] 3.283023
+    [1] 3.337908
 
 Optimising the taper parameter (*b1*) at the species-level reduces RMSE
 by 0.105844.

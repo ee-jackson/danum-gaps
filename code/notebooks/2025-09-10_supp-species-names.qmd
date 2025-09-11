@@ -95,6 +95,6 @@ write_csv(wfo_sp,
         here::here(
           "data",
           "derived",
-          "taxonomy.csv"),)
+          "taxonomy.csv"))
 ```
 

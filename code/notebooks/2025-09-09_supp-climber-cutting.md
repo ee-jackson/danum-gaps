@@ -1,6 +1,6 @@
 # Supplementary Information for the climber cutting plots
 eleanorjackson
-2025-09-09
+2025-09-11
 
 ``` r
 library("tidyverse")
@@ -139,7 +139,6 @@ my_coef_tab_survival <-
   select(-fit) %>% 
   unnest(tidy) %>% 
   filter(!grepl("prior", term)) %>% 
-  filter(!grepl("cut", term)) %>% 
   rowwise() %>% 
   mutate(forest_type = pluck(strsplit(term, "_"), 1, 2)) %>%
   mutate(forest_type = str_remove(forest_type, "type")) %>% 
@@ -148,6 +147,7 @@ my_coef_tab_survival <-
              forest_type == "primary" ~ "Old-growth forest",
              forest_type == "logged" ~ "Logged forest",
              forest_type == "mean" ~ "Basal diameter",
+             forest_type == "cut1" ~ "Climber cutting",
              .default = forest_type
              )) 
 ```

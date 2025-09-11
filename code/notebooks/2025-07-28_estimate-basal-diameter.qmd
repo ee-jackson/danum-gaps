@@ -124,8 +124,8 @@ data %>%
   ggplot(aes(y = dbase_est, x = dbase_mean)) +
   geom_point(alpha = 0.5, shape = 16) +
   geom_abline(intercept = 0, colour = "red") +
-  labs(x = "True basal diameter", 
-       y = "Estimated basal diameter") +
+  labs(x = "True basal diameter (mm)", 
+       y = "Estimated basal diameter (mm)") +
   
   data %>% 
   mutate(dbase_est = get_basal(dbh_mean, 
@@ -136,7 +136,7 @@ data %>%
   geom_density() +
   geom_vline(xintercept = 0, colour = "red") +
   xlim(-100, 100) +
-  labs(x = "Error", 
+  labs(x = "Error (mm)", 
        y = "Density") +
   
   plot_annotation(tag_levels = "a")

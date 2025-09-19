@@ -1,0 +1,90 @@
+---
+title: "Supporting Information"
+subtitle: "Danum gaps"
+knitr:
+  opts_chunk: 
+    echo: false
+    message: false
+    warning: false
+format:
+  pdf:
+    fig-pos: H
+    toc: true
+    number-sections: true
+    colorlinks: true
+---
+
+```{r}
+library("tidyverse")
+```
+
+# Climber cutting
+
+Three of the Sabah Biodiversity Experiment plots included in this study received 
+a complete climber cutting treatment as part of a different experiment (plots numbered 5, 11 and 14), 
+where all lianas $\ge$ 10 cm in height were cut at the base in 2011 and 2014 [see @obrienPositiveEffectsLiana2019].
+
+Including the climber cutting treatment as a fixed effect in our growth and survival models
+did not change our results.
+
+![Comparison of parameter estimates for the growth model with and without a fixed effect of climber cutting. Facet columns indicate the parameters of the growth function with estimates for the old-growth and logged forest types on the _y_ axis. Facet rows show results from the original model presented in the main text, and a model with the addition of a fixed effect for climber cutting treatment. Point shows the mean of the posterior distribution with lines dentoting the 95% credible interval.](../code/notebooks/figures/2025-09-09_supp-climber-cutting/unnamed-chunk-6-1.png){#fig-climber-cutting-growth width=400}
+
+
+![Comparison of effect size from survival models with and without a fixed effect of climber cutting. Facet rows show results from the original model presented in the main text, and a model with the addition of a fixed effect for climber cutting treatment. Point shows the mean of the posterior distribution with lines dentoting the 95% credible interval.](../code/notebooks/figures/2025-09-09_supp-climber-cutting/unnamed-chunk-12-1.png){#fig-climber-cutting-survival width=400}
+
+
+# Species taxonomy
+
+In the main text we use species names which are consistent with prior publications involving the Sabah Biodiversity Experiment. Here, we list the current accepted names for reference. Species names were matched to a static copy of [The World Flora Online (WFO)](http://www.worldfloraonline.org)  v.2024.12 [zenodo.14538251](https://doi.org/10.5281/zenodo.14538251) using the function `WFO.match` from the R package {WorldFlora}. The function `WFO.one` was then used to find one unique matching name for each submitted name. using the argument `priority = "Accepted"`, it first limits candidates to accepted names, with a possible second step of eliminating accepted names that are synonyms.
+
+```{r}
+#| label: tab-species
+#| tbl-cap: "Taxonomy of species included in the study"
+
+readr::read_csv(
+        here::here(
+          "data",
+          "derived",
+          "taxonomy.csv")) |>
+  select(genus_species.ORIG,
+         scientificName,
+         taxonID,
+         scientificNameAuthorship) |>
+  rename("Original name" = genus_species.ORIG,
+         "New accepted name" = scientificName,
+         "WFO ID" = taxonID,
+         "Authorship" = scientificNameAuthorship) |>
+  knitr::kable()
+```
+
+# Estimating missing values of basal diameter
+
+There are 190 missing values of basal diameter in our data (0.73 % of all records for living trees). For these missing values, we estimated basal diameter from diameter at breast height using a known allometric equation [@cushmanImprovingEstimatesBiomass2014];
+
+$$
+d_{h2} = \frac{D_{h1}}{exp(b_1 h1 - h2)}
+$$
+
+where $d_{h2}$ is the estimated diameter (mm) at height $h_2$ (m),
+$D_{h1}$ is the known diameter (mm) at height $h_1$ (m), 
+and $b_1$ is a taper parameter.
+
+We chose the value for our taper parameter $b_1 = 3.91$ by 
+optimising on trees where we had diameter measurements both at the base and at 
+breast height, to find the value which gave the lowest Root Mean Squared Error.
+
+![In (a), estimated values of basal diameter are plotted against their true values. The red line indicates where the estimate is equal to the true value. (b) Shows the distribution of the error around zero (red line).](../code/notebooks/figures/2025-07-28_estimate-basal-diameter/unnamed-chunk-7-1.png){#fig-est-basal width=400}
+
+# Prior choice
+
+We set weakly informative priors on each of the three parameters describing growth (equation 1) for the population-level effect of forest type. We left the predictor variables on their original scale, since the parameters have meaningful values. We used a log-normal prior for A, maximum size, with  = 6,  = 1. The world’s tallest tropical tree, found at our primary forest study site in Danum Valley, has a DBH of 212 cm (Shorea faguetiana) (Shenkin et al., 2019). We expect a right-skewed distribution of adult size, with few very large individuals and a lower limit of 0 mm. The Student’s-t distribution is generally recommended for weakly informative priors as it has heavier tails than a normal distribution and hence is more robust to outliers (Ghosh et al., 2017). We used Student’s-t priors with degrees of freedom set to five for the remaining population-level priors. The prior for k, the growth rate coefficient, was set with  = 0,  = 0.5 and a lower bound of 0, since the basal diameter of dipterocarp seedlings in other locations grow at a rate of X-X (cite). Finally, the prior for delay, the time at inflection of the curve in years, was set with  = 0,  = 5. Since seedlings were germinated in the nursery no more than X months before transplanting to the forest, delay cannot be less than -X years and is very unlikely to be greater than 10 years. For the group-level effects of species and seedling ID we used the default priors provided by the R package {brms}: a Student-t prior with three degrees of freedom,  = 0 and  = 2.5.
+
+![Prior and posterior distributions for the growth model. Facet columns indicate parameters estimated by the model. Facet rows indicate the prior and posterior distributions. Note that the same priors were set for both forest types, and that axes are not preserved across panels.](../code/notebooks/figures/2025-06-13_growth-prior-vs-posterior/unnamed-chunk-4-1.png){#fig-est-basal width=400}
+
+![Prior and posterior distributions for the survival model. Prior and posterior distributions are displayed in separate panels and colours represent regression coefficients for the population-level, or "fixed" effects. Note that the same prior was set across all the population-level parameters, and that axes are not preserved across panels. ](../code/notebooks/figures/2025-06-18_survival-prior-vs-posterior/unnamed-chunk-4-1.png){#fig-est-basal width=400}
+
+# Posterior predictive checks
+
+![Posterior predictive check for the growth model, where the observed data is in dark blue (_y_) and 50 draws from the posterior distribution are in light blue (_yrep_).](../code/notebooks/figures/2025-09-12_posterior-predictive-checks/unnamed-chunk-4-1.png){#fig-est-basal width=400}
+
+![Posterior predictive check for the survival model, where the observed data is in dark blue (_y_) and 50 draws from the posterior distribution are in light blue (_yrep_). Conditional Kaplan-Meier curves, represented by _y_, were estimated for seedlings at representive values of basal diameter (the 0.25, 0.5 and 0.75 quartiles +/- the standard distribution multiplied by 0.01). Posterior preditions (_yrep_), were made for seedlings of these exact sizes (the 0.25, 0.5 and 0.75 quartiles). ](../code/notebooks/figures/2025-09-12_posterior-predictive-checks/unnamed-chunk-13-1.png){#fig-est-basal width=400}

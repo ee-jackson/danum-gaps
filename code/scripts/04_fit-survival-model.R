@@ -2,7 +2,7 @@
 
 ## Author: E E Jackson, eleanor.elizabeth.j@gmail.com
 ## Script: 04_fit-survival-model.R
-## Desc: Fit survival model
+## Desc: Fits the survival model
 ## Date created: 2025-04-10
 
 

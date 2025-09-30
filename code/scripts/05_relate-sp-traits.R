@@ -2,7 +2,7 @@
 
 ## Author: E E Jackson, eleanor.elizabeth.j@gmail.com
 ## Script: 05_relate-sp-traits.R
-## Desc: Relate species growth and survival responses to functional traits
+## Desc: Relates species growth and survival responses to functional traits
 ## Date created: 2025-07-30
 
 

@@ -2,7 +2,7 @@
 
 ## Author: E E Jackson, eleanor.elizabeth.j@gmail.com
 ## Script: 00_combine-raw-data.R
-## Desc: Combine data from 3 different sources into one csv file
+## Desc: Combines raw data from 3 different sources into one csv file
 ## Date created: 2024-08-06
 
 

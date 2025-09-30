@@ -2,7 +2,7 @@
 
 ## Author: E E Jackson, eleanor.elizabeth.j@gmail.com
 ## Script: 01_clean-data.R
-## Desc: Clean the combined raw data file
+## Desc: Cleans the combined raw data file
 ## Date created: 2024-08-09
 
 

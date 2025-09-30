@@ -2,7 +2,8 @@
 
 ## Author: E E Jackson, eleanor.elizabeth.j@gmail.com
 ## Script: 03_fit-growth-model.R
-## Desc: Fit final growth model
+## Desc: Fits the growth model. Note that this script is memory-intensive and
+## has a very long run time (days). Needs to be run on a supercomputer/cluster.
 ## Date created: 2025-03-05
 
 

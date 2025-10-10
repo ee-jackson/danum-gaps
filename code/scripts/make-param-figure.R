@@ -11,7 +11,6 @@
 library("tidyverse")
 library("tidybayes")
 library("brms")
-library("marginaleffects")
 library("modelr")
 library("patchwork")
 library("ggtext")
@@ -42,6 +41,60 @@ hypothesis(mod_gro,
 hypothesis(mod_gro,
            "delay_forest_typelogged - delay_forest_typeprimary = 0")
 
+
+# Make summary tables -----------------------------------------------------
+
+post_summary_gro <-
+  summary(mod_gro)$fixed %>%
+  rownames_to_column(var = "Parameter") %>%
+  mutate(`Forest type` = str_split_i(string = Parameter, pattern ="_", i = 3)) %>%
+  mutate(`Forest type` = case_when(
+    grepl("typelogged", `Forest type`) ~ "Logged",
+    grepl("typeprimary", `Forest type`) ~ "Old-growth")) %>%
+  mutate(Parameter = str_split_i(string = Parameter, pattern ="_", i = 1)) %>%
+  mutate(across(c(Estimate, `l-95% CI`, `u-95% CI`), ~
+                  case_when(
+                    Parameter == "k" ~ (. / exp(1))*100,
+                    .default = .
+                  ))) %>%
+  mutate(Parameter = ifelse(Parameter == "delay", "T~i~", Parameter)) %>%
+  mutate(Parameter = ifelse(Parameter == "k", "k/e", Parameter)) %>%
+  select(Parameter, `Forest type`, Estimate, `l-95% CI`,
+         `u-95% CI`, Rhat, Bulk_ESS, Tail_ESS) %>%
+  rename(`Posterior mean` = Estimate) %>%
+  mutate(across(!Parameter & !`Forest type`, \(x) round(x, 3)))
+
+write_csv(post_summary_gro,
+          here::here(
+            "output",
+            "results",
+            "posterior_summary_growth.csv"))
+
+post_summary_surv <-
+  summary(mod_surv)$fixed %>%
+  rownames_to_column(var = "Parameter") %>%
+  mutate(Parameter = case_when(
+    grepl("forest_typelogged", Parameter) ~ "Logged forest",
+    grepl("forest_typeprimary", Parameter) ~ "Old-growth forest",
+    grepl("dbase_mean_sc", Parameter) ~ "Basal diameter")) %>%
+  mutate(Parameter = str_split_i(string = Parameter, pattern ="_", i = 1)) %>%
+  mutate(across(c(Estimate, `l-95% CI`, `u-95% CI`), ~
+                  case_when(
+                    Parameter == "k" ~ (. / exp(1))*100,
+                    .default = .
+                  ))) %>%
+  mutate(Parameter = ifelse(Parameter == "delay", "T~i~", Parameter)) %>%
+  mutate(Parameter = ifelse(Parameter == "k", "k/e", Parameter)) %>%
+  select(Parameter, Estimate, `l-95% CI`,
+         `u-95% CI`, Rhat, Bulk_ESS, Tail_ESS) %>%
+  rename(`Posterior mean` = Estimate) %>%
+  mutate(across(!Parameter, \(x) round(x, 3)))
+
+write_csv(post_summary_surv,
+          here::here(
+            "output",
+            "results",
+            "posterior_summary_survival.csv"))
 
 
 # Get forest type estimates -----------------------------------------------

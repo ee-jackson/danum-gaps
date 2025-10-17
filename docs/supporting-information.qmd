@@ -27,10 +27,10 @@ where all lianas $\ge$ 10 cm in height were cut at the base in 2011 and 2014 [se
 Including the climber cutting treatment as a fixed effect in our growth and survival models
 did not change our results.
 
-![Comparison of parameter estimates for the growth model with and without a fixed effect of climber cutting. Facet columns indicate the parameters of the growth function with estimates for the old-growth and logged forest types on the _y_ axis. Facet rows show results from the original model presented in the main text, and a model with the addition of a fixed effect for climber cutting treatment. Point shows the mean of the posterior distribution with lines dentoting the 95% credible interval.](../code/notebooks/figures/2025-09-09_supp-climber-cutting/unnamed-chunk-6-1.png){#fig-climber-cutting-growth width=400}
+![Comparison of parameter estimates for the growth model with and without a fixed effect of climber cutting. Facet columns indicate the parameters of the growth function with estimates for the old-growth and logged forest types on the _y_ axis. Facet rows show results from the original model presented in the main text, and a model with the addition of a fixed effect for climber cutting treatment. Point shows the mean of the posterior distribution with lines dentoting the 95% credible interval.](../code/notebooks/figures/2025-09-09_supp-climber-cutting/unnamed-chunk-6-1.png){#fig-climber-cutting-gro width=400}
 
 
-![Comparison of effect size from survival models with and without a fixed effect of climber cutting. Facet rows show results from the original model presented in the main text, and a model with the addition of a fixed effect for climber cutting treatment. Point shows the mean of the posterior distribution with lines dentoting the 95% credible interval.](../code/notebooks/figures/2025-09-09_supp-climber-cutting/unnamed-chunk-12-1.png){#fig-climber-cutting-survival width=400}
+![Comparison of effect size from survival models with and without a fixed effect of climber cutting. Facet rows show results from the original model presented in the main text, and a model with the addition of a fixed effect for climber cutting treatment. Point shows the mean of the posterior distribution with lines dentoting the 95% credible interval.](../code/notebooks/figures/2025-09-09_supp-climber-cutting/unnamed-chunk-12-1.png){#fig-climber-cutting-surv width=400}
 
 
 # Species taxonomy
@@ -54,12 +54,41 @@ readr::read_csv(
          "New accepted name" = scientificName,
          "WFO ID" = taxonID,
          "Authorship" = scientificNameAuthorship) |>
+  arrange(`Original name`) |>
   knitr::kable()
 ```
 
+
+# Survival analysis of seedlings in the first census of the logged forest
+
+57% of individuals were never recorded as alive (5,868 out of 10,272) 
+i.e., they died in the period between planting and the first census. 
+This occurs exclusively in the logged forest, 
+since diameter measurements were not taken at the time of planting. 
+Between 18 and 20 months elapsed between planting into the forest and censusing.
+We excluded these individuals from the main analysis since they 
+lack data on size and their mortality is likely due to stress from transplanting rather than any effect of forest type.
+Nevertheless, this data might provide some insight on which species are more likely to survive transplanting from the nursery to the forest, 
+and we present a simple analysis here.
+
+To assess survival from planting to the first census in the logged forest, we fit a model in the `R` package `brms` 
+with a Bernoulli response distribution, 
+where zero indicated the seedling was dead in the first census and one indicated it was alive. 
+The predictor was a fixed effect of species. 
+We use a regularising prior of `normal(0, 2)`.
+
+Results are presented in @fig-cens1-surv. 
+Two of the 15 species were more than 50% likely to survive 
+the first 18 to 20 months (_Shorea ovalis_ and _Hopea sangal_), 
+four species were as equally likely to die as survive 
+(_Shorea johorensis_, _Parashorea tomentella_, _parashorea malaanonan_ and _Dipterocarpus conformis_),
+and the remaining nine species were more likely to die than survive.
+
+![Posterior estimates of survival probability in the time period between planting and the first census of the logged forest. The posterior median is represented by a point with the line showing the 66% and 95% credible interval. The dashed red line shows where the likelihood of survival is 50% ](../code/notebooks/figures/2025-09-30_never-alive-seedlings/unnamed-chunk-7-1.png){#fig-cens1-surv width=400}
+
 # Estimating missing values of basal diameter
 
-There are 190 missing values of basal diameter in our data (0.73 % of all records for living trees). For these missing values, we estimated basal diameter from diameter at breast height using a known allometric equation [@cushmanImprovingEstimatesBiomass2014];
+There are 190 missing values of basal diameter in our data (0.73% of all records for living trees). For these missing values, we estimated basal diameter from diameter at breast height using a known allometric equation [@cushmanImprovingEstimatesBiomass2014];
 
 $$
 d_{h2} = \frac{D_{h1}}{exp(b_1 h1 - h2)}
@@ -79,12 +108,36 @@ breast height, to find the value which gave the lowest Root Mean Squared Error.
 
 We set weakly informative priors on each of the three parameters describing growth (equation 1) for the population-level effect of forest type. We left the predictor variables on their original scale, since the parameters have meaningful values. We used a log-normal prior for A, maximum size, with  = 6,  = 1. The world’s tallest tropical tree, found at our primary forest study site in Danum Valley, has a DBH of 212 cm (Shorea faguetiana) (Shenkin et al., 2019). We expect a right-skewed distribution of adult size, with few very large individuals and a lower limit of 0 mm. The Student’s-t distribution is generally recommended for weakly informative priors as it has heavier tails than a normal distribution and hence is more robust to outliers (Ghosh et al., 2017). We used Student’s-t priors with degrees of freedom set to five for the remaining population-level priors. The prior for k, the growth rate coefficient, was set with  = 0,  = 0.5 and a lower bound of 0, since the basal diameter of dipterocarp seedlings in other locations grow at a rate of X-X (cite). Finally, the prior for delay, the time at inflection of the curve in years, was set with  = 0,  = 5. Since seedlings were germinated in the nursery no more than X months before transplanting to the forest, delay cannot be less than -X years and is very unlikely to be greater than 10 years. For the group-level effects of species and seedling ID we used the default priors provided by the R package {brms}: a Student-t prior with three degrees of freedom,  = 0 and  = 2.5.
 
-![Prior and posterior distributions for the growth model. Facet columns indicate parameters estimated by the model. Facet rows indicate the prior and posterior distributions. Note that the same priors were set for both forest types, and that axes are not preserved across panels.](../code/notebooks/figures/2025-06-13_growth-prior-vs-posterior/unnamed-chunk-4-1.png){#fig-est-basal width=400}
+![Prior and posterior distributions for the growth model. Facet columns indicate parameters estimated by the model. Facet rows indicate the prior and posterior distributions. Note that the same priors were set for both forest types, and that axes are not preserved across panels.](../code/notebooks/figures/2025-06-13_growth-prior-vs-posterior/unnamed-chunk-4-1.png){#fig-prior-gro width=400}
 
-![Prior and posterior distributions for the survival model. Prior and posterior distributions are displayed in separate panels and colours represent regression coefficients for the population-level, or "fixed" effects. Note that the same prior was set across all the population-level parameters, and that axes are not preserved across panels. ](../code/notebooks/figures/2025-06-18_survival-prior-vs-posterior/unnamed-chunk-4-1.png){#fig-est-basal width=400}
+![Prior and posterior distributions for the survival model. Prior and posterior distributions are displayed in separate panels and colours represent regression coefficients for the population-level, or "fixed" effects. Note that the same prior was set across all the population-level parameters, and that axes are not preserved across panels. ](../code/notebooks/figures/2025-06-18_survival-prior-vs-posterior/unnamed-chunk-4-1.png){#fig-prior-surv width=400}
 
 # Posterior predictive checks
 
-![Posterior predictive check for the growth model, where the observed data is in dark blue (_y_) and 50 draws from the posterior distribution are in light blue (_yrep_).](../code/notebooks/figures/2025-09-12_posterior-predictive-checks/unnamed-chunk-4-1.png){#fig-est-basal width=400}
+![Posterior predictive check for the growth model, where the observed data is in dark blue (_y_) and 50 draws from the posterior distribution are in light blue (_yrep_).](../code/notebooks/figures/2025-09-12_posterior-predictive-checks/unnamed-chunk-4-1.png){#fig-ppcheck-gro width=400}
 
-![Posterior predictive check for the survival model, where the observed data is in dark blue (_y_) and 50 draws from the posterior distribution are in light blue (_yrep_). Conditional Kaplan-Meier curves, represented by _y_, were estimated for seedlings at representive values of basal diameter (the 0.25, 0.5 and 0.75 quartiles +/- the standard distribution multiplied by 0.01). Posterior preditions (_yrep_), were made for seedlings of these exact sizes (the 0.25, 0.5 and 0.75 quartiles). ](../code/notebooks/figures/2025-09-12_posterior-predictive-checks/unnamed-chunk-13-1.png){#fig-est-basal width=400}
+```{r}
+#| label: tab-growth-params
+#| tbl-cap: "Posterior estimates of fixed effects from the growth model"
+
+readr::read_csv(
+        here::here(
+          "output",
+          "results",
+          "posterior_summary_growth.csv")) |>
+  knitr::kable()
+```
+
+![Posterior predictive check for the survival model, where the observed data is in dark blue (_y_) and 50 draws from the posterior distribution are in light blue (_yrep_). Conditional Kaplan-Meier curves, represented by _y_, were estimated for seedlings at representive values of basal diameter (the 0.25, 0.5 and 0.75 quartiles +/- the standard distribution multiplied by 0.01). Posterior preditions (_yrep_), were made for seedlings of these exact sizes (the 0.25, 0.5 and 0.75 quartiles). ](../code/notebooks/figures/2025-09-12_posterior-predictive-checks/unnamed-chunk-13-1.png){#fig-ppcheck-surv width=400}
+
+```{r}
+#| label: tab-survival-params
+#| tbl-cap: "Posterior estimates of fixed effects from the survival model"
+
+readr::read_csv(
+        here::here(
+          "output",
+          "results",
+          "posterior_summary_survival.csv")) |>
+  knitr::kable()
+```

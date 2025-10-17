@@ -1,6 +1,6 @@
 # Plotting priors vs posteriors for our growth model
 eleanorjackson
-2025-09-11
+2025-10-17
 
 ``` r
 library("tidyverse")
@@ -50,9 +50,9 @@ prior_post %>%
   mutate(dist = str_to_sentence(dist)) %>%
   mutate(dist = factor(dist, levels = c("Prior", "Posterior"))) %>%
   mutate(name = case_when(
-    parameter == "A" ~ "<i>A</i>, Adult basal<br>diameter (mm)",
-    parameter == "k" ~ "<i>k / e</i>, Maximum relative<br>growth rate (% year<sup>-1</sup>)",
-    parameter == "delay" ~ "<i>delay</i>, Time to reach<br>max RGR (years)"
+    parameter == "A" ~ "<i>A</i>, Asymptotic basal<br>diameter (mm)",
+    parameter == "k" ~ "<i>k<sub>G</sub> / e</i>, Maximum relative<br>growth rate (% year<sup>-1</sup>)",
+    parameter == "delay" ~ "<i>T<sub>i</sub></i>, Time to reach max<br>growth rate (years)"
   )) %>%
   ggplot(aes(x = value, fill = forest_type)) +
   geom_density(alpha = 0.5) +

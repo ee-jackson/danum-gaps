@@ -209,10 +209,10 @@ param_traits <-
   #select(Species, wood_density_g_cm3, sla_mm2_mg) %>%
   right_join(all_params) %>%
   mutate(names = case_when(
-    Parameter == "A" ~ "<i>A</i>, Adult basal<br>diameter (mm)",
-    Parameter == "k" ~ "<i>k / e</i>, Maximum relative<br>growth rate (% year<sup>-1</sup>)",
-    Parameter == "delay" ~ "<i>delay</i>, Time to reach<br>max RGR (years)",
-    Parameter == "survival" ~ "<i>survival</i>, Typical<br>mortality (years)"
+    Parameter == "A" ~ "<i>A</i>, Asymptotic basal<br>diameter (mm)",
+    Parameter == "k" ~ "<i>k<sub>G</sub> / e</i>, Maximum relative<br>growth rate (% year<sup>-1</sup>)",
+    Parameter == "delay" ~ "<i>T<sub>i</sub></i>, Time to reach max<br>growth rate (years)",
+    Parameter == "survival" ~ "<i>survival</i>, Time to typical<br>mortality (years)"
   ))
 
 

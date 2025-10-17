@@ -1,7 +1,7 @@
-Parameter,Forest type,Posterior mean,l-95% CI,u-95% CI,Rhat,Bulk_ESS,Tail_ESS
+Parameter,Forest type,Posterior mean,l-95% CI,u-95% CI,Rhat,Bulk effective sample size,Tail effective sample size
 A,Logged,102.462,84.025,121.043,1.003,5261.08,8376.864
 A,Old-growth,57.068,44.889,70.088,1.008,2961.325,10236.973
-k/e,Logged,5.054,4.371,5.729,1.002,7524.692,9803.324
-k/e,Old-growth,14.209,12.385,16.002,1.008,6262.388,13648.914
+k~G~/e,Logged,5.054,4.371,5.729,1.002,7524.692,9803.324
+k~G~/e,Old-growth,14.209,12.385,16.002,1.008,6262.388,13648.914
 T~i~,Logged,-1.398,-1.785,-1.011,1.001,9006.186,11873.259
 T~i~,Old-growth,-0.541,-0.803,-0.288,1.002,4856.719,9402.731

@@ -1,4 +1,4 @@
-Parameter,Posterior mean,l-95% CI,u-95% CI,Rhat,Bulk_ESS,Tail_ESS
+Parameter,Posterior mean,l-95% CI,u-95% CI,Rhat,Bulk effective sample size,Tail effective sample size
 Logged forest,1.095,0.9,1.291,1.001,1998.535,3343.982
 Old-growth forest,1.726,1.349,2.123,1,2736.945,4498.318
 Basal diameter,2.44,2.275,2.611,1,10324.653,6602.133

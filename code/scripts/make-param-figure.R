@@ -58,10 +58,12 @@ post_summary_gro <-
                     .default = .
                   ))) %>%
   mutate(Parameter = ifelse(Parameter == "delay", "T~i~", Parameter)) %>%
-  mutate(Parameter = ifelse(Parameter == "k", "k/e", Parameter)) %>%
+  mutate(Parameter = ifelse(Parameter == "k", "k~G~/e", Parameter)) %>%
   select(Parameter, `Forest type`, Estimate, `l-95% CI`,
          `u-95% CI`, Rhat, Bulk_ESS, Tail_ESS) %>%
-  rename(`Posterior mean` = Estimate) %>%
+  rename(`Posterior mean` = Estimate,
+         `Bulk effective sample size` = Bulk_ESS,
+         `Tail effective sample size` = Tail_ESS) %>%
   mutate(across(!Parameter & !`Forest type`, \(x) round(x, 3)))
 
 write_csv(post_summary_gro,
@@ -84,10 +86,12 @@ post_summary_surv <-
                     .default = .
                   ))) %>%
   mutate(Parameter = ifelse(Parameter == "delay", "T~i~", Parameter)) %>%
-  mutate(Parameter = ifelse(Parameter == "k", "k/e", Parameter)) %>%
+  mutate(Parameter = ifelse(Parameter == "k", "k~G~/e", Parameter)) %>%
   select(Parameter, Estimate, `l-95% CI`,
          `u-95% CI`, Rhat, Bulk_ESS, Tail_ESS) %>%
-  rename(`Posterior mean` = Estimate) %>%
+  rename(`Posterior mean` = Estimate,
+         `Bulk effective sample size` = Bulk_ESS,
+         `Tail effective sample size` = Tail_ESS) %>%
   mutate(across(!Parameter, \(x) round(x, 3)))
 
 write_csv(post_summary_surv,
@@ -137,9 +141,9 @@ ft_ests_surv <-
 ft_ests <-
   bind_rows(ft_ests_grow, ft_ests_surv) %>%
   mutate(name = case_when(
-    parameter == "A" ~ "<i>A</i>, Adult basal diameter (mm)",
-    parameter == "k" ~ "<i>k / e</i>, Maximum relative growth rate (% year<sup>-1</sup>)",
-    parameter == "delay" ~ "<i>delay</i>, Time to reach max RGR (years)",
+    parameter == "A" ~ "<i>A</i>, Asymptotic basal diameter (mm)",
+    parameter == "k" ~ "<i>k<sub>G</sub> / e</i>, Maximum relative growth rate (% year<sup>-1</sup>)",
+    parameter == "delay" ~ "<i>T<sub>i</sub></i>, Time to reach max growth rate (years)",
     parameter == "survival" ~ "Effect of forest type on <i>time to mortality</i> (years)"
   ))
 
@@ -239,9 +243,9 @@ sp_ests <-
             sp_ests_k,
             sp_ests_surv)%>%
   mutate(name = case_when(
-    parameter == "A" ~ "<i>A</i>, Adult basal diameter (mm)",
-    parameter == "k" ~ "<i>k / e</i>, Maximum relative growth rate (% year<sup>-1</sup>)",
-    parameter == "delay" ~ "<i>delay</i>, Time to reach max RGR (years)",
+    parameter == "A" ~ "<i>A</i>, Asymptotic basal diameter (mm)",
+    parameter == "k" ~ "<i>k<sub>G</sub> / e</i>, Maximum relative growth rate (% year<sup>-1</sup>)",
+    parameter == "delay" ~ "<i>T<sub>i</sub></i>, Time to reach max growth rate (years)",
     parameter == "survival" ~ "Effect of forest type on <i>time to mortality</i> (years)"
   )) %>%
   mutate(Species = str_replace(Species, "_", " ")) %>%

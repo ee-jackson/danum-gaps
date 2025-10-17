@@ -1,6 +1,6 @@
 # Supplementary Information for the climber cutting plots
 eleanorjackson
-2025-09-11
+2025-10-17
 
 ``` r
 library("tidyverse")
@@ -46,7 +46,7 @@ model_main$formula
 my_coef_tab <- 
   tibble(fit = list(model_main, model_cc),
          model = c("Original model", 
-                   "with fixed effect<br>of climber cutting")) %>%
+                   "with fixed effect\nof climber cutting")) %>%
   mutate(tidy = purrr::map(
     fit,
     broom.mixed::tidy,
@@ -78,9 +78,9 @@ my_coef_tab <-
     .default = conf.high
   )) %>%
   mutate(name = case_when(
-    parameter == "A" ~ "<i>A</i>, Adult basal<br>diameter (mm)",
-    parameter == "k" ~ "<i>k / e</i>, Maximum relative<br>growth rate (% year<sup>-1</sup>)",
-    parameter == "delay" ~ "<i>delay</i>, Time to reach<br>max RGR (years)"
+    parameter == "A" ~ "<i>A</i>, Asymptotic basal<br>diameter (mm)",
+    parameter == "k" ~ "<i>k<sub>G</sub> / e</i>, Maximum relative<br>growth rate (% year<sup>-1</sup>)",
+    parameter == "delay" ~ "<i>T<sub>i</sub></i>, Time to reach max<br>growth rate (years)"
   ))
 ```
 
@@ -131,7 +131,7 @@ model_survival_cc$formula
 my_coef_tab_survival <- 
   tibble(fit = list(model_survival, model_survival_cc),
          model = c("Original model", 
-                   "with fixed effect<br>of climber cutting")) %>%
+                   "with fixed effect\nof climber cutting")) %>%
   mutate(tidy = purrr::map(
     fit,
     broom.mixed::tidy,

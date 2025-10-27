@@ -49,6 +49,12 @@ data <-
   filter(census_no == "01")
 ```
 
+```{r}
+data %>% 
+  group_by(survival) %>% 
+  summarise(n())
+```
+
 ## Fit model
 
 ```{r}
@@ -104,7 +110,8 @@ prior_post %>%
 ## Make figure of posterior
 
 ```{r}
-data %>% 
+p1 <- 
+  data %>% 
   modelr::data_grid(genus_species = unique(data$genus_species)) %>%
   tidybayes::add_epred_draws(object = model_01) %>% 
   mutate(genus_species = str_replace(genus_species, "_", " ")) %>%
@@ -114,6 +121,93 @@ data %>%
   theme(axis.text.y = element_markdown()) +
   labs(x = "Estimate",
        y = "") +
-  geom_vline(xintercept = 0.5, colour = "red", linetype = 2)
+  geom_vline(xintercept = 0.5, colour = "red", linetype = 2) +
+  ggtitle("Cohort one")
+
+p1
+```
+
+# Repeat for the second cohort 
+
+```{r}
+data_2 <-
+  readRDS(here::here("data", "derived", "data_cleaned.rds")) %>% 
+  filter(forest_type == "logged", cohort == "2") %>% 
+  filter(census_no == "06")
+```
+
+```{r}
+data_2 %>% 
+  group_by(survival) %>% 
+  summarise(n())
+```
+
+
+## Fit model
+
+```{r}
+model_02 <- 
+  brm(formula = survival ~ 0 + genus_species,
+    data = data_2,
+    family = bernoulli,
+    prior = prior(normal(0, 2)),
+    sample_prior = "yes",
+    file_refit = "on_change",
+    file = here::here("code",
+                      "notebooks",
+                      "models",
+                      "2025-09-30_never-alive-seedlings",
+                      "census-06-bernoulli-survival")
+    )
+```
+
+```{r}
+model_02
+```
+
+```{r}
+p2 <- 
+  data_2 %>% 
+  modelr::data_grid(genus_species = fct_drop(unique(data_2$genus_species))) %>%
+  tidybayes::add_epred_draws(object = model_02) %>% 
+  mutate(genus_species = str_replace(genus_species, "_", " ")) %>%
+  mutate(genus_species = paste0("<i>", genus_species, "</i>", sep = "")) %>%
+  ggplot(aes(x = .epred, y = genus_species)) +
+  ggdist::stat_halfeye(alpha = 0.7) +
+  theme(axis.text.y = element_markdown()) +
+  labs(x = "Estimate",
+       y = "") +
+  geom_vline(xintercept = 0.5, colour = "red", linetype = 2) +
+  ggtitle("Cohort two")
+
+p2
+```
+
+```{r}
+out_1 <- 
+  data %>% 
+  modelr::data_grid(genus_species = unique(data$genus_species)) %>%
+  tidybayes::add_epred_draws(object = model_01) %>% 
+  mutate(genus_species = str_replace(genus_species, "_", " ")) %>%
+  mutate(genus_species = paste0("<i>", genus_species, "</i>", sep = ""))%>% 
+  mutate(cohort = "Cohort one")
+
+out_2 <-
+  data_2 %>% 
+  modelr::data_grid(genus_species = fct_drop(unique(data_2$genus_species))) %>%
+  tidybayes::add_epred_draws(object = model_02) %>% 
+  mutate(genus_species = str_replace(genus_species, "_", " ")) %>%
+  mutate(genus_species = paste0("<i>", genus_species, "</i>", sep = "")) %>% 
+  mutate(cohort = "Cohort two")
+
+bind_rows(out_1, out_2) %>% 
+  ggplot(aes(x = .epred, y = genus_species)) +
+  ggdist::stat_halfeye(alpha = 0.7) +
+  theme(axis.text.y = element_markdown()) +
+  labs(x = "Estimate",
+       y = "") +
+  geom_vline(xintercept = 0.5, colour = "red", linetype = 2) +
+  facet_wrap(~cohort)
+  
 ```
 

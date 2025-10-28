@@ -41,11 +41,52 @@ library("ggtext")
 library("modelr")
 library("ggdist")
 ```
+```{r}
+left_censored <-
+  readRDS(here::here("data", "derived", "data_cleaned.rds")) %>%
+  filter(forest_type == "logged") %>% 
+  group_by(plant_id) %>%
+  summarise(n = sum(survival)) %>%
+  filter(n == 0) %>%
+  select(plant_id)
+
+all <-
+  readRDS(here::here("data", "derived", "data_cleaned.rds")) %>%
+  filter(forest_type == "logged") %>% 
+  distinct(plant_id)
+
+# all 
+nrow(distinct(
+  readRDS(here::here("data", "derived", "data_cleaned.rds")), 
+  plant_id))
+
+# all logged
+nrow(all)
+
+# all logged left censored
+nrow(left_censored)
+```
+
+Seedlings that were never recorded alive, when were they first censused?
+
+```{r}
+never_alive <-
+  readRDS(here::here("data", "derived", "data_cleaned.rds")) %>%
+  filter(plant_id %in% left_censored$plant_id)
+
+never_alive %>% 
+  filter(forest_type == "logged") %>% 
+  filter(first_survey == survey_date ) %>% 
+  group_by(census_no, cohort) %>% 
+  summarise(n())
+```
+
+# First cohort
 
 ```{r}
 data <-
   readRDS(here::here("data", "derived", "data_cleaned.rds")) %>% 
-  filter(forest_type == "logged") %>% 
+  filter(forest_type == "logged", cohort == "1") %>% 
   filter(census_no == "01")
 ```
 
@@ -165,6 +206,8 @@ model_02 <-
 model_02
 ```
 
+## Make figure 
+
 ```{r}
 p2 <- 
   data_2 %>% 
@@ -182,6 +225,8 @@ p2 <-
 
 p2
 ```
+
+# Combine figures
 
 ```{r}
 out_1 <- 

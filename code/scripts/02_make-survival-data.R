@@ -76,7 +76,7 @@ right_censored <-
 
 # Combine right and interval censored data --------------------------------
 
-# centre and scale for modelling
+# scale (but don't center) for modelling
 # day zero needs to be slightly > 0 for Weibull model
 data_aggregated <-
   bind_rows(interval_censored, right_censored) %>%

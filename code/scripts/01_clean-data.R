@@ -202,6 +202,14 @@ data_backfilled <-
   ) %>%
   bind_rows()
 
+# fill missing plant level data for backfilled plants
+data_backfilled <-
+  data_backfilled %>%
+  dplyr::group_by(plant_id) %>%
+  arrange(census_no, .by_group = TRUE) %>%
+  tidyr::fill(canopy:planting_date, .direction = "updown") %>%
+  ungroup()
+
 # "new" cohort of plants were first surveyed in census "06"
 data_backfilled <-
   data_backfilled %>%
@@ -210,14 +218,6 @@ data_backfilled <-
               old_new == "N" &
               census_no %in% c("01", "02", "03", "04", "05") )
   )
-
-# fill missing plant level data for backfilled plants
-data_backfilled <-
-  data_backfilled %>%
-  dplyr::group_by(plant_id) %>%
-  arrange(census_no, .by_group = TRUE) %>%
-  tidyr::fill(canopy:planting_date, .direction = "updown") %>%
-  ungroup()
 
 # add survey dates for for backfilled plants
 data_backfilled <-

@@ -59,32 +59,36 @@ readr::read_csv(
 ```
 
 
-# Survival analysis of seedlings in the first census of the logged forest
+# Survival analysis of logged forest seedlings in their first census
 
-57% of individuals were never recorded as alive (5,868 out of 10,272) 
-i.e., they died in the period between planting and the first census. 
-This occurs exclusively in the logged forest, 
-since diameter measurements were not taken at the time of planting. 
-Between 18 and 20 months elapsed between planting into the forest and censusing.
+57% of all individuals were never recorded as alive (5,868 out of 10,272) 
+i.e., they died in the period between planting and their first census. 
+This occurs exclusively in the logged forest 
+since unlike in the old-growth forest, 
+diameter measurements were not taken at the time of planting. 
+
 We excluded these individuals from the main analysis since they 
-lack data on size and their mortality is likely due to stress from transplanting rather than any effect of forest type.
-Nevertheless, this data might provide some insight on which species are more likely to survive transplanting from the nursery to the forest, 
+lack data both on size and exact age, 
+hence the seedlings cannot be directly compared.
+For the first cohort of seedlings planted into the logged forest, 
+between 18 and 20 months elapsed between planting and censusing, 
+in that time 70% of seedlings died (5,034 out of 7,222).
+For the second cohort (replacing dead seedlings from cohort one), 
+between 7 and 28 months elapsed between planting and censusing, and
+30% died (834 out of 2,746).
+
+Nevertheless, this data might provide some insight on which species are more likely to survive transplanting from the nursery to the logged forest over these time periods, 
 and we present a simple analysis here.
 
-To assess survival from planting to the first census in the logged forest, we fit a model in the `R` package `brms` 
+Survival of seedlings from cohort one and two were assessed in separate models with identical formulae.
+We fit the models in the `R` package `brms` 
 with a Bernoulli response distribution, 
-where zero indicated the seedling was dead in the first census and one indicated it was alive. 
+where zero indicated the seedling was dead in it's first census and one indicated it was alive. 
 The predictor was a fixed effect of species. 
-We use a regularising prior of `normal(0, 2)`.
-
+We use a regularising prior of `normal(0, 2)`, a common choice for Bernoulli models. 
 Results are presented in @fig-cens1-surv. 
-Two of the 15 species were more than 50% likely to survive 
-the first 18 to 20 months (_Shorea ovalis_ and _Hopea sangal_), 
-four species were as equally likely to die as survive 
-(_Shorea johorensis_, _Parashorea tomentella_, _parashorea malaanonan_ and _Dipterocarpus conformis_),
-and the remaining nine species were more likely to die than survive.
 
-![Posterior estimates of survival probability in the time period between planting and the first census of the logged forest. The posterior median is represented by a point with the line showing the 66% and 95% credible interval. The dashed red line shows where the likelihood of survival is 50% ](../code/notebooks/figures/2025-09-30_never-alive-seedlings/unnamed-chunk-7-1.png){#fig-cens1-surv width=400}
+![Posterior estimates of survival probability in the time period between planting and the first census of cohort one and two seedlings in the logged forest. The posterior median is represented by a point with the line showing the 66% and 95% credible interval. The dashed red line shows where the likelihood of survival is 50%. No _Dipterocarpus conformis_ seedlings were planted in the second cohort due to insufficient avalibility.](../code/notebooks/figures/2025-09-30_never-alive-seedlings/unnamed-chunk-16-1.png){#fig-cens1-surv width=400}
 
 # Estimating missing values of basal diameter
 

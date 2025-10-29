@@ -77,7 +77,7 @@ For the second cohort (replacing dead seedlings from cohort one),
 between 7 and 28 months elapsed between planting and censusing, and
 30% died (834 out of 2,746).
 
-Nevertheless, this data might provide some insight on which species are more likely to survive transplanting from the nursery to the logged forest over these time periods, 
+Nevertheless, this data might provide some insight on which species are more likely to survive over these time periods, 
 and we present a simple analysis here.
 
 Survival of seedlings from cohort one and two were assessed in separate models with identical formulae.
@@ -86,9 +86,11 @@ with a Bernoulli response distribution,
 where zero indicated the seedling was dead in it's first census and one indicated it was alive. 
 The predictor was a fixed effect of species. 
 We use a regularising prior of `normal(0, 2)`, a common choice for Bernoulli models. 
-Results are presented in @fig-cens1-surv. 
+Results are presented in @fig-cens1-surv and @fig-cens1-corrsurv. 
 
 ![Posterior estimates of survival probability in the time period between planting and the first census of cohort one and two seedlings in the logged forest. The posterior median is represented by a point with the line showing the 66% and 95% credible interval. The dashed red line shows where the likelihood of survival is 50%. No _Dipterocarpus conformis_ seedlings were planted in the second cohort due to insufficient avalibility.](../code/notebooks/figures/2025-09-30_never-alive-seedlings/unnamed-chunk-16-1.png){#fig-cens1-surv width=400}
+
+![Median posterior estimates of survival probability for seedlings in cohort one (_y_ axis) and two (_x_ axis) in the time period between planting and their first census.](../code/notebooks/figures/2025-09-30_never-alive-seedlings/unnamed-chunk-17-1.png){#fig-cens1-corrsurv width=400}
 
 # Estimating missing values of basal diameter
 
@@ -107,14 +109,6 @@ optimising on trees where we had diameter measurements both at the base and at
 breast height, to find the value which gave the lowest Root Mean Squared Error.
 
 ![In (a), estimated values of basal diameter are plotted against their true values. The red line indicates where the estimate is equal to the true value. (b) Shows the distribution of the error around zero (red line).](../code/notebooks/figures/2025-07-28_estimate-basal-diameter/unnamed-chunk-7-1.png){#fig-est-basal width=400}
-
-# Prior choice
-
-We set weakly informative priors on each of the three parameters describing growth (equation 1) for the population-level effect of forest type. We left the predictor variables on their original scale, since the parameters have meaningful values. We used a log-normal prior for A, maximum size, with  = 6,  = 1. The world’s tallest tropical tree, found at our primary forest study site in Danum Valley, has a DBH of 212 cm (Shorea faguetiana) (Shenkin et al., 2019). We expect a right-skewed distribution of adult size, with few very large individuals and a lower limit of 0 mm. The Student’s-t distribution is generally recommended for weakly informative priors as it has heavier tails than a normal distribution and hence is more robust to outliers (Ghosh et al., 2017). We used Student’s-t priors with degrees of freedom set to five for the remaining population-level priors. The prior for k, the growth rate coefficient, was set with  = 0,  = 0.5 and a lower bound of 0, since the basal diameter of dipterocarp seedlings in other locations grow at a rate of X-X (cite). Finally, the prior for delay, the time at inflection of the curve in years, was set with  = 0,  = 5. Since seedlings were germinated in the nursery no more than X months before transplanting to the forest, delay cannot be less than -X years and is very unlikely to be greater than 10 years. For the group-level effects of species and seedling ID we used the default priors provided by the R package {brms}: a Student-t prior with three degrees of freedom,  = 0 and  = 2.5.
-
-![Prior and posterior distributions for the growth model. Facet columns indicate parameters estimated by the model. Facet rows indicate the prior and posterior distributions. Note that the same priors were set for both forest types, and that axes are not preserved across panels.](../code/notebooks/figures/2025-06-13_growth-prior-vs-posterior/unnamed-chunk-4-1.png){#fig-prior-gro width=400}
-
-![Prior and posterior distributions for the survival model. Prior and posterior distributions are displayed in separate panels and colours represent regression coefficients for the population-level, or "fixed" effects. Note that the same prior was set across all the population-level parameters, and that axes are not preserved across panels. ](../code/notebooks/figures/2025-06-18_survival-prior-vs-posterior/unnamed-chunk-4-1.png){#fig-prior-surv width=400}
 
 # Posterior predictive checks
 
@@ -145,3 +139,11 @@ readr::read_csv(
           "posterior_summary_survival.csv")) |>
   knitr::kable()
 ```
+
+# Prior choice
+
+We set weakly informative priors on each of the three parameters describing growth (equation 1) for the population-level effect of forest type. We left the predictor variables on their original scale, since the parameters have meaningful values. We used a log-normal prior for A, maximum size, with  = 6,  = 1. The world’s tallest tropical tree, found at our primary forest study site in Danum Valley, has a DBH of 212 cm (Shorea faguetiana) (Shenkin et al., 2019). We expect a right-skewed distribution of adult size, with few very large individuals and a lower limit of 0 mm. The Student’s-t distribution is generally recommended for weakly informative priors as it has heavier tails than a normal distribution and hence is more robust to outliers (Ghosh et al., 2017). We used Student’s-t priors with degrees of freedom set to five for the remaining population-level priors. The prior for k, the growth rate coefficient, was set with  = 0,  = 0.5 and a lower bound of 0, since the basal diameter of dipterocarp seedlings in other locations grow at a rate of X-X (cite). Finally, the prior for delay, the time at inflection of the curve in years, was set with  = 0,  = 5. Since seedlings were germinated in the nursery no more than X months before transplanting to the forest, delay cannot be less than -X years and is very unlikely to be greater than 10 years. For the group-level effects of species and seedling ID we used the default priors provided by the R package {brms}: a Student-t prior with three degrees of freedom,  = 0 and  = 2.5.
+
+![Prior and posterior distributions for the growth model. Facet columns indicate parameters estimated by the model. Facet rows indicate the prior and posterior distributions. Note that the same priors were set for both forest types, and that axes are not preserved across panels.](../code/notebooks/figures/2025-06-13_growth-prior-vs-posterior/unnamed-chunk-4-1.png){#fig-prior-gro width=400}
+
+![Prior and posterior distributions for the survival model. Prior and posterior distributions are displayed in separate panels and colours represent regression coefficients for the population-level, or "fixed" effects. Note that the same prior was set across all the population-level parameters, and that axes are not preserved across panels. ](../code/notebooks/figures/2025-06-18_survival-prior-vs-posterior/unnamed-chunk-4-1.png){#fig-prior-surv width=400}

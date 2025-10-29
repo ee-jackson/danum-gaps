@@ -257,3 +257,25 @@ bind_rows(out_1, out_2) %>%
   
 ```
 
+# Do the estimates correlate?
+
+```{r}
+
+bind_rows(out_1, out_2) %>% 
+  mutate(genus_species = 
+           str_remove_all(genus_species, "</?[iI]>")) %>% 
+  mutate(genus_species = 
+           str_replace(genus_species, "^(\\S)\\S+\\s+", "\\1. ")) %>% 
+  group_by(genus_species, cohort) %>% 
+  ggdist::point_interval() %>% 
+  pivot_wider(names_from = cohort, 
+              values_from = .epred, 
+              id_cols = genus_species) %>% 
+  ggplot(aes(x = `Cohort two`, y = `Cohort one`)) +
+  geom_point() +
+  geom_text(aes(label = genus_species), 
+            hjust = 0, nudge_x = 0.005,
+            fontface = "italic") +
+  expand_limits(x = c(0.5, 0.9))
+```
+

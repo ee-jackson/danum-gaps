@@ -1,6 +1,6 @@
 # Analysis of seedlings which were never recorded as alive
 eleanorjackson
-2025-10-28
+2025-10-29
 
 - [First cohort](#first-cohort)
   - [Fit model](#fit-model)
@@ -10,6 +10,7 @@ eleanorjackson
   - [Fit model](#fit-model-1)
   - [Make figure](#make-figure)
 - [Combine figures](#combine-figures)
+- [Do the estimates correlate?](#do-the-estimates-correlate)
 
 57% of individuals were never recorded as alive (5,869 out of 10,274),
 i.e. they died in the period between planting and the first census. We
@@ -362,3 +363,26 @@ bind_rows(out_1, out_2) %>%
 ```
 
 ![](figures/2025-09-30_never-alive-seedlings/unnamed-chunk-16-1.png)
+
+# Do the estimates correlate?
+
+``` r
+bind_rows(out_1, out_2) %>% 
+  mutate(genus_species = 
+           str_remove_all(genus_species, "</?[iI]>")) %>% 
+  mutate(genus_species = 
+           str_replace(genus_species, "^(\\S)\\S+\\s+", "\\1. ")) %>% 
+  group_by(genus_species, cohort) %>% 
+  ggdist::point_interval() %>% 
+  pivot_wider(names_from = cohort, 
+              values_from = .epred, 
+              id_cols = genus_species) %>% 
+  ggplot(aes(x = `Cohort two`, y = `Cohort one`)) +
+  geom_point() +
+  geom_text(aes(label = genus_species), 
+            hjust = 0, nudge_x = 0.005,
+            fontface = "italic") +
+  expand_limits(x = c(0.5, 0.9))
+```
+
+![](figures/2025-09-30_never-alive-seedlings/unnamed-chunk-17-1.png)

@@ -158,94 +158,43 @@ traits_both <-
          WD_NB, LA_cm2_mean, dry_weight_mg_mean) %>%
   filter(forest_type == "OG") %>%
   filter(Species %in% all_params$Species) %>%
-  mutate(LA_mm2_mean = LA_cm2_mean * 100) %>% # make units match TRY data
+  mutate(LA_mm2_mean = LA_cm2_mean * 100) %>%
   mutate(sla = LA_mm2_mean / dry_weight_mg_mean) %>%
   group_by(Species) %>%
-  summarise(sla = median(sla, na.rm = TRUE),
-            wood_density = median(WD_NB, na.rm = TRUE)) %>%
-  mutate(dataset = "Both")
-
-# get TRY traits https://www.try-db.org
-traits_try <-
-  read_tsv(
-    here::here(
-      "data",
-      "raw",
-      "traits",
-      "43247.txt"
-    ),
-    na = c("", " ", "NA")
-   ) %>%
-  filter(DatasetID != 761) %>%
-  rtry::rtry_remove_dup() %>%
-  mutate(Species =
-           str_replace(AccSpeciesName, " ", "_")) %>%
-  mutate(trait = case_when(
-    DataName == "Wood density; stem specific density; wood specific gravity (SSD)" ~ "wood_density",
-    DataName == "SLA: undefined if petiole in- or excluded" |
-      DataName == "SLA: petiole  excluded" ~ "sla"
-  )) %>%
-  drop_na(trait) %>%
-  pivot_wider(names_from = trait,
-              values_from = StdValue) %>%
-  group_by(Species) %>%
-  summarise(sla = median(sla, na.rm = TRUE),
-            wood_density = median(wood_density, na.rm = TRUE)) %>%
-  mutate(dataset = "TRY")
+  summarise(sla_med = median(sla, na.rm = TRUE),
+            sla_iqr = IQR(sla, na.rm = TRUE),
+            wood_density_med = median(WD_NB, na.rm = TRUE),
+            wood_density_iqr = IQR(WD_NB, na.rm = TRUE))
 
 
-# combine model parameters with traits
-# preference for Both trait data
-param_traits <-
-  traits_try %>%
-  bind_rows(traits_both) %>%
-  pivot_wider(names_from = "dataset", values_from = c(wood_density, sla)) %>%
-  mutate(wood_density_g_cm3 = ifelse(is.na(wood_density_Both),
-                                     wood_density_TRY,
-                                     wood_density_Both )) %>%
-  mutate(sla_mm2_mg = ifelse(is.na(sla_Both),
-                             sla_TRY,
-                             sla_Both )) %>%
-  #select(Species, wood_density_g_cm3, sla_mm2_mg) %>%
-  right_join(all_params) %>%
+# Combine traits and model estimates --------------------------------------
+
+param_traits_median <-
+  traits_both %>%
+  left_join(all_params) %>%
   mutate(names = case_when(
     Parameter == "A" ~ "<i>A</i>, Asymptotic basal<br>diameter (mm)",
     Parameter == "k" ~ "<i>k<sub>G</sub> / e</i>, Maximum relative<br>growth rate (% year<sup>-1</sup>)",
     Parameter == "delay" ~ "<i>T<sub>i</sub></i>, Time to reach max<br>growth rate (years)",
     Parameter == "survival" ~ "<i>survival</i>, Time to typical<br>mortality (years)"
-  ))
-
+  )) %>%
+  group_by(Species, Parameter, names,
+           sla_med, sla_iqr, wood_density_med, wood_density_iqr) %>%
+  summarise(
+    diff_iqr = IQR(diff, na.rm = TRUE),
+    diff_med = median(diff, na.rm = TRUE))
 
 # Plot --------------------------------------------------------------------
 
-param_traits_median <-
-  param_traits %>%
-  summarise(
-            iqr = IQR(diff, na.rm = TRUE),
-            diff = median(diff, na.rm = TRUE),
-            .by = c(Species, Parameter, names, sla_Both, wood_density_Both))
-
 # SLA
 fig_sla <-
-  param_traits %>%
-  ggplot(aes(y = diff,
-             x = sla_Both,
-             group = Species)) +
-  stat_interval(interval_alpha = 0.5, show_point = TRUE,
-                point_size = 1, point_fill = "white",
-                point_colour = "black", size = 1.75,
-                shape = 21, show.legend = FALSE,
-                stroke = 0.5) +
-  geom_smooth(aes(y = diff,
-                  x = sla_Both,
-                  group = Parameter),
-              se = TRUE,
-              level = 0.95,
-              method = "lm",
-              fill = "grey", linewidth = 0.5,
-              data = param_traits_median) +
+  param_traits_median %>%
+  ggplot(aes(y = diff_med,
+             x = sla_med)) +
+  geom_point(shape = 16, alpha = 0.6) +
   facet_wrap(~names, scales = "free") +
   geom_hline(yintercept = 0, colour = "red", linetype = 2, linewidth = 0.25) +
+  ggpubr::stat_cor(size = 2, label.y.npc = 0.85) +
   labs(y = "Additional effect of logging
        <br>(logged forest estimate - old-growth forest estimate)",
        x = "Specific leaf area (mm<sup>2</sup>/mg)") +
@@ -256,37 +205,15 @@ fig_sla <-
     strip.text = element_markdown(lineheight = 0.5)
   )
 
-jpeg(
-  here::here("output", "figures", "SLA.jpeg"),
-  width = 8.5,
-  height = 8.5,
-  res = 600,
-  pointsize = 6,
-  units = "cm",
-  type = "cairo"
-)
-fig_sla
-dev.off()
-
 # Wood density
 fig_wd <-
-  param_traits %>%
-  ggplot(aes(y = diff,
-             x = wood_density_Both,
-             group = Species)) +
-  stat_interval(interval_alpha = 0.5, show_point = TRUE,
-                point_size = 1, point_fill = "white",
-                point_colour = "black", size = 1.75,
-                shape = 21, show.legend = FALSE,
-                stroke = 0.5) +
-  geom_smooth(aes(y = diff,
-                  x = wood_density_Both,
-                  group = names),
-              method = "lm",
-              fill = "grey", linewidth = 0.5,
-              data = param_traits_median) +
+  param_traits_median %>%
+  ggplot(aes(y = diff_med,
+             x = wood_density_med)) +
+  geom_point(shape = 16, alpha = 0.6) +
   facet_wrap(~names, scales = "free") +
   geom_hline(yintercept = 0, colour = "red", linetype = 2, linewidth = 0.25) +
+  ggpubr::stat_cor(size = 2, label.y.npc = 0.85) +
   labs(y = "Additional effect of logging
        <br>(logged forest estimate - old-growth forest estimate)",
        x = "Wood density (g/cm<sup>3</sup>)") +
@@ -298,22 +225,11 @@ fig_wd <-
     strip.text = element_markdown(lineheight = 0.5)
   )
 
-jpeg(
-  here::here("output", "figures", "wood_density.jpeg"),
-  width = 8.5,
-  height = 8.5,
-  res = 600,
-  pointsize = 6,
-  units = "cm",
-  type = "cairo"
-)
-fig_wd
-dev.off()
 
 # Combined figure
 
 jpeg(
-  here::here("output", "figures", "figure_03.jpeg"),
+  here::here("output", "figures", "figure_05.jpeg"),
   width = 8,
   height = 16,
   res = 600,
@@ -327,52 +243,3 @@ fig_sla + fig_wd +
   plot_annotation(tag_levels = "a")
 
 dev.off()
-
-# Fit linear models -------------------------------------------------------
-
-# get SLA model results
-fit_sla_lm <- function(param, param_data, trait_data) {
-
-  param_data %>%
-    filter(Parameter == param) %>%
-    group_by(Species) %>%
-    summarise(diff = median(diff, na.rm = TRUE)) %>%
-    inner_join(trait_data) %>%
-    lm(formula = diff ~ sla) %>%
-    broom::tidy(conf.int = TRUE) %>%
-    mutate(y = param,
-           x = "SLA")
-}
-
-results_sla <-
-  map(.f = fit_sla_lm, .x = unique(param_traits$Parameter),
-      param_data = all_params, trait_data = traits_both) %>%
-  bind_rows()
-
-# get wood density model results
-fit_wd_lm <- function(param, param_data, trait_data) {
-
-  param_data %>%
-    filter(Parameter == param) %>%
-    group_by(Species) %>%
-    summarise(diff = median(diff, na.rm = TRUE)) %>%
-    inner_join(trait_data) %>%
-    lm(formula = diff ~ wood_density) %>%
-    broom::tidy(conf.int = TRUE) %>%
-    mutate(y = param,
-           x = "Wood density")
-}
-
-results_wd <-
-  map(.f = fit_wd_lm, .x = unique(param_traits$Parameter),
-      param_data = all_params, trait_data = traits_both) %>%
-  bind_rows()
-
-all_lm_results <-
-  bind_rows(
-  results_wd,
-  results_sla
-)
-
-write_csv(all_lm_results,
-          here::here("output", "results", "trait_lms.csv"))

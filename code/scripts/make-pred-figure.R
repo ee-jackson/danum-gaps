@@ -2,7 +2,7 @@
 
 ## Author: E E Jackson, eleanor.elizabeth.j@gmail.com
 ## Script:
-## Desc:
+## Desc: Make figure 3
 ## Date created: 2025-08-07
 
 
@@ -334,7 +334,7 @@ pal <-
          y = "Survival probability")
 
 jpeg(
-    here::here("output", "figures", "curves.jpeg"),
+    here::here("output", "figures", "figure_03.jpeg"),
     width = 18,
     height = 12,
     res = 600,

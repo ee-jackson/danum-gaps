@@ -2,7 +2,7 @@
 
 ## Author: E E Jackson, eleanor.elizabeth.j@gmail.com
 ## Script:
-## Desc: Make growth fig
+## Desc: Make figure 4
 ## Date created: 2025-04-21
 
 
@@ -316,7 +316,7 @@ pd <-
 # Combine panels ----------------------------------------------------------
 
 jpeg(
-  here::here("output", "figures", "all-params.jpeg"),
+  here::here("output", "figures", "figure_04.jpeg"),
   width = 17,
   height = 24,
   res = 600,

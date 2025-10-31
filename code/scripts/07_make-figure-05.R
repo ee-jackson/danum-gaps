@@ -181,15 +181,14 @@ param_traits_median <-
   group_by(Species, Parameter, names,
            sla_med, sla_iqr, wood_density_med, wood_density_iqr) %>%
   summarise(
-    diff_iqr = IQR(diff, na.rm = TRUE),
-    diff_med = median(diff, na.rm = TRUE))
+    diff_mean = mean(diff, na.rm = TRUE))
 
 # Plot --------------------------------------------------------------------
 
 # SLA
 fig_sla <-
   param_traits_median %>%
-  ggplot(aes(y = diff_med,
+  ggplot(aes(y = diff_mean,
              x = sla_med)) +
   geom_point(shape = 16, alpha = 0.6) +
   facet_wrap(~names, scales = "free") +
@@ -208,7 +207,7 @@ fig_sla <-
 # Wood density
 fig_wd <-
   param_traits_median %>%
-  ggplot(aes(y = diff_med,
+  ggplot(aes(y = diff_mean,
              x = wood_density_med)) +
   geom_point(shape = 16, alpha = 0.6) +
   facet_wrap(~names, scales = "free") +

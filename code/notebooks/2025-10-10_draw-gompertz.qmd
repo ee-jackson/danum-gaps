@@ -29,6 +29,7 @@ ggplot2::theme_set(ggplot2::theme_bw(base_size = 13))
 ```{r}
 library("tidyverse")
 library("ggtext")
+library("patchwork")
 ```
 
 ```{r}
@@ -45,26 +46,27 @@ gompertz <- function(t, A, k_G, T_i) {
 
 ```{r}
 # Calculate slope and intercept at inflection point
-slope_max <- A * k_G / exp(1)
+max_growth_rate <- A * k_G / exp(1)
 size_at_Ti <- A / exp(1)
-intercept <- size_at_Ti - slope_max * T_i
+intercept <- size_at_Ti - max_growth_rate * T_i
 ```
 
 ```{r}
 # Create data frame with curve and tangent line
 df <- tibble(
-  t = seq(-5, 20, by = 0.1)
+  t = seq(-5, 20, by = 1)
 ) %>%
   mutate(
     size = gompertz(t, A, k_G, T_i),
-    tangent = slope_max * t + intercept
+    tangent = max_growth_rate * t + intercept
   )
 
 # Create inflection point data
-inflection_point <- tibble(
-  t = T_i,
-  size = size_at_Ti
-)
+inflection_point <- 
+  tibble(
+    t = T_i, 
+    size = size_at_Ti
+    )
 
 # Plot
 toy_fig <- 
@@ -114,7 +116,6 @@ toy_fig <-
   theme(
     legend.position = "inside",
     legend.position.inside = c(0.7, 0.2),
-    plot.title = element_text(hjust = 0.5),
     axis.text.x = element_markdown(),
     axis.text.y = element_markdown(),
     legend.text = element_markdown()
@@ -138,7 +139,7 @@ toy_fig
 
 ```{r}
 jpeg(
-  here::here("output", "figures", "gompertz.jpeg"),
+  here::here("output", "plots", "gompertz.jpeg"),
   width = 80,
   height = 60,
   res = 600,
@@ -153,13 +154,76 @@ dev.off()
 
 ```{r}
 # Print parameters
-cat("Parameters:\n")
-cat("A =", A, "\n")
-cat("k_G =", k_G, "\n")
-cat("T_i =", T_i, "\n\n")
-cat("At inflection point:\n")
-cat("Maximum slope =", round(slope_max, 3), "\n")
-cat("Size at T_i =", round(size_at_Ti, 3), "\n")
-cat("Tangent intercept =", round(intercept, 3), "\n")
+cat(
+  "Parameters:\n",
+  "A =", A, "\n",
+  "k_G =", k_G, "\n",
+  "T_i =", T_i, "\n\n",
+  "At inflection point:\n",
+  "Maximum absolute growth rate =", round(max_growth_rate, 3), "\n",
+  "Size at T_i =", round(size_at_Ti, 3), "\n",
+  "Tangent intercept =", round(intercept, 3), "\n"
+  )
 ```
 
+```{r}
+toy_fig2 <- 
+  df %>% 
+  mutate(lag_size = lag(size, n = 1, order_by = t)) %>%
+  mutate(growth = size - lag_size) %>% 
+  ggplot(aes(x = size, y = growth)) +
+  geom_line(
+    stat = "smooth",
+    colour = "forestgreen",
+    .width = 0,
+    linewidth = 1,
+    alpha = 0.6
+  ) +
+  geom_hline(
+    yintercept = max_growth_rate,
+    linetype = "dashed",
+    color = "gray40",
+    linewidth = 1
+  ) +
+  labs(x = "Basal diameter (mm)", y = "Growth (mm year<sup>-1</sup>)", color = NULL) +
+  theme_classic(base_size = 10) +
+  theme(
+    axis.text.x = element_markdown(),
+    axis.text.y = element_markdown(),
+    axis.title.y = element_markdown()
+  ) +
+  scale_y_continuous(
+    breaks = c(0, 2, 4, max_growth_rate),
+    labels = c(0, 2, 4, 
+                "<span style = 'color:gray40;'>_A k<sub>G</sub> / e_</span>"),
+  ) +
+  scale_x_continuous(
+    breaks = c(0, 20, 40, A, 60),
+    labels = c(0, 20, 40, 
+               "<span style = 'color:gray40;'>_A_</span>", 
+               60),
+    limits = c(0, 60)
+  ) 
+
+toy_fig2
+```
+```{r}
+toy_fig + toy_fig2 +
+  plot_annotation(tag_levels = "a")
+```
+
+```{r}
+jpeg(
+  here::here("output", "figures", "figure_02.jpeg"),
+  width = 80,
+  height = 120,
+  res = 600,
+  pointsize = 6,
+  units = "mm",
+  type = "cairo"
+)
+toy_fig / 
+  toy_fig2 +
+  plot_annotation(tag_levels = "a")
+dev.off()
+```

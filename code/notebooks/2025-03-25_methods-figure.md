@@ -1,6 +1,6 @@
 # Create a figure exlaining the analysis?
 eleanorjackson
-2025-08-28
+2025-12-16
 
 - [Growth](#growth)
   - [First panel](#first-panel)
@@ -17,6 +17,7 @@ library("patchwork")
 library("tidybayes")
 library("modelr")
 library("tidyverse")
+library("ggtext")
 ```
 
 # Growth
@@ -145,7 +146,7 @@ p1 <-
   ylab("Basal diameter mm") +
   xlab("Years") +
   scale_x_continuous(expand = c(0, 0)) +
-  scale_y_continuous(expand = c(0, 0))
+  scale_y_continuous(expand = c(0, 1))
 
 p1
 ```
@@ -226,9 +227,10 @@ all_gr %>%
             alpha = 1,
             linetype = 2) +
   xlab("Basal diameter mm") +
-  ylab("Growth rate mm/yr") +
+  ylab("Growth rate mm year<sup>-1</sup>") +
   scale_x_continuous(expand = c(0, 0)) +
-  scale_y_continuous(expand = c(0, 0))
+  scale_y_continuous(expand = c(0, 0)) +
+  theme(axis.title.y = element_markdown())
 ```
 
 ![](figures/2025-03-25_methods-figure/unnamed-chunk-8-1.png)
@@ -250,22 +252,6 @@ sp1_gr_s <-
 ```
 
 ``` r
-sp1_gr_s %>% 
-  ggplot(aes(x = .epred, y = growth_cmyr)) +
-  geom_line(aes(group = plant_id), 
-            alpha = 0.3,
-            colour = "forestgreen",
-            linewidth = 1,
-            stat = "smooth") +
-  xlab("Basal diameter mm") +
-  ylab("Growth rate mm/yr") +
-  scale_x_continuous(expand = c(0, 0)) +
-  scale_y_continuous(limit = c(0, NA), expand = c(0, 0))
-```
-
-![](figures/2025-03-25_methods-figure/unnamed-chunk-10-1.png)
-
-``` r
 all_gr_sp1_s <- 
   all_gr %>% 
   filter(genus_species == sp_1 & forest_type == "logged")
@@ -285,14 +271,13 @@ p3 <-
             alpha = 1,
             linetype = 2) +
   xlab("Basal diameter mm") +
-  ylab("Growth rate mm/yr") +
+  ylab("Growth rate mm year<sup>-1</sup>") +
   scale_x_continuous(expand = c(0, 0)) +
-  scale_y_continuous(limit = c(0, NA), expand = c(0, 0))
+  scale_y_continuous(limit = c(0, NA), expand = c(0, 0)) +
+  theme(axis.title.y = element_markdown())
 
-p3
+#p3
 ```
-
-![](figures/2025-03-25_methods-figure/unnamed-chunk-11-1.png)
 
 # Survival
 
@@ -313,7 +298,8 @@ survival_data <-
 p4 <- 
   data %>% 
   filter(genus_species == sp_1 & 
-           forest_type == "logged" & cohort == 1) %>% 
+           forest_type == "logged" & 
+           cohort == 1) %>% 
   filter(plant_id %in% 
            sample(unique(growth_data_sp1_s$plant_id), 30)) %>% 
   mutate(survival = ifelse(survival == 0, "Dead", "Alive")) %>% 
@@ -322,7 +308,9 @@ p4 <-
   geom_point(size = 2, colour = "grey20", stroke = 0.75) +
   scale_shape_manual(values = c(19, 4)) +
   theme(axis.text.y = element_blank(),
-        legend.position = "top",legend.justification="left",
+        axis.ticks.y = element_blank(),
+        legend.position = "top",
+        legend.justification="left",
         legend.title = element_blank()) +
   xlab("Years") +
   ylab("Seedling ID")
@@ -330,52 +318,42 @@ p4 <-
 p4
 ```
 
-![](figures/2025-03-25_methods-figure/unnamed-chunk-14-1.png)
+![](figures/2025-03-25_methods-figure/unnamed-chunk-13-1.png)
 
 ## Fifth panel
 
 ``` r
-data %>% 
-  mutate(survival = 0) %>% 
-  filter(genus_species == sp_1) %>%
-  ggplot(aes(x = dbase_mean)) +
-  geom_dots(aes(y = survival,
-                side = ifelse(survival == 0, "top", "bottom")), 
-            pch = 19, color = "grey20",
-            overlaps = "nudge") +
-  scale_x_continuous(expand = c(0, 0)) +
-  scale_y_continuous(expand = c(0, 0), breaks = c(0,1)) +
-  facet_wrap(~forest_type) +
-  ylab("Count of mortalities") +
-  xlab("Basal diameter mm")
-```
-
-![](figures/2025-03-25_methods-figure/unnamed-chunk-15-1.png)
-
-``` r
 surv_sp1 <-
   survival_data %>% 
-  mutate(survival = 0) %>% 
-  filter(genus_species == sp_1)
+  filter(genus_species == sp_1 & forest_type == "logged") %>% 
+  filter(censor == "interval")
 
 p5 <-
-  ggplot() +
-  geom_dots(data = filter(surv_sp1, forest_type == "logged"),
-         aes(x = dbase_mean, y = survival,
-                side = ifelse(survival == 0, "top", "bottom")), 
-            pch = 19, color = "grey20",
-            overlaps = "nudge"
+  surv_sp1 %>% 
+  ggplot(aes(x = dbase_mean)) +
+  geom_histogram(
+          position = "identity",
+          fill = "forestgreen",
+          alpha = 0.6,
+          bins = 60
          ) +
+  geom_step(
+    aes(y = ..count..),
+    colour = "forestgreen",
+    stat = "bin",
+    bins = 60,
+    direction = "mid"
+    ) +
   ylab("Count of mortalities")+
   xlab("Basal diameter mm") +
   theme(legend.position = "bottom") +
   scale_x_continuous(limits = c(0, 200), expand = c(0, 2)) +
-  scale_y_continuous(expand = c(0, 0), breaks = c(0)) 
+  scale_y_continuous(expand = c(0, 1)) 
 
 p5
 ```
 
-![](figures/2025-03-25_methods-figure/unnamed-chunk-16-1.png)
+![](figures/2025-03-25_methods-figure/unnamed-chunk-14-1.png)
 
 ## Sixth panel
 
@@ -412,25 +390,12 @@ unscale_basal <- function(x) {
 ```
 
 ``` r
-surv_pred_sp %>% 
-  ggplot (aes (x = unscale_basal(dbase_mean_sc), 
-               y = surv)) +
-  stat_lineribbon (.width = 0.95, alpha = 0.5) +
-  ylab("Survival probability")+
-  xlab("Basal diameter mm") +
-  facet_wrap(~genus_species, ncol = 3) +
-  theme(legend.position = "none")
-```
-
-![](figures/2025-03-25_methods-figure/unnamed-chunk-19-1.png)
-
-``` r
 p6 <-
   ggplot() +
   stat_lineribbon(data = surv_pred_sp, 
     aes(x = unscale_basal(dbase_mean_sc), 
                y = surv), colour = "forestgreen", fill = "forestgreen",
-               .width = 0.95, alpha = 0.6, show.legend = FALSE) +
+               .width = 0.95, alpha = 0.5, show.legend = FALSE) +
   stat_lineribbon(data = surv_pred_sp, 
     aes(x = unscale_basal(dbase_mean_sc), 
                y = surv), colour = "forestgreen", 
@@ -444,7 +409,7 @@ p6 <-
 p6
 ```
 
-![](figures/2025-03-25_methods-figure/unnamed-chunk-20-1.png)
+![](figures/2025-03-25_methods-figure/unnamed-chunk-17-1.png)
 
 # Combined panels
 
@@ -454,11 +419,11 @@ p1 + p2 + p3 + p4 + p5 + p6 +
   patchwork::plot_annotation(
     tag_levels = "a",
     title = "Hopea sangal",
-    subtitle = "Enriched logged forest",
+    subtitle = "Logged forest",
     theme = theme(
       plot.title = element_text(face = "italic")
       )
   )
 ```
 
-![](figures/2025-03-25_methods-figure/unnamed-chunk-21-1.png)
+![](figures/2025-03-25_methods-figure/unnamed-chunk-18-1.png)

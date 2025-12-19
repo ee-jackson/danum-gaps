@@ -13,6 +13,7 @@ library("tidybayes")
 library("patchwork")
 library("rtry")
 library("ggtext")
+library("ggpmisc")
 
 
 # Get growth --------------------------------------------------------------
@@ -193,7 +194,9 @@ fig_sla <-
   geom_point(shape = 16, alpha = 0.6) +
   facet_wrap(~names, scales = "free") +
   geom_hline(yintercept = 0, colour = "red", linetype = 2, linewidth = 0.25) +
-  ggpubr::stat_cor(size = 2, label.y.npc = 0.85) +
+  ggpmisc::stat_correlation(r.conf.level = 0.95,method = "pearson",
+                            size = 1.5, mapping = use_label("R", "R.CI"),
+                            label.y = 0.85) +
   labs(y = "Additional effect of logging
        <br>(logged forest estimate - old-growth forest estimate)",
        x = "Specific leaf area (mm<sup>2</sup>/mg)") +
@@ -212,7 +215,9 @@ fig_wd <-
   geom_point(shape = 16, alpha = 0.6) +
   facet_wrap(~names, scales = "free") +
   geom_hline(yintercept = 0, colour = "red", linetype = 2, linewidth = 0.25) +
-  ggpubr::stat_cor(size = 2, label.y.npc = 0.85) +
+  ggpmisc::stat_correlation(r.conf.level = 0.95,method = "pearson",
+                            size = 1.5, mapping = use_label("R", "R.CI"),
+                            label.y = 0.85) +
   labs(y = "Additional effect of logging
        <br>(logged forest estimate - old-growth forest estimate)",
        x = "Wood density (g/cm<sup>3</sup>)") +

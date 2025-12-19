@@ -110,6 +110,16 @@ breast height, to find the value which gave the lowest Root Mean Squared Error.
 
 ![In (a), estimated values of basal diameter are plotted against their true values. The red line indicates where the estimate is equal to the true value. (b) Shows the distribution of the error around zero (red line).](../code/notebooks/figures/2025-07-28_estimate-basal-diameter/unnamed-chunk-7-1.png){#fig-est-basal width=400}
 
+# Prior choice
+
+![Prior and posterior distributions for the growth model. Facet columns indicate parameters estimated by the model. Facet rows indicate the prior and posterior distributions. Note that the same priors were set for both forest types, and that axes are not preserved across panels.](../code/notebooks/figures/2025-06-13_growth-prior-vs-posterior/unnamed-chunk-4-1.png){#fig-prior-gro width=400}
+
+![Prior and posterior distributions for the survival model. Prior and posterior distributions are displayed in separate panels and colours represent regression coefficients for the population-level, or "fixed" effects. Note that the same prior was set across all the population-level parameters, and that axes are not preserved across panels. ](../code/notebooks/figures/2025-06-18_survival-prior-vs-posterior/unnamed-chunk-4-1.png){#fig-prior-surv width=400}
+
+# Growth curves over time 
+
+![Basal diameter measurements for all seedlings over time (black points). Coloured lines show posterior predictions for a species in the old-growth (green) and logged (yellow) forest. ](../code/notebooks/figures/2025-12-19_supp-growth-fits-w-data/sp_preds.png){#fig-gro-data width=325}
+
 # Posterior predictive checks
 
 ![Posterior predictive check for the growth model, where the observed data is in dark blue (_y_) and 50 draws from the posterior distribution are in light blue (_yrep_).](../code/notebooks/figures/2025-09-12_posterior-predictive-checks/unnamed-chunk-4-1.png){#fig-ppcheck-gro width=400}
@@ -130,7 +140,7 @@ readr::read_csv(
 
 ```{r}
 #| label: tab-survival-params
-#| tbl-cap: "Posterior estimates of fixed effects from the survival model"
+#| tbl-cap: "Posterior estimates of population-level effects from the survival model"
 
 readr::read_csv(
         here::here(
@@ -140,8 +150,3 @@ readr::read_csv(
   knitr::kable()
 ```
 
-# Prior choice
-
-![Prior and posterior distributions for the growth model. Facet columns indicate parameters estimated by the model. Facet rows indicate the prior and posterior distributions. Note that the same priors were set for both forest types, and that axes are not preserved across panels.](../code/notebooks/figures/2025-06-13_growth-prior-vs-posterior/unnamed-chunk-4-1.png){#fig-prior-gro width=400}
-
-![Prior and posterior distributions for the survival model. Prior and posterior distributions are displayed in separate panels and colours represent regression coefficients for the population-level, or "fixed" effects. Note that the same prior was set across all the population-level parameters, and that axes are not preserved across panels. ](../code/notebooks/figures/2025-06-18_survival-prior-vs-posterior/unnamed-chunk-4-1.png){#fig-prior-surv width=400}

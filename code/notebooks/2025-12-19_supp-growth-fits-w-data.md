@@ -1,0 +1,122 @@
+# Figures of growth curves with data points
+eleanorjackson
+2025-12-19
+
+``` r
+library("tidyverse")
+library("tidybayes")
+library("modelr")
+library("ggtext")
+library("ggview")
+```
+
+``` r
+mod_gro <-
+  readRDS(here::here("output", "models",
+                     "growth_model_base_p3_allo.rds"))
+```
+
+``` r
+data <-
+  readRDS(here::here("data", "derived", "data_cleaned.rds")) %>%
+  filter(survival == 1)
+
+well_sampled_trees <-
+  data %>%
+  group_by(plant_id) %>%
+  summarise(records = sum(!is.na(dbase_mean))) %>%
+  filter(records > 2)
+
+data_gro <-
+  data %>%
+  filter(plant_id %in% well_sampled_trees$plant_id)
+```
+
+``` r
+preds_sp <- 
+  data_grid(data_gro,
+            genus_species,
+            years = 0:20,
+            forest_type = c("primary", "logged")) %>%
+  add_epred_draws(mod_gro,
+                  re_formula =
+                    `log(A)` ~ 0 + forest_type|genus_species,
+                    k ~ 0 + forest_type|genus_species,
+                    delay ~ 0 + forest_type|genus_species) %>%
+  mutate(forest_type = case_when(
+      grepl("logged", forest_type) ~ "Logged",
+      grepl("primary", forest_type) ~ "Old-growth")) %>%
+  mutate(Species = str_replace(genus_species, "_", " ")) %>%
+  mutate(Species = paste0("<i>", Species, "</i>", sep = ""))
+```
+
+``` r
+data_gro <- 
+  data_gro %>%
+    mutate(forest_type = case_when(
+      grepl("logged", forest_type) ~ "Logged",
+      grepl("primary", forest_type) ~ "Old-growth")) %>%
+  mutate(Species = str_replace(genus_species, "_", " ")) %>%
+  mutate(Species = paste0("<i>", Species, "</i>", sep = ""))
+```
+
+``` r
+pal <-
+  c("Logged" = "#e69f00", "Old-growth" = "#009e73")
+
+ggplot() +
+  geom_point(data = data_gro,
+             aes(x = years, y = dbase_mean),
+             alpha = 0.3,
+             shape = 16,
+             size = 0.75,
+             show.legend = FALSE) +
+  stat_lineribbon(data = preds_sp,
+                  aes(x = years, y = .epred, colour = forest_type),
+                  .width = 0,
+                  linewidth = 1,
+                  show.legend = FALSE) +
+  facet_wrap(Species~forest_type,
+             ncol = 4) +
+  scale_fill_manual(values = pal) +
+  scale_colour_manual(values = pal) +
+  labs(y = "Basal diameter mm",
+       x = "Years since first measurement") +
+  theme(strip.text = element_markdown()) 
+```
+
+![](figures/2025-12-19_supp-growth-fits-w-data/unnamed-chunk-6-1.png)
+
+``` r
+p <- 
+  ggplot() +
+  geom_point(data = data_gro,
+             aes(x = years, y = dbase_mean),
+             alpha = 0.3,
+             shape = 16,
+             size = 0.75,
+             show.legend = FALSE) +
+  stat_lineribbon(data = preds_sp,
+                  aes(x = years, y = .epred, colour = forest_type),
+                  .width = 0,
+                  linewidth = 1,
+                  show.legend = FALSE) +
+  facet_wrap(Species~forest_type,
+             ncol = 4) +
+  scale_fill_manual(values = pal) +
+  scale_colour_manual(values = pal) +
+  labs(y = "Basal diameter mm",
+       x = "Years since first measurement") +
+  theme(strip.text = element_markdown()) +
+  ggview::canvas(18, 36, units = "cm")
+
+ggview::save_ggplot(
+  p, 
+  file =
+    paste0("figures/", 
+           sub("\\.rmarkdown$", "", basename(file_name)), 
+           "/", 
+           "sp_preds.png", 
+           sep = "")
+  )
+```

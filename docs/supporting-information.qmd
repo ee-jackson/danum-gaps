@@ -1,6 +1,6 @@
 ---
 title: "Supporting Information"
-subtitle: "Danum gaps"
+subtitle: "Lower growth rates and earlier mortality of enrichment planted dipterocarp seedlings in logged versus old-growth forest"
 knitr:
   opts_chunk: 
     echo: false
@@ -141,8 +141,6 @@ readr::read_csv(
 ```
 
 # Prior choice
-
-We set weakly informative priors on each of the three parameters describing growth (equation 1) for the population-level effect of forest type. We left the predictor variables on their original scale, since the parameters have meaningful values. We used a log-normal prior for A, maximum size, with  = 6,  = 1. The world’s tallest tropical tree, found at our primary forest study site in Danum Valley, has a DBH of 212 cm (Shorea faguetiana) (Shenkin et al., 2019). We expect a right-skewed distribution of adult size, with few very large individuals and a lower limit of 0 mm. The Student’s-t distribution is generally recommended for weakly informative priors as it has heavier tails than a normal distribution and hence is more robust to outliers (Ghosh et al., 2017). We used Student’s-t priors with degrees of freedom set to five for the remaining population-level priors. The prior for k, the growth rate coefficient, was set with  = 0,  = 0.5 and a lower bound of 0, since the basal diameter of dipterocarp seedlings in other locations grow at a rate of X-X (cite). Finally, the prior for delay, the time at inflection of the curve in years, was set with  = 0,  = 5. Since seedlings were germinated in the nursery no more than X months before transplanting to the forest, delay cannot be less than -X years and is very unlikely to be greater than 10 years. For the group-level effects of species and seedling ID we used the default priors provided by the R package {brms}: a Student-t prior with three degrees of freedom,  = 0 and  = 2.5.
 
 ![Prior and posterior distributions for the growth model. Facet columns indicate parameters estimated by the model. Facet rows indicate the prior and posterior distributions. Note that the same priors were set for both forest types, and that axes are not preserved across panels.](../code/notebooks/figures/2025-06-13_growth-prior-vs-posterior/unnamed-chunk-4-1.png){#fig-prior-gro width=400}
 

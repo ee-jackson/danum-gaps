@@ -1,0 +1,60 @@
+---
+title: "`summary(growth model)`"
+author: 'eleanorjackson'
+date: '`r format(Sys.time(), "%d %B, %Y")`' 
+format: 
+  gfm:
+    toc: true
+editor: source
+execute:
+  warning: false
+---
+
+```{r setup}
+#| include: false
+
+file_name <- knitr::current_input()
+
+knitr::opts_chunk$set(
+  fig.path =
+    paste0("figures/", sub("\\.rmarkdown$", "", basename(file_name)), 
+           "/", sep = "")
+)
+```
+```{r}
+library("tidyverse")
+library("insight")
+```
+
+```{r}
+mod_gro <-
+  readRDS(here::here("output", "models",
+                     "growth_model_base_p3_allo.rds"))
+```
+
+```{r}
+summary(mod_gro)
+```
+Andrew Gelman, Ben Goodrich, Jonah Gabry & Aki Vehtari. (2018). R-squared for Bayesian regression models, The American Statistician. [10.1080/00031305.2018.1549100](https://doi.org/10.1080/00031305.2018.1549100)
+
+> The usual definition of R2 (variance of the predicted values divided by the variance of the data) has a problem for Bayesian fits, as the numerator can be larger than the denominator. We propose an alternative definition similar to one that has appeared in the survival analysis literature: the variance of the predicted values divided by the variance of predicted values plus the expected variance of the errors.
+
+```{r}
+#| eval: FALSE
+
+brms::bayes_R2(mod_gro)
+```
+
+`Error: vector memory limit of 16.0 Gb reached, see mem.maxVSize()`
+
+
+`VarCorr()` 
+
+>This function calculates the estimated standard deviations, correlations and covariances of the group-level terms in a multilevel model of class brmsfit. For linear models, the residual standard deviations, correlations and covariances are also returned.
+
+> Returns: A list of lists (one per grouping factor), each with three elements: a matrix containing the standard deviations, an array containing the correlation matrix, and an array containing the covariance matrix with variances on the diagonal.
+
+```{r}
+brms::VarCorr(mod_gro)
+```
+

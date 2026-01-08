@@ -35,6 +35,27 @@ mod_gro <-
 ```{r}
 summary(mod_gro)
 ```
+
+`sigma` (Residual SD): Represents the inherent variability (error) 
+in the response variable after accounting for predictors, 
+showing how much individual data points deviate from their predicted values.
+
+Group-Level SDs (under Multilevel Hyperparameters i.e., `~genus_species` and `~plant_id`): 
+Quantify the variation between groups (i.e., species and individuals), 
+indicating if group effects are similar or highly dispersed.
+
+`Est.Error`: shows the standard deviation of the posterior for fixed effects 
+and group-level parameters, reflecting uncertainty in those estimates. 
+
+Looks like there is more variation in _A_ and _delay_ between individuals than between species?
+Variation in _k_ is similar between between individuals and between species.
+
+- Since `~plant_id` `sd(A_Intercept) ` is 51.38
+- and `~genus_species` `sd(A_forest_typelogged)` is 34.70 and `sd(A_forest_typeprimary)` is 20.33
+
+- `~plant_id` `sd(delay_Intercept)` is 1.56
+- and `~genus_species` `sd(delay_forest_typelogged)` is 0.72 and `sd(delay_forest_typeprimary)` is 0.28
+
 Andrew Gelman, Ben Goodrich, Jonah Gabry & Aki Vehtari. (2018). R-squared for Bayesian regression models, The American Statistician. [10.1080/00031305.2018.1549100](https://doi.org/10.1080/00031305.2018.1549100)
 
 > The usual definition of R2 (variance of the predicted values divided by the variance of the data) has a problem for Bayesian fits, as the numerator can be larger than the denominator. We propose an alternative definition similar to one that has appeared in the survival analysis literature: the variance of the predicted values divided by the variance of predicted values plus the expected variance of the errors.

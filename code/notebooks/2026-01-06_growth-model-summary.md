@@ -1,6 +1,6 @@
 # `summary(growth model)`
 eleanorjackson
-2026-01-06
+2026-01-08
 
 ``` r
 library("tidyverse")
@@ -89,6 +89,33 @@ summary(mod_gro)
     Draws were sampled using sampling(NUTS). For each parameter, Bulk_ESS
     and Tail_ESS are effective sample size measures, and Rhat is the potential
     scale reduction factor on split chains (at convergence, Rhat = 1).
+
+`sigma` (Residual SD): Represents the inherent variability (error) in
+the response variable after accounting for predictors, showing how much
+individual data points deviate from their predicted values.
+
+Group-Level SDs (under Multilevel Hyperparameters i.e., `~genus_species`
+and `~plant_id`): Quantify the variation between groups (i.e., species
+and individuals), indicating if group effects are similar or highly
+dispersed.
+
+`Est.Error`: shows the standard deviation of the posterior for fixed
+effects and group-level parameters, reflecting uncertainty in those
+estimates.
+
+Looks like there is more variation in *A* and *delay* between
+individuals than between species? Variation in *k* is similar between
+between individuals and between species.
+
+- Since `~plant_id` `sd(A_Intercept)` is 51.38
+
+- and `~genus_species` `sd(A_forest_typelogged)` is 34.70 and
+  `sd(A_forest_typeprimary)` is 20.33
+
+- `~plant_id` `sd(delay_Intercept)` is 1.56
+
+- and `~genus_species` `sd(delay_forest_typelogged)` is 0.72 and
+  `sd(delay_forest_typeprimary)` is 0.28
 
 Andrew Gelman, Ben Goodrich, Jonah Gabry & Aki Vehtari. (2018).
 R-squared for Bayesian regression models, The American Statistician.

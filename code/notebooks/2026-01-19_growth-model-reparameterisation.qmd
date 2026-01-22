@@ -1,0 +1,258 @@
+---
+title: "Reparameterising the growth model"
+author: 'eleanorjackson'
+date: '`r format(Sys.time(), "%d %B, %Y")`' 
+format: 
+  gfm:
+    toc: true
+editor: source
+execute:
+  warning: false
+---
+
+```{r setup}
+#| include: false
+
+file_name <- knitr::current_input()
+
+knitr::opts_chunk$set(
+  fig.path =
+    paste0("figures/", sub("\\.rmarkdown$", "", basename(file_name)), 
+           "/", sep = "")
+)
+
+set.seed(20472)
+ggplot2::theme_set(ggplot2::theme_bw(base_size = 10))
+```
+
+
+`dbase_mean ~ A * exp(-exp(-kG * (years - Ti)))`
+
+Is equation 1 in Tjørve & Tjørve (2017). To constrain `A` and `kG` to be positive we use:
+
+`dbase_mean ~ exp(logA) * exp(-exp(- exp(logkG) * (years - Ti)))`
+
+and, with `family = lognormal()` brms interprets our nonlinear predictor as mu on the log scale. Therefore, we write the Gompertz on the log scale:
+
+`dbase_mean ~ logA - exp(-(exp(logkG) * (years - Ti)))`
+
+to predict `dbase_mean` on the response scale and give `A` and `kG` on the response scale as `A = exp(logA)` and `kG = exp(logkG)`.
+
+```{r}
+library("tidyverse")
+library("tidybayes")
+library("brms")
+library("ggtext")
+```
+
+This is the new formula reparameterisation run on a **subset** of the data.
+
+```{r}
+mod_gro <-
+  readRDS(here::here("output", "models",
+                     "growth_model_base_p3_allo_priors5_sub.rds"))
+```
+
+```{r}
+summary(mod_gro)
+```
+
+## Check priors
+
+```{r}
+prior_draws <- 
+  prior_draws(mod_gro) %>% 
+  select(contains("b_"))
+
+post_draws <- 
+  as_draws_df(mod_gro, variable = "^b_", regex = TRUE)
+
+prior_post <- 
+  bind_rows(prior = prior_draws, 
+          posterior = post_draws,
+          .id = "dist") %>% 
+  pivot_longer(cols = contains("b_")) %>% 
+  mutate(parameter = str_split_i(string = name, 
+                                 pattern ="_", i = 2)) %>% 
+  mutate(forest_type = case_when(
+    grepl("logged", name) ~ "Logged forest",
+    grepl("primary", name) ~ "Old-growth forest")) %>% 
+  mutate(parameter = str_remove(string = parameter, 
+                                 pattern ="logged")) %>% 
+  mutate(parameter = str_remove(string = parameter, 
+                                 pattern ="primary"))
+```
+
+```{r}
+pal <-
+  c("Logged forest" = "#e69f00", "Old-growth forest" = "#009e73")
+
+prior_post %>% 
+  mutate(dist = str_to_sentence(dist)) %>%
+  mutate(dist = factor(dist, levels = c("Prior", "Posterior"))) %>%
+  mutate(name = case_when(
+    parameter == "logA" ~ "<i>log A</i>, Asymptotic basal<br>diameter (mm)",
+    parameter == "logkG" ~ "<i>log k<sub>G</sub></i>, Growth rate<br>coefficient",
+    parameter == "Ti" ~ "<i>T<sub>i</sub></i>, Time to reach max<br>growth rate (years)"
+  )) %>%
+  mutate(value = case_when(
+    parameter == "logA" ~ value,
+    parameter == "logkG" ~ value,
+    parameter == "Ti" ~ value
+  )) %>%
+  filter(value < 50) %>% 
+  filter(value > -50) %>% 
+  ggplot(aes(x = value, fill = forest_type)) +
+  geom_density(alpha = 0.5) +
+  ggh4x::facet_grid2(dist~name, scales = "free", independent = "all") +
+  scale_fill_manual(values = pal) +
+  theme(legend.position = "bottom",
+        strip.text = element_markdown(),
+        legend.title = element_blank())
+```
+
+## Check forest type preds
+
+```{r}
+data_gro <-
+  readRDS(here::here("data", "derived", "data_cleaned.rds")) %>%
+  filter(survival == 1) %>%
+  drop_na(dbase_mean)
+```
+
+```{r}
+# predicting diameter at 1 year time points
+gro_epred <-
+  data_gro %>%
+  modelr::data_grid(years = c(0:20),
+            forest_type) %>%
+  add_epred_draws(mod_gro,
+                  re_formula = NA)
+
+# calculate growth rate
+gro_rate_epred <-
+  gro_epred %>%
+  group_by(forest_type, years) %>%
+  point_interval(.epred,
+                 .width = 0.95,
+                 .point = median,
+                 .interval = qi,
+                 na.rm = TRUE) %>%
+  group_by(forest_type) %>%
+  mutate(lag_epred = lag(.epred, n = 1, order_by = years),
+         lag_epred_low = lag(.lower, n = 1, order_by = years),
+         lag_epred_up = lag(.upper, n = 1, order_by = years)) %>%
+  rowwise() %>%
+  mutate(y_value = .epred - lag_epred,
+         y_min = .lower - lag_epred_low,
+         y_max = .upper - lag_epred_up) %>%
+  ungroup() %>%
+  rename(x_min = .lower,
+         x_max = .upper,
+         x_value = .epred) %>%
+  mutate(type = "growth")
+```
+
+```{r}
+pal <-
+  c("Logged" = "#e69f00", "Old-growth" = "#009e73")
+
+gro_rate_epred %>%
+    mutate(forest_type = case_when(
+      grepl("logged", forest_type) ~ "Logged",
+      grepl("primary", forest_type) ~ "Old-growth")) %>%
+    ggplot(aes(x = x_value, y = y_value,
+               xmin = x_min, xmax = x_max,
+               ymin = y_min, ymax = y_max,
+               colour = forest_type,
+               fill = forest_type)) +
+    geom_pointinterval(interval_alpha = 0.5, orientation = "y",
+                       size = 0.5, show.legend = FALSE) +
+    geom_pointinterval(interval_alpha = 0.5, orientation = "x",
+                       size = 0.5, show.legend = FALSE) +
+    geom_line(show.legend = FALSE) +
+    scale_fill_manual(values = pal) +
+    scale_colour_manual(values = pal) +
+    labs(x = "Basal diameter (mm)",
+         y = "Basal diameter growth")
+```
+
+## Check species preds
+
+```{r}
+preds_sp <- 
+  modelr::data_grid(data_gro, 
+                    forest_type, genus_species,
+                    years = c(0:20)) %>%
+  add_epred_draws(mod_gro,
+                  re_formula =
+                    `log(A)` ~ 0 + forest_type|genus_species,
+                    k ~ 0 + forest_type|genus_species,
+                    delay ~ 0 + forest_type|genus_species) %>% 
+  mutate(forest_type_name = case_when(
+      grepl("logged", forest_type) ~ "Logged",
+      grepl("primary", forest_type) ~ "Old-growth")) 
+```
+
+```{r}
+ggplot() +
+  stat_lineribbon(data = preds_sp,
+                  aes(x = years, y = .epred, 
+                      colour = forest_type_name, group = forest_type),
+                  .width = 0,
+                  alpha = 0.5,
+                  linewidth = 1,
+                  show.legend = FALSE) +
+  facet_wrap(~genus_species,
+             ncol = 4, scales = "free_y") +
+  scale_fill_manual(values = pal) +
+  scale_colour_manual(values = pal) +
+  labs(y = "Basal diameter mm",
+       x = "Years since first measurement") 
+```
+
+## Check individual preds
+
+```{r}
+plant_ids <-
+  mod_gro$data %>% 
+  select(plant_id, forest_type, genus_species) %>% 
+  distinct()
+
+preds_sp <- 
+  modelr::data_grid(mod_gro$data,
+                    plant_id,
+                    years = seq(-5,20,2)) %>%
+  left_join(plant_ids) %>% 
+  mutate(plant_id = droplevels(plant_id)) %>% 
+  add_epred_draws(mod_gro) %>% 
+  mutate(forest_type_name = case_when(
+      grepl("logged", forest_type) ~ "Logged",
+      grepl("primary", forest_type) ~ "Old-growth")) 
+```
+
+```{r}
+#| fig-height: 15
+#| fig-width: 5
+ggplot() +
+  stat_lineribbon(data = preds_sp,
+                  aes(x = years, y = .epred, 
+                      colour = forest_type_name, group = plant_id),
+                  .width = 0,
+                  alpha = 0.3,
+                  linewidth = 1,
+                  show.legend = FALSE) +
+  geom_point(data = mod_gro$data,
+             aes(x = years, y = dbase_mean),
+             shape = 16,
+             size = 1,
+             alpha = 0.7,
+             show.legend = FALSE) +
+  facet_grid(genus_species~forest_type,
+             scales = "free_y") +
+  scale_fill_manual(values = pal) +
+  scale_colour_manual(values = pal) +
+  labs(y = "Basal diameter mm",
+       x = "Years since first measurement") 
+```
+

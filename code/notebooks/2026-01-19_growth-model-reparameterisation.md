@@ -1,6 +1,6 @@
 # Reparameterising the growth model
 eleanorjackson
-2026-01-22
+2026-01-26
 
 - [Check priors](#check-priors)
 - [Check forest type preds](#check-forest-type-preds)
@@ -44,7 +44,7 @@ summary(mod_gro)
 ```
 
      Family: lognormal 
-      Links: mu = identity 
+      Links: mu = identity; sigma = identity 
     Formula: dbase_mean ~ logA - exp(-(exp(logkG) * (years - Ti))) 
              logA ~ 0 + forest_type + (0 + forest_type | genus_species) + (1 | plant_id)
              logkG ~ 0 + forest_type + (0 + forest_type | genus_species) + (1 | plant_id)
@@ -175,21 +175,41 @@ prior_post %>%
 ## Check forest type preds
 
 ``` r
-data_gro <-
-  readRDS(here::here("data", "derived", "data_cleaned.rds")) %>%
-  filter(survival == 1) %>%
-  drop_na(dbase_mean)
+# predicting diameter at 1 year time points
+gro_epred <-
+  mod_gro$data %>%
+  modelr::data_grid(years = c(-5:20),
+            forest_type) %>%
+  add_epred_draws(mod_gro,
+                  re_formula = NA) %>% 
+  mutate(forest_type = case_when(
+      grepl("logged", forest_type) ~ "Logged",
+      grepl("primary", forest_type) ~ "Old-growth")) 
 ```
 
 ``` r
-# predicting diameter at 1 year time points
-gro_epred <-
-  data_gro %>%
-  modelr::data_grid(years = c(0:20),
-            forest_type) %>%
-  add_epred_draws(mod_gro,
-                  re_formula = NA)
+pal <-
+  c("Logged" = "#e69f00", "Old-growth" = "#009e73")
+```
 
+``` r
+ggplot() +
+  stat_lineribbon(data = gro_epred,
+                  aes(x = years, y = .epred, 
+                      colour = forest_type, group = forest_type),
+                  .width = 0,
+                  alpha = 0.5,
+                  linewidth = 1,
+                  show.legend = FALSE) +
+  scale_colour_manual(values = pal) +
+  geom_vline(xintercept = 0, linetype = 2) +
+  labs(y = "Basal diameter mm",
+       x = "Years since first measurement") 
+```
+
+![](figures/2026-01-19_growth-model-reparameterisation/unnamed-chunk-8-1.png)
+
+``` r
 # calculate growth rate
 gro_rate_epred <-
   gro_epred %>%
@@ -215,13 +235,7 @@ gro_rate_epred <-
 ```
 
 ``` r
-pal <-
-  c("Logged" = "#e69f00", "Old-growth" = "#009e73")
-
 gro_rate_epred %>%
-    mutate(forest_type = case_when(
-      grepl("logged", forest_type) ~ "Logged",
-      grepl("primary", forest_type) ~ "Old-growth")) %>%
     ggplot(aes(x = x_value, y = y_value,
                xmin = x_min, xmax = x_max,
                ymin = y_min, ymax = y_max,
@@ -234,17 +248,17 @@ gro_rate_epred %>%
     geom_line(show.legend = FALSE) +
     scale_fill_manual(values = pal) +
     scale_colour_manual(values = pal) +
-    labs(x = "Basal diameter (mm)",
+    labs(x = "Basal diameter mm",
          y = "Basal diameter growth")
 ```
 
-![](figures/2026-01-19_growth-model-reparameterisation/unnamed-chunk-8-1.png)
+![](figures/2026-01-19_growth-model-reparameterisation/unnamed-chunk-10-1.png)
 
 ## Check species preds
 
 ``` r
 preds_sp <- 
-  modelr::data_grid(data_gro, 
+  modelr::data_grid(mod_gro$data, 
                     forest_type, genus_species,
                     years = c(0:20)) %>%
   add_epred_draws(mod_gro,
@@ -274,7 +288,7 @@ ggplot() +
        x = "Years since first measurement") 
 ```
 
-![](figures/2026-01-19_growth-model-reparameterisation/unnamed-chunk-10-1.png)
+![](figures/2026-01-19_growth-model-reparameterisation/unnamed-chunk-12-1.png)
 
 ## Check individual preds
 
@@ -319,4 +333,4 @@ ggplot() +
        x = "Years since first measurement") 
 ```
 
-![](figures/2026-01-19_growth-model-reparameterisation/unnamed-chunk-12-1.png)
+![](figures/2026-01-19_growth-model-reparameterisation/unnamed-chunk-14-1.png)

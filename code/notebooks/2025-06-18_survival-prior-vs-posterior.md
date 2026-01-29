@@ -1,6 +1,6 @@
 # Plotting priors vs posteriors for our survival model
 eleanorjackson
-2025-09-11
+2026-01-29
 
 ``` r
 library("tidyverse")
@@ -53,7 +53,7 @@ prior_post %>%
   ggplot(aes(x = value, fill = type)) +
   geom_density(alpha = 0.5) +
   facet_wrap(~dist, scales = "free", ncol = 1) +
-  scale_fill_manual(values = pal) +
+  scale_fill_manual(values = pal, breaks = ~ .x[!is.na(.x)]) +
   theme(legend.title = element_blank())
 ```
 

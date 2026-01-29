@@ -76,6 +76,6 @@ prior_post %>%
   ggplot(aes(x = value, fill = type)) +
   geom_density(alpha = 0.5) +
   facet_wrap(~dist, scales = "free", ncol = 1) +
-  scale_fill_manual(values = pal) +
+  scale_fill_manual(values = pal, breaks = ~ .x[!is.na(.x)]) +
   theme(legend.title = element_blank())
 ```

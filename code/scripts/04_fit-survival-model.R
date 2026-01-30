@@ -55,7 +55,7 @@ survival_model <-
       seed = 123,
       init = 0,
       file_refit = "always",
-      file = "output/models/survival/survival_model_allo_nocenter")
+      file = "output/models/survival/survival_model")
 
 add_criterion(survival_model,
               criterion = "loo")

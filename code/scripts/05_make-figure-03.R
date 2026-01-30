@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 
 ## Author: E E Jackson, eleanor.elizabeth.j@gmail.com
-## Script:
+## Script: make-figure-03.R
 ## Desc: Make figure 3
 ## Date created: 2025-08-07
 
@@ -19,35 +19,24 @@ library("ggtext")
 # Get models --------------------------------------------------------------
 
 mod_surv <-
-  readRDS(here::here("output", "models", "survival",
-                     "survival_model_allo_nocenter.rds"))
+  readRDS(here::here("output", "models",
+                     "survival_model.rds"))
 
 mod_gro <-
   readRDS(here::here("output", "models",
-                     "growth_model_base_p3_allo.rds"))
+                     "growth_model.rds"))
+
 
 # Get data ----------------------------------------------------------------
 
 data_surv <-
-  readRDS(here::here("data", "derived", "data_survival.rds"))
+  mod_surv$data
+
+data_gro <-
+  mod_gro$data
 
 data <-
   readRDS(here::here("data", "derived", "data_cleaned.rds"))
-
-alive_trees <-
-  data %>%
-  filter(survival == 1) %>%
-  filter(! if_all(c(dbh_mean, dbase_mean), is.na))
-
-well_sampled_alive_trees <-
-  alive_trees %>%
-  group_by(plant_id) %>%
-  summarise(n = n()) %>%
-  filter(n > 2)
-
-data_gro <-
-  alive_trees %>%
-  filter(plant_id %in% well_sampled_alive_trees$plant_id)
 
 
 # Get forest type predictions of survival ---------------------------------
@@ -215,9 +204,9 @@ gro_epred_sp <-
             .model = mod_gro) %>%
   add_epred_draws(object = mod_gro, ndraws = NULL,
                   re_formula =
-                    `log(A)` ~ 0 + forest_type|genus_species,
-                  k ~ 0 + forest_type|genus_species,
-                  delay ~ 0 + forest_type|genus_species
+                  logA ~ 0 + forest_type|genus_species,
+                  logkG ~ 0 + forest_type|genus_species,
+                  Ti ~ 0 + forest_type|genus_species
   )
 
 gro_rate_epred_sp <-
@@ -249,7 +238,7 @@ pal <-
   c("Logged" = "#e69f00", "Old-growth" = "#009e73")
 
 
-# Horizontal figure -------------------------------------------------------
+# Build figure ------------------------------------------------------------
 
   p1 <-
     gro_rate_epred %>%
@@ -350,5 +339,6 @@ jpeg(
           legend.position.inside = c(0.9, 0.9),
           axis.title.y = element_markdown(),
           strip.text = element_markdown(),
-          legend.title = element_blank())
+          legend.title = element_blank(),
+          legend.text = element_text(size = 6))
 dev.off()

@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 
 ## Author: E E Jackson, eleanor.elizabeth.j@gmail.com
-## Script:
+## Script: make-figure-04.R
 ## Desc: Make figure 4
 ## Date created: 2025-04-21
 
@@ -20,11 +20,11 @@ library("ggtext")
 
 mod_gro <-
   readRDS(here::here("output", "models",
-                     "growth_model_base_p3_allo.rds"))
+                     "growth_model.rds"))
 
 mod_surv <-
-  readRDS(here::here("output", "models", "survival",
-                     "survival_model_allo_nocenter.rds"))
+  readRDS(here::here("output", "models",
+                     "survival_model.rds"))
 
 
 # Test hypotheses ---------------------------------------------------------
@@ -33,17 +33,18 @@ hypothesis(mod_surv,
            "forest_typelogged - forest_typeprimary = 0")
 
 hypothesis(mod_gro,
-           "A_forest_typelogged - A_forest_typeprimary = 0")
+           "logA_forest_typelogged - logA_forest_typeprimary = 0")
 
 hypothesis(mod_gro,
-           "k_forest_typelogged - k_forest_typeprimary = 0")
+           "logkG_forest_typelogged - logkG_forest_typeprimary = 0")
 
 hypothesis(mod_gro,
-           "delay_forest_typelogged - delay_forest_typeprimary = 0")
+           "Ti_forest_typelogged - Ti_forest_typeprimary = 0")
 
 
 # Make summary tables -----------------------------------------------------
 
+# In lognormal models, brms provides the median on the log scale
 post_summary_gro <-
   summary(mod_gro)$fixed %>%
   rownames_to_column(var = "Parameter") %>%
@@ -54,14 +55,20 @@ post_summary_gro <-
   mutate(Parameter = str_split_i(string = Parameter, pattern ="_", i = 1)) %>%
   mutate(across(c(Estimate, `l-95% CI`, `u-95% CI`), ~
                   case_when(
-                    Parameter == "k" ~ (. / exp(1))*100,
+                    Parameter == "logkG" | Parameter == "logA" ~ exp(.),
                     .default = .
                   ))) %>%
-  mutate(Parameter = ifelse(Parameter == "delay", "T~i~", Parameter)) %>%
-  mutate(Parameter = ifelse(Parameter == "k", "k~G~/e", Parameter)) %>%
+  mutate(across(c(Estimate, `l-95% CI`, `u-95% CI`), ~
+                  case_when(
+                    Parameter == "logkG" ~ (. / exp(1))*100,
+                    .default = .
+                  ))) %>%
+  mutate(Parameter = ifelse(Parameter == "Ti", "T~i~", Parameter)) %>%
+  mutate(Parameter = ifelse(Parameter == "logkG", "k~G~/e", Parameter)) %>%
+  mutate(Parameter = ifelse(Parameter == "logA", "A", Parameter)) %>%
   select(Parameter, `Forest type`, Estimate, `l-95% CI`,
          `u-95% CI`, Rhat, Bulk_ESS, Tail_ESS) %>%
-  rename(`Posterior mean` = Estimate,
+  rename(`Posterior median` = Estimate,
          `Bulk effective sample size` = Bulk_ESS,
          `Tail effective sample size` = Tail_ESS) %>%
   mutate(across(!Parameter & !`Forest type`, \(x) round(x, 3)))
@@ -72,24 +79,18 @@ write_csv(post_summary_gro,
             "results",
             "posterior_summary_growth.csv"))
 
+# For the survival model we need to specify robust = TRUE to get the median and MAD
 post_summary_surv <-
-  summary(mod_surv)$fixed %>%
+  summary(mod_surv, robust = TRUE)$fixed %>%
   rownames_to_column(var = "Parameter") %>%
   mutate(Parameter = case_when(
     grepl("forest_typelogged", Parameter) ~ "Logged forest",
     grepl("forest_typeprimary", Parameter) ~ "Old-growth forest",
     grepl("dbase_mean_sc", Parameter) ~ "Basal diameter")) %>%
   mutate(Parameter = str_split_i(string = Parameter, pattern ="_", i = 1)) %>%
-  mutate(across(c(Estimate, `l-95% CI`, `u-95% CI`), ~
-                  case_when(
-                    Parameter == "k" ~ (. / exp(1))*100,
-                    .default = .
-                  ))) %>%
-  mutate(Parameter = ifelse(Parameter == "delay", "T~i~", Parameter)) %>%
-  mutate(Parameter = ifelse(Parameter == "k", "k~G~/e", Parameter)) %>%
   select(Parameter, Estimate, `l-95% CI`,
          `u-95% CI`, Rhat, Bulk_ESS, Tail_ESS) %>%
-  rename(`Posterior mean` = Estimate,
+  rename(`Posterior median` = Estimate,
          `Bulk effective sample size` = Bulk_ESS,
          `Tail effective sample size` = Tail_ESS) %>%
   mutate(across(!Parameter, \(x) round(x, 3)))
@@ -107,24 +108,29 @@ write_csv(post_summary_surv,
 ft_ests_grow <-
   mod_gro %>%
   gather_draws(
-    b_A_forest_typeprimary,
-    b_A_forest_typelogged,
-    b_k_forest_typeprimary,
-    b_k_forest_typelogged,
-    b_delay_forest_typeprimary,
-    b_delay_forest_typelogged) %>%
+    b_logA_forest_typeprimary,
+    b_logA_forest_typelogged,
+    b_logkG_forest_typeprimary,
+    b_logkG_forest_typelogged,
+    b_Ti_forest_typeprimary,
+    b_Ti_forest_typelogged
+  ) %>%
   mutate(forest_type = case_when(
     grepl("logged", .variable) ~ "Logged",
-    grepl("primary", .variable) ~ "Old-growth")) %>%
-  mutate(parameter = case_when(
-    grepl("A", .variable) ~ "A",
-    grepl("k", .variable) ~ "k",
-    grepl("delay", .variable) ~ "delay")) %>%
-  mutate(.value = case_when(
-    parameter == "k" ~ (.value / exp(1))*100,
-    .default = .value
+    grepl("primary", .variable) ~ "Old-growth"
   )) %>%
-  select(-.variable)
+  mutate(parameter = case_when(
+    grepl("logA", .variable) ~ "A",
+    grepl("logkG", .variable) ~ "kG",
+    grepl("Ti", .variable) ~ "Ti"
+  )) %>%
+  mutate(.value =
+           case_when(parameter == "kG" |
+                       parameter == "A" ~ exp(.value),
+                     .default = .value)) %>%
+  mutate(.value =
+           case_when(parameter == "kG" ~ (.value / exp(1)) * 100,
+                     .default = .value))
 
 # survival model parameter estimates
 ft_ests_surv <-
@@ -142,8 +148,8 @@ ft_ests <-
   bind_rows(ft_ests_grow, ft_ests_surv) %>%
   mutate(name = case_when(
     parameter == "A" ~ "<i>A</i>, Asymptotic basal diameter (mm)",
-    parameter == "k" ~ "<i>k<sub>G</sub> / e</i>, Maximum relative growth rate (% year<sup>-1</sup>)",
-    parameter == "delay" ~ "<i>T<sub>i</sub></i>, Time to reach max growth rate (years)",
+    parameter == "kG" ~ "<i>k<sub>G</sub> / e</i>, Maximum relative growth rate (% year<sup>-1</sup>)",
+    parameter == "Ti" ~ "<i>T<sub>i</sub></i>, Time to reach max growth rate (years)",
     parameter == "survival" ~ "Effect of forest type on <i>time to mortality</i> (years)"
   ))
 
@@ -154,16 +160,16 @@ ft_ests <-
 sp_ests_A <-
   mod_gro %>%
   spread_draws(
-    b_A_forest_typeprimary,
-    b_A_forest_typelogged,
-    `r_genus_species__A.*`, regex = TRUE) %>%
+    b_logA_forest_typeprimary,
+    b_logA_forest_typelogged,
+    `r_genus_species__logA.*`, regex = TRUE) %>%
   rowwise() %>%
   mutate(across(contains(",forest_typeprimary]"),
-                ~ .x + b_A_forest_typeprimary)) %>%
+                ~ .x + b_logA_forest_typeprimary)) %>%
   mutate(across(contains(",forest_typelogged]"),
-                ~ .x + b_A_forest_typelogged)) %>%
+                ~ .x + b_logA_forest_typelogged)) %>%
   ungroup() %>%
-  pivot_longer(cols = contains("r_genus_species__A")) %>%
+  pivot_longer(cols = contains("r_genus_species__logA")) %>%
 
   mutate(forest_type = case_when(
     grepl("logged", name) ~ "Logged",
@@ -171,53 +177,55 @@ sp_ests_A <-
   mutate(Species = str_split_i(string = name, pattern ="\\[", i = 2)) %>%
   mutate(Species = str_split_i(string = Species, pattern =",", i = 1)) %>%
   mutate(parameter = "A") %>%
-  select(-c("b_A_forest_typeprimary", "b_A_forest_typelogged"))
+  select(-c("b_logA_forest_typeprimary", "b_logA_forest_typelogged")) %>%
+  mutate(value = exp(value))
 
-# k parameter
-sp_ests_k <-
+# kG parameter
+sp_ests_kG <-
   mod_gro %>%
   spread_draws(
-    b_k_forest_typeprimary,
-    b_k_forest_typelogged,
-    `r_genus_species__k.*`, regex = TRUE) %>%
+    b_logkG_forest_typeprimary,
+    b_logkG_forest_typelogged,
+    `r_genus_species__logkG.*`, regex = TRUE) %>%
   rowwise() %>%
   mutate(across(contains(",forest_typeprimary]"),
-                ~ .x + b_k_forest_typeprimary)) %>%
+                ~ .x + b_logkG_forest_typeprimary)) %>%
   mutate(across(contains(",forest_typelogged]"),
-                ~ .x + b_k_forest_typelogged)) %>%
+                ~ .x + b_logkG_forest_typelogged)) %>%
   ungroup() %>%
-  pivot_longer(cols = contains("r_genus_species__k")) %>%
+  pivot_longer(cols = contains("r_genus_species__logkG")) %>%
 
   mutate(forest_type = case_when(
     grepl("logged", name) ~ "Logged",
     grepl("primary", name) ~ "Old-growth")) %>%
   mutate(Species = str_split_i(string = name, pattern ="\\[", i = 2)) %>%
   mutate(Species = str_split_i(string = Species, pattern =",", i = 1)) %>%
-  mutate(parameter = "k") %>%
+  mutate(parameter = "kG") %>%
+  mutate(value = exp(value)) %>%
   mutate(value = (value / exp(1))*100) %>%
-  select(-c("b_k_forest_typeprimary", "b_k_forest_typelogged"))
+  select(-c("b_logkG_forest_typeprimary", "b_logkG_forest_typelogged"))
 
 # delay parameter
-sp_ests_delay <-
+sp_ests_Ti <-
   mod_gro %>%
   spread_draws(
-    b_delay_forest_typeprimary,
-    b_delay_forest_typelogged,
-    `r_genus_species__delay.*`, regex = TRUE) %>%
+    b_Ti_forest_typeprimary,
+    b_Ti_forest_typelogged,
+    `r_genus_species__Ti.*`, regex = TRUE) %>%
   rowwise() %>%
   mutate(across(contains(",forest_typeprimary]"),
-                ~ .x + b_delay_forest_typeprimary)) %>%
+                ~ .x + b_Ti_forest_typeprimary)) %>%
   mutate(across(contains(",forest_typelogged]"),
-                ~ .x + b_delay_forest_typelogged)) %>%
+                ~ .x + b_Ti_forest_typelogged)) %>%
   ungroup() %>%
-  pivot_longer(cols = contains("r_genus_species__delay")) %>%
+  pivot_longer(cols = contains("r_genus_species__Ti")) %>%
   mutate(forest_type = case_when(
     grepl("logged", name) ~ "Logged",
     grepl("primary", name) ~ "Old-growth")) %>%
   mutate(Species = str_split_i(string = name, pattern ="\\[", i = 2)) %>%
   mutate(Species = str_split_i(string = Species, pattern =",", i = 1)) %>%
-  mutate(parameter = "delay") %>%
-  select(-c("b_delay_forest_typeprimary", "b_delay_forest_typelogged"))
+  mutate(parameter = "Ti") %>%
+  select(-c("b_Ti_forest_typeprimary", "b_Ti_forest_typelogged"))
 
 # survival
 sp_ests_surv <-
@@ -239,13 +247,13 @@ sp_ests_surv <-
 # combine
 sp_ests <-
   bind_rows(sp_ests_A,
-            sp_ests_delay,
-            sp_ests_k,
+            sp_ests_Ti,
+            sp_ests_kG,
             sp_ests_surv)%>%
   mutate(name = case_when(
     parameter == "A" ~ "<i>A</i>, Asymptotic basal diameter (mm)",
-    parameter == "k" ~ "<i>k<sub>G</sub> / e</i>, Maximum relative growth rate (% year<sup>-1</sup>)",
-    parameter == "delay" ~ "<i>T<sub>i</sub></i>, Time to reach max growth rate (years)",
+    parameter == "kG" ~ "<i>k<sub>G</sub> / e</i>, Maximum relative growth rate (% year<sup>-1</sup>)",
+    parameter == "Ti" ~ "<i>T<sub>i</sub></i>, Time to reach max growth rate (years)",
     parameter == "survival" ~ "Effect of forest type on <i>time to mortality</i> (years)"
   )) %>%
   mutate(Species = str_replace(Species, "_", " ")) %>%
@@ -261,7 +269,7 @@ pa <-
   ft_ests %>%
   ggplot(aes(x = .value,
              fill = forest_type)) +
-  stat_halfeye(.width = 0.95, slab_alpha = 0.5,
+  stat_halfeye(.width = 0.95, slab_alpha = 0.5, point_interval = "median_qi",
                size = 0.25, normalize = "panels", show.legend = FALSE) +
   theme(legend.position = "bottom") +
   facet_wrap(~name, scales = "free", nrow = 4) +
@@ -276,7 +284,7 @@ pb <-
               values_from = .value) %>%
   mutate(diff = Logged - `Old-growth`) %>%
   ggplot(aes(x = diff)) +
-  stat_halfeye(.width = 0.95, slab_alpha = 0.5,
+  stat_halfeye(.width = 0.95, slab_alpha = 0.5, point_interval = "median_qi",
                size = 0.25, normalize = "panels") +
   theme(legend.position = "bottom") +
   facet_wrap(~name, scales = "free", nrow = 4) +
@@ -290,7 +298,8 @@ pc <-
   ggplot(aes(x = value, y = Species,
              fill = forest_type)) +
   stat_halfeye(.width = 0.95, slab_alpha = 0.5, interval_size = 0.05,
-               normalize = "groups", point_size = 0.25) +
+               normalize = "groups", point_size = 0.25,
+               point_interval = "median_qi") +
   theme(legend.position = "bottom") +
   facet_wrap(~name, scales = "free", nrow = 4) +
   scale_fill_manual(values = pal) +
@@ -304,7 +313,8 @@ pd <-
   mutate(diff = Logged - `Old-growth`) %>%
   ggplot(aes(x = diff, y = Species)) +
   stat_halfeye(.width = 0.95, slab_alpha = 0.5, interval_size = 0.05,
-               normalize = "groups", point_size = 0.25) +
+               normalize = "groups", point_size = 0.25,
+               point_interval = "median_qi") +
   theme(legend.position = "bottom") +
   facet_wrap(~name, scales = "free", nrow = 4) +
   geom_vline(xintercept = 0, linetype = 2, colour = "red", linewidth = 0.25) +
@@ -334,5 +344,6 @@ pa+pb+pc+pd+
         axis.title.y = element_markdown(),
         axis.text.y = element_markdown(),
         axis.title.x = element_markdown(),
-        strip.text = element_markdown(lineheight = 0.5))
+        strip.text = element_markdown(lineheight = 0.5),
+        legend.text = element_text(size = 8))
 dev.off()

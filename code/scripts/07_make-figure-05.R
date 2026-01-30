@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 
 ## Author: E E Jackson, eleanor.elizabeth.j@gmail.com
-## Script: 05_relate-sp-traits.R
+## Script: 05_make-figure-05.R
 ## Desc: Relates species growth and survival responses to functional traits
 ## Date created: 2025-07-30
 
@@ -20,95 +20,93 @@ library("ggpmisc")
 
 mod_gro <-
   readRDS(here::here("output", "models",
-                     "growth_model_base_p3_allo.rds"))
+                     "growth_model.rds"))
 
 pc_data_A <-
   mod_gro %>%
   spread_draws(
-    b_A_forest_typeprimary,
-    b_A_forest_typelogged,
-    `r_genus_species__A.*`, regex = TRUE) %>%
+    b_logA_forest_typeprimary,
+    b_logA_forest_typelogged,
+    `r_genus_species__logA.*`, regex = TRUE) %>%
   rowwise() %>%
   mutate(across(contains(",forest_typeprimary]"),
-                ~ .x + b_A_forest_typeprimary)) %>%
+                ~ .x + b_logA_forest_typeprimary)) %>%
   mutate(across(contains(",forest_typelogged]"),
-                ~ .x + b_A_forest_typelogged)) %>%
+                ~ .x + b_logA_forest_typelogged)) %>%
   ungroup() %>%
-  pivot_longer(cols = contains("r_genus_species__A")) %>%
+  pivot_longer(cols = contains("r_genus_species__logA")) %>%
 
   mutate(forest_type = case_when(
-    grepl("logged", name) ~ "logged",
-    grepl("primary", name) ~ "Primary")) %>%
+    grepl("logged", name) ~ "Logged",
+    grepl("primary", name) ~ "Old-growth")) %>%
   mutate(Species = str_split_i(string = name, pattern ="\\[", i = 2)) %>%
   mutate(Species = str_split_i(string = Species, pattern =",", i = 1)) %>%
   mutate(Parameter = "A") %>%
-  select(- b_A_forest_typeprimary, -b_A_forest_typelogged, -name)
+  mutate(value = exp(value)) %>%
+  select(- b_logA_forest_typeprimary, -b_logA_forest_typelogged, -name)
 
-pc_data_k <-
+pc_data_kG <-
   mod_gro %>%
   spread_draws(
-    b_k_forest_typeprimary,
-    b_k_forest_typelogged,
-    `r_genus_species__k.*`, regex = TRUE) %>%
+    b_logkG_forest_typeprimary,
+    b_logkG_forest_typelogged,
+    `r_genus_species__logkG.*`, regex = TRUE) %>%
   rowwise() %>%
   mutate(across(contains(",forest_typeprimary]"),
-                ~ .x + b_k_forest_typeprimary)) %>%
+                ~ .x + b_logkG_forest_typeprimary)) %>%
   mutate(across(contains(",forest_typelogged]"),
-                ~ .x + b_k_forest_typelogged)) %>%
+                ~ .x + b_logkG_forest_typelogged)) %>%
   ungroup() %>%
-  pivot_longer(cols = contains("r_genus_species__k")) %>%
+  pivot_longer(cols = contains("r_genus_species__logkG")) %>%
 
   mutate(forest_type = case_when(
-    grepl("logged", name) ~ "logged",
-    grepl("primary", name) ~ "Primary")) %>%
+    grepl("logged", name) ~ "Logged",
+    grepl("primary", name) ~ "Old-growth")) %>%
   mutate(Species = str_split_i(string = name, pattern ="\\[", i = 2)) %>%
   mutate(Species = str_split_i(string = Species, pattern =",", i = 1)) %>%
-  mutate(Parameter = "k") %>%
-  select(- b_k_forest_typeprimary, -b_k_forest_typelogged, -name) %>%
+  mutate(Parameter = "kG") %>%
+  select(- b_logkG_forest_typeprimary, -b_logkG_forest_typelogged, -name) %>%
+  mutate(value = exp(value)) %>%
   mutate(value = (value / exp(1))*100)
 
-pc_data_delay <-
+pc_data_Ti <-
   mod_gro %>%
   spread_draws(
-    b_delay_forest_typeprimary,
-    b_delay_forest_typelogged,
-    `r_genus_species__delay.*`, regex = TRUE) %>%
+    b_Ti_forest_typeprimary,
+    b_Ti_forest_typelogged,
+    `r_genus_species__Ti.*`, regex = TRUE) %>%
   rowwise() %>%
   mutate(across(contains(",forest_typeprimary]"),
-                ~ .x + b_delay_forest_typeprimary)) %>%
+                ~ .x + b_Ti_forest_typeprimary)) %>%
   mutate(across(contains(",forest_typelogged]"),
-                ~ .x + b_delay_forest_typelogged)) %>%
+                ~ .x + b_Ti_forest_typelogged)) %>%
   ungroup() %>%
-  pivot_longer(cols = contains("r_genus_species__delay")) %>%
+  pivot_longer(cols = contains("r_genus_species__Ti")) %>%
 
   mutate(forest_type = case_when(
-    grepl("logged", name) ~ "logged",
-    grepl("primary", name) ~ "Primary")) %>%
+    grepl("logged", name) ~ "Logged",
+    grepl("primary", name) ~ "Old-growth")) %>%
   mutate(Species = str_split_i(string = name, pattern ="\\[", i = 2)) %>%
   mutate(Species = str_split_i(string = Species, pattern =",", i = 1)) %>%
-  mutate(Parameter = "delay") %>%
-  select(- b_delay_forest_typeprimary, -b_delay_forest_typelogged, -name)
+  mutate(Parameter = "Ti") %>%
+  select(- b_Ti_forest_typeprimary, -b_Ti_forest_typelogged, -name)
 
 growth_params <-
   bind_rows(pc_data_A,
-            pc_data_delay,
-            pc_data_k) %>%
-  mutate(value = case_when(
-    Parameter == "k" ~ (value / exp(1))*100,
-    .default = value
-  )) %>%
+            pc_data_Ti,
+            pc_data_kG) %>%
   pivot_wider(names_from = forest_type, values_from = value) %>%
   rowwise() %>%
   mutate(
-    diff = logged - Primary
+    diff = `Logged` - `Old-growth`
   )
 
 
 # Get survival ------------------------------------------------------------
 
 mod_surv <-
-  readRDS(here::here("output", "models", "survival",
-                     "survival_model_allo_nocenter.rds"))
+  readRDS(here::here("output", "models",
+                     "survival_model.rds"))
 
 surv_params <-
   mod_surv %>%
@@ -122,12 +120,12 @@ surv_params <-
                              r_genus_species +
                              b_forest_typelogged)) %>%
   mutate(forest_type = case_when(
-    forest_type == "forest_typelogged" ~ "logged",
-    forest_type == "forest_typeprimary" ~ "Primary")) %>%
+    forest_type == "forest_typelogged" ~ "Logged",
+    forest_type == "forest_typeprimary" ~ "Old-growth")) %>%
   pivot_wider(names_from = forest_type,
               id_cols = c(genus_species, .chain, .iteration, .draw),
               values_from = value) %>%
-  mutate(diff = logged - Primary,
+  mutate(diff = `Logged` - `Old-growth`,
          Parameter = "survival") %>%
   rename(Species = genus_species)
 
@@ -175,8 +173,8 @@ param_traits_median <-
   left_join(all_params) %>%
   mutate(names = case_when(
     Parameter == "A" ~ "<i>A</i>, Asymptotic basal<br>diameter (mm)",
-    Parameter == "k" ~ "<i>k<sub>G</sub> / e</i>, Maximum relative<br>growth rate (% year<sup>-1</sup>)",
-    Parameter == "delay" ~ "<i>T<sub>i</sub></i>, Time to reach max<br>growth rate (years)",
+    Parameter == "kG" ~ "<i>k<sub>G</sub> / e</i>, Maximum relative<br>growth rate (% year<sup>-1</sup>)",
+    Parameter == "Ti" ~ "<i>T<sub>i</sub></i>, Time to reach max<br>growth rate (years)",
     Parameter == "survival" ~ "<i>survival</i>, Time to typical<br>mortality (years)"
   )) %>%
   group_by(Species, Parameter, names,

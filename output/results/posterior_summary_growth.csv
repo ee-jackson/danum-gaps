@@ -1,7 +1,7 @@
-Parameter,Forest type,Posterior mean,l-95% CI,u-95% CI,Rhat,Bulk effective sample size,Tail effective sample size
-A,Logged,102.462,84.025,121.043,1.003,5261.08,8376.864
-A,Old-growth,57.068,44.889,70.088,1.008,2961.325,10236.973
-k~G~/e,Logged,5.054,4.371,5.729,1.002,7524.692,9803.324
-k~G~/e,Old-growth,14.209,12.385,16.002,1.008,6262.388,13648.914
-T~i~,Logged,-1.398,-1.785,-1.011,1.001,9006.186,11873.259
-T~i~,Old-growth,-0.541,-0.803,-0.288,1.002,4856.719,9402.731
+Parameter,Forest type,Posterior median,l-95% CI,u-95% CI,Rhat,Bulk effective sample size,Tail effective sample size
+A,Logged,49.825,42.829,58.028,1.001,5614.307,6642.914
+A,Old-growth,36.758,28.108,48.255,1,7817.899,6747.319
+k~G~/e,Logged,3.751,3.356,4.192,1,6115.659,6917.982
+k~G~/e,Old-growth,10.239,8.926,11.8,1,9874.542,6836.225
+T~i~,Logged,6.38,5.576,7.229,1,6780.5,6621.473
+T~i~,Old-growth,2.689,2.021,3.397,1,9540.742,7616.194

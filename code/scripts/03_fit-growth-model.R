@@ -23,7 +23,8 @@ options(brms.file_refit = "on_change")
 
 data <-
   readRDS("data/derived/data_cleaned.rds") %>%
-  filter(survival == 1)
+  filter(survival == 1) %>%
+  drop_na(dbase_mean)
 
 well_sampled_trees <-
   data %>%
@@ -38,28 +39,43 @@ data_sample <-
 
 # Set priors --------------------------------------------------------------
 
-priors2 <- c(
-  prior(lognormal(5, 1.2), nlpar = "A", lb = 0),
-  prior(student_t(5, 0, 1), nlpar = "k", lb = 0),
-  prior(student_t(5, 0, 10), nlpar = "delay"))
+priors5 <- c(
+  # logA (Student-t, heavy-tailed)
+  # Centered at ln(50) ≈ 3.9120
+  # Scale chosen so ~99% prior mass for A < 2000 mm
+  set_prior("student_t(3, 3.9120, 0.78)", nlpar = "logA"),
 
-priors3 <- c(
-  prior(lognormal(6, 1), nlpar = "A", lb = 0),
-  prior(student_t(5, 0, 0.5), nlpar = "k", lb = 0),
-  prior(student_t(5, 0, 5), nlpar = "delay"))
+  # logkG (Student-t, heavy-tailed)
+  # Centered at ln(0.2) ≈ -1.6
+  set_prior("student_t(3, -1.6094, 1)", nlpar = "logkG"),
+
+  # Ti (heavy-tailed around 0 - can be negative)
+  set_prior("student_t(3, 0, 10)", nlpar = "Ti")
+)
 
 
 # Define formula ----------------------------------------------------------
 
+# dbase_mean ~ A * exp(-exp(-kG * (years - Ti)))
+# is equation 1 in Tjørve & Tjørve (2017)
+# to constrain A and kG to be positive we use:
+# dbase_mean ~ exp(logA) * exp(-exp(- exp(logkG) * (years - Ti)))
+# and, with `family = lognormal()`
+# brms interprets our nonlinear predictor as mu on the log scale
+# therefore we write the Gompertz on the log scale:
+# dbase_mean ~ logA - exp(-(exp(logkG) * (years - Ti)))
+# to predict dbase_mean on the response scale
+# and give A and kG on the response scale as A = exp(logA) or kG = exp(logkG)
+
 gompertz <-
-  bf(dbase_mean ~ log(A) * exp( -exp( -(k * (years - delay) ) ) ),
-     log(A) ~ 0 + forest_type +
+  bf(dbase_mean ~ logA - exp(-(exp(logkG) * (years - Ti))),
+     logA ~ 0 + forest_type +
        (0 + forest_type|genus_species) +
        (1 | plant_id),
-     k ~ 0 + forest_type +
+     logkG ~ 0 + forest_type +
        (0 + forest_type|genus_species) +
        (1 | plant_id),
-     delay ~ 0 + forest_type +
+     Ti ~ 0 + forest_type +
        (0 + forest_type|genus_species) +
        (1 | plant_id),
      nl = TRUE)
@@ -70,21 +86,20 @@ gompertz <-
 growth_model <-
   brm(gompertz,
       data = data_sample,
-      family = brmsfamily("lognormal"),
-      prior = priors3,
+      family = brmsfamily("lognormal",
+                          link = "identity", link_sigma = "log"),
+      prior = priors5,
       sample_prior = "yes",
       cores = 4,
       chains = 4,
       init = 0,
       seed = 123,
-      iter = 15000,
-      #control = list(adapt_delta = 0.9),
+      iter = 5000,
+      control = list(adapt_delta = 0.95),
       file_refit = "always",
-      file = "output/models/growth_model_base_p3_allo")
+      file = "output/models/growth_model")
 
 add_criterion(x = growth_model,
-              newdata = drop_na(data = data_sample,
-                                dbase_mean),
               criterion = "loo")
 
 print("growth_model fit complete")

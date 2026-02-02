@@ -1,6 +1,6 @@
 # Posterior predictive checks
 eleanorjackson
-2025-10-28
+2026-02-02
 
 - [Growth](#growth)
 - [Survival](#survival)
@@ -24,7 +24,7 @@ library("bayestestR")
 ``` r
 mod_gro <-
   readRDS(here::here("output", "models",
-                     "growth_model_base_p3_allo.rds"))
+                     "growth_model.rds"))
 ```
 
 ``` r
@@ -48,8 +48,8 @@ pp_check(mod_gro, ndraws = 50) +
 
 ``` r
 mod_surv <-
-  readRDS(here::here("output", "models", "survival",
-                     "survival_model_allo_nocenter.rds"))
+  readRDS(here::here("output", "models",
+                     "survival_model.rds"))
 
 data_surv <-
   readRDS(here::here("data", "derived", "data_survival.rds")) %>%

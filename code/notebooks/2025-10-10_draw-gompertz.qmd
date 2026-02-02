@@ -34,8 +34,8 @@ library("patchwork")
 
 ```{r}
 A <- 50 # Asymptotic maximum size
-T_i <- -1 # Time at inflection point
-k_G <- 0.3 # Growth rate parameter
+T_i <- 6 # Time at inflection point
+k_G <- 0.20 # Growth rate parameter
 ```
 
 ```{r}
@@ -54,7 +54,7 @@ intercept <- size_at_Ti - max_growth_rate * T_i
 ```{r}
 # Create data frame with curve and tangent line
 df <- tibble(
-  t = seq(-5, 20, by = 1)
+  t = seq(-1, 20, by = 1)
 ) %>%
   mutate(
     size = gompertz(t, A, k_G, T_i),
@@ -121,11 +121,10 @@ toy_fig <-
     legend.text = element_markdown()
   ) +
   scale_y_continuous(
-    breaks = c(0, 20, 40, A, 60),
+    breaks = c(0, 20, 40, A),
     labels = c(0, 20, 40, 
-               "<span style = 'color:gray40;'>_A_</span>", 
-               60),
-    limits = c(0, 60)
+               "<span style = 'color:gray40;'>_A_</span>"),
+    limits = c(0, 55)
   ) +
   scale_x_continuous(
     breaks = c(-5, T_i, 0, 5, 10, 15, 20),
@@ -175,7 +174,6 @@ toy_fig2 <-
   geom_line(
     stat = "smooth",
     colour = "forestgreen",
-    .width = 0,
     linewidth = 1,
     alpha = 0.6
   ) +
@@ -193,16 +191,15 @@ toy_fig2 <-
     axis.title.y = element_markdown()
   ) +
   scale_y_continuous(
-    breaks = c(0, 2, 4, max_growth_rate),
-    labels = c(0, 2, 4, 
+    breaks = c(0, 1, 2, 3, max_growth_rate),
+    labels = c(0, 1, 2, 3, 
                 "<span style = 'color:gray40;'>_A k<sub>G</sub> / e_</span>"),
   ) +
   scale_x_continuous(
-    breaks = c(0, 20, 40, A, 60),
+    breaks = c(0, 20, 40, A),
     labels = c(0, 20, 40, 
-               "<span style = 'color:gray40;'>_A_</span>", 
-               60),
-    limits = c(0, 60)
+               "<span style = 'color:gray40;'>_A_</span>"),
+    limits = c(0, 55)
   ) 
 
 toy_fig2

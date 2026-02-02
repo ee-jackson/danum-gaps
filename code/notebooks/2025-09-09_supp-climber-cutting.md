@@ -1,6 +1,6 @@
 # Supplementary Information for the climber cutting plots
 eleanorjackson
-2025-10-17
+2026-02-02
 
 ``` r
 library("tidyverse")
@@ -15,32 +15,31 @@ library("ggtext")
 ``` r
 model_cc <- 
   readRDS(here::here("output", 
-                   "models", 
-                   "grow-extra",
-                   "growth_model_base_p3_cc.rds"))
+                   "models", "grow-extra",
+                   "growth_model_climber.rds"))
 
 model_main <- readRDS(here::here("output",
                                  "models",
-                                 "growth_model_base_p3_allo.rds"))
+                                 "growth_model.rds"))
 ```
 
 ``` r
 model_cc$formula
 ```
 
-    dbase_mean ~ log(A) * exp(-exp(-(k * (years - delay)))) 
-    A ~ 0 + forest_type + climber_cut + (0 + forest_type | genus_species) + (1 | plant_id)
-    k ~ 0 + forest_type + climber_cut + (0 + forest_type | genus_species) + (1 | plant_id)
-    delay ~ 0 + forest_type + climber_cut + (0 + forest_type | genus_species) + (1 | plant_id)
+    dbase_mean ~ logA - exp(-(exp(logkG) * (years - Ti))) 
+    logA ~ 0 + forest_type + climber_cut + (0 + forest_type | genus_species) + (1 | plant_id)
+    logkG ~ 0 + forest_type + climber_cut + (0 + forest_type | genus_species) + (1 | plant_id)
+    Ti ~ 0 + forest_type + climber_cut + (0 + forest_type | genus_species) + (1 | plant_id)
 
 ``` r
 model_main$formula
 ```
 
-    dbase_mean ~ log(A) * exp(-exp(-(k * (years - delay)))) 
-    A ~ 0 + forest_type + (0 + forest_type | genus_species) + (1 | plant_id)
-    k ~ 0 + forest_type + (0 + forest_type | genus_species) + (1 | plant_id)
-    delay ~ 0 + forest_type + (0 + forest_type | genus_species) + (1 | plant_id)
+    dbase_mean ~ logA - exp(-(exp(logkG) * (years - Ti))) 
+    logA ~ 0 + forest_type + (0 + forest_type | genus_species) + (1 | plant_id)
+    logkG ~ 0 + forest_type + (0 + forest_type | genus_species) + (1 | plant_id)
+    Ti ~ 0 + forest_type + (0 + forest_type | genus_species) + (1 | plant_id)
 
 ``` r
 my_coef_tab <- 
@@ -65,22 +64,10 @@ my_coef_tab <-
              forest_type == "logged" ~ "Logged forest",
              .default = forest_type
              )) %>% 
-  mutate(estimate = case_when(
-    parameter == "k" ~ (estimate / exp(1))*100,
-    .default = estimate
-  ),
-  conf.low  = case_when(
-    parameter == "k" ~ (conf.low  / exp(1))*100,
-    .default = conf.low 
-  ),
-  conf.high = case_when(
-    parameter == "k" ~ (conf.high / exp(1))*100,
-    .default = conf.high
-  )) %>%
   mutate(name = case_when(
-    parameter == "A" ~ "<i>A</i>, Asymptotic basal<br>diameter (mm)",
-    parameter == "k" ~ "<i>k<sub>G</sub> / e</i>, Maximum relative<br>growth rate (% year<sup>-1</sup>)",
-    parameter == "delay" ~ "<i>T<sub>i</sub></i>, Time to reach max<br>growth rate (years)"
+    parameter == "logA" ~ "log <i>A</i>, Asymptotic<br>basal diameter (mm)",
+    parameter == "logkG" ~ "log <i>k<sub>G</sub></i>, Growth<br>rate coefficient",
+    parameter == "Ti" ~ "<i>T<sub>i</sub></i>, Time to reach max<br>growth rate (years)"
   ))
 ```
 
@@ -102,8 +89,8 @@ my_coef_tab %>%
 
 ``` r
 model_survival <-
-  readRDS(here::here("output", "models", "survival",
-                     "survival_model_allo_nocenter.rds"))
+  readRDS(here::here("output", "models",
+                     "survival_model.rds"))
 ```
 
 ``` r

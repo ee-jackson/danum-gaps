@@ -1,6 +1,6 @@
-# Create a figure exlaining the analysis?
+# Create a figure explaining the analysis?
 eleanorjackson
-2025-12-16
+2026-01-29
 
 - [Growth](#growth)
   - [First panel](#first-panel)
@@ -23,29 +23,14 @@ library("ggtext")
 # Growth
 
 ``` r
-data <-
-  readRDS(here::here("data", "derived", "data_cleaned.rds"))
-
-alive_trees <-
-  data %>%
-  filter(survival == 1) %>%
-  filter(! if_all(c(dbh_mean, dbase_mean), is.na))
-
-well_sampled_alive_trees <-
-  alive_trees %>%
-  group_by(plant_id) %>%
-  summarise(n = n()) %>%
-  filter(n > 2)
-
-growth_data <-
-  alive_trees %>%
-  filter(plant_id %in% well_sampled_alive_trees$plant_id)
+growth_model <- readRDS(here::here("output",
+                                   "models",
+                                   "growth_model_base_p3_allo_priors5.rds"))
 ```
 
 ``` r
-growth_model <- readRDS(here::here("output",
-                                   "models",
-                                   "growth_model_base_p3_allo.rds"))
+growth_data <-
+  growth_model$data
 ```
 
 ``` r
@@ -216,12 +201,12 @@ all_gr <-
   group_by(forest_type, genus_species) %>% 
   mutate(lag_epred = lag(.epred, n = 1, order_by = years)) %>% 
   rowwise() %>% 
-  mutate(growth_cmyr = .epred - lag_epred) %>% 
+  mutate(growth_mmyr = .epred - lag_epred) %>% 
   ungroup()
 
 all_gr %>% 
   filter(genus_species == sp_1) %>% 
-  ggplot(aes(x = .epred, y = growth_cmyr, 
+  ggplot(aes(x = .epred, y = growth_mmyr, 
              xmin = .lower, xmax = .upper)) +
   geom_path(linewidth = 1,
             alpha = 1,
@@ -247,7 +232,7 @@ sp1_gr_s <-
   group_by(plant_id) %>% 
   mutate(lag_dbh_pred = lag(.epred, n = 1, order_by = years)) %>% 
   rowwise() %>% 
-  mutate(growth_cmyr = .epred - lag_dbh_pred) %>% 
+  mutate(growth_mmyr = .epred - lag_dbh_pred) %>% 
   ungroup()
 ```
 
@@ -259,14 +244,14 @@ all_gr_sp1_s <-
 p3 <- 
   ggplot() +
   geom_line(data = sp1_gr_s,
-            aes(x = .epred, y = growth_cmyr,
+            aes(x = .epred, y = growth_mmyr,
                 group = plant_id), 
             alpha = 0.3,
             stat = "smooth",
             colour = "forestgreen",
             linewidth = 1) +
   geom_path(data = all_gr_sp1_s,
-            aes(x = .epred, y = growth_cmyr), 
+            aes(x = .epred, y = growth_mmyr), 
             linewidth = 1,
             alpha = 1,
             linetype = 2) +
@@ -276,8 +261,10 @@ p3 <-
   scale_y_continuous(limit = c(0, NA), expand = c(0, 0)) +
   theme(axis.title.y = element_markdown())
 
-#p3
+p3
 ```
+
+![](figures/2025-03-25_methods-figure/unnamed-chunk-10-1.png)
 
 # Survival
 
@@ -290,6 +277,11 @@ survival_model <-
 ``` r
 survival_data <-
   readRDS(here::here("data", "derived", "data_survival.rds"))
+```
+
+``` r
+data <-
+  readRDS(here::here("data", "derived", "data_cleaned.rds"))
 ```
 
 ## Fourth panel
@@ -318,7 +310,7 @@ p4 <-
 p4
 ```
 
-![](figures/2025-03-25_methods-figure/unnamed-chunk-13-1.png)
+![](figures/2025-03-25_methods-figure/unnamed-chunk-14-1.png)
 
 ## Fifth panel
 
@@ -347,13 +339,13 @@ p5 <-
   ylab("Count of mortalities")+
   xlab("Basal diameter mm") +
   theme(legend.position = "bottom") +
-  scale_x_continuous(limits = c(0, 200), expand = c(0, 2)) +
-  scale_y_continuous(expand = c(0, 1)) 
+  scale_x_continuous(limits = c(0, 200), expand = c(0, 1)) +
+  scale_y_continuous(expand = c(0, 0)) 
 
 p5
 ```
 
-![](figures/2025-03-25_methods-figure/unnamed-chunk-14-1.png)
+![](figures/2025-03-25_methods-figure/unnamed-chunk-15-1.png)
 
 ## Sixth panel
 
@@ -409,7 +401,7 @@ p6 <-
 p6
 ```
 
-![](figures/2025-03-25_methods-figure/unnamed-chunk-17-1.png)
+![](figures/2025-03-25_methods-figure/unnamed-chunk-18-1.png)
 
 # Combined panels
 
@@ -426,4 +418,4 @@ p1 + p2 + p3 + p4 + p5 + p6 +
   )
 ```
 
-![](figures/2025-03-25_methods-figure/unnamed-chunk-18-1.png)
+![](figures/2025-03-25_methods-figure/unnamed-chunk-19-1.png)

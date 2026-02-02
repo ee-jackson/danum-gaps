@@ -1,6 +1,6 @@
 # Plotting priors vs posteriors for our growth model
 eleanorjackson
-2025-10-28
+2026-01-29
 
 ``` r
 library("tidyverse")
@@ -13,7 +13,7 @@ library("ggh4x")
 ``` r
 mod_gro <-
   readRDS(here::here("output", "models", 
-                     "growth_model_base_p3_allo.rds"))
+                     "growth_model_base_p3_allo_priors5.rds"))
 ```
 
 ``` r
@@ -45,19 +45,24 @@ pal <-
   c("Logged forest" = "#e69f00", "Old-growth forest" = "#009e73")
 
 prior_post %>% 
-  filter(value < 2500) %>% 
-  filter(value > -50) %>% 
   mutate(dist = str_to_sentence(dist)) %>%
   mutate(dist = factor(dist, levels = c("Prior", "Posterior"))) %>%
   mutate(name = case_when(
-    parameter == "A" ~ "<i>A</i>, Asymptotic basal<br>diameter (mm)",
-    parameter == "k" ~ "<i>k<sub>G</sub></i>, Growth rate<br>coefficient",
-    parameter == "delay" ~ "<i>T<sub>i</sub></i>, Time to reach max<br>growth rate (years)"
+    parameter == "logA" ~ "log <i>A</i>, Asymptotic basal<br>diameter (mm)",
+    parameter == "logkG" ~ "log <i>k<sub>G</sub></i>, Growth rate<br>coefficient",
+    parameter == "Ti" ~ "<i>T<sub>i</sub></i>, Time to reach max<br>growth rate (years)"
   )) %>%
+  mutate(value = case_when(
+    parameter == "logA" ~ value,
+    parameter == "logkG" ~ value,
+    parameter == "Ti" ~ value
+  )) %>%
+  filter(value < 50) %>% 
+  filter(value > -50) %>% 
   ggplot(aes(x = value, fill = forest_type)) +
   geom_density(alpha = 0.5) +
   ggh4x::facet_grid2(dist~name, scales = "free", independent = "all") +
-  scale_fill_manual(values = pal) +
+  scale_fill_manual(values = pal, breaks = ~ .x[!is.na(.x)]) +
   theme(legend.position = "bottom",
         strip.text = element_markdown(),
         legend.title = element_blank())
@@ -67,18 +72,20 @@ prior_post %>%
 
 ``` r
 prior_post %>% 
-  filter(parameter == "A") %>% 
-  ggplot(aes(x = value, fill = forest_type)) +
-  geom_density(alpha = 0.5, bounds = c(0, 2000)) +
+  filter(parameter == "logA") %>% 
+  mutate(A = exp(value)) %>% 
+  ggplot(aes(x = A, fill = forest_type)) +
+  geom_density(alpha = 0.5) +
   facet_wrap(dist~parameter, scales = "free") +
-  labs(x = "Diameter at base (mm)")
+  labs(x = "Diameter at base (mm)") +
+  xlim(c(0,500))
 ```
 
 ![](figures/2025-06-13_growth-prior-vs-posterior/unnamed-chunk-5-1.png)
 
 ``` r
 prior_post %>% 
-  filter(parameter == "delay") %>% 
+  filter(parameter == "Ti") %>% 
   ggplot(aes(x = value, fill = forest_type)) +
   geom_density(alpha = 0.5, bounds = c(-20, 20)) +
   facet_wrap(dist~parameter, scales = "free") +
@@ -89,14 +96,16 @@ prior_post %>%
 
 ``` r
 prior_post %>% 
-  filter(parameter == "k") %>% 
+  filter(parameter == "logkG") %>% 
   drop_na(value) %>% 
+  mutate(kG = exp(value)) %>% 
   rowwise() %>% 
-  mutate(rgr = (value / exp(1))*100) %>% 
+  mutate(rgr = (kG / exp(1))*100) %>% 
   ggplot(aes(x = rgr, fill = forest_type)) +
-  geom_density(alpha = 0.5, bounds = c(0, 100)) +
+  geom_density(alpha = 0.5) +
   facet_wrap(dist~parameter, scales = "free") +
-  xlab("Relative growth rate (% year-1)")
+  xlab("Relative growth rate (% year-1)") +
+  xlim(c(0, 50))
 ```
 
 ![](figures/2025-06-13_growth-prior-vs-posterior/unnamed-chunk-7-1.png)

@@ -38,13 +38,12 @@ library("ggtext")
 ```{r}
 model_cc <- 
   readRDS(here::here("output", 
-                   "models", 
-                   "grow-extra",
-                   "growth_model_base_p3_cc.rds"))
+                   "models", "grow-extra",
+                   "growth_model_climber.rds"))
 
 model_main <- readRDS(here::here("output",
                                  "models",
-                                 "growth_model_base_p3_allo.rds"))
+                                 "growth_model.rds"))
 ```
 
 ```{r}
@@ -78,22 +77,10 @@ my_coef_tab <-
              forest_type == "logged" ~ "Logged forest",
              .default = forest_type
              )) %>% 
-  mutate(estimate = case_when(
-    parameter == "k" ~ (estimate / exp(1))*100,
-    .default = estimate
-  ),
-  conf.low  = case_when(
-    parameter == "k" ~ (conf.low  / exp(1))*100,
-    .default = conf.low 
-  ),
-  conf.high = case_when(
-    parameter == "k" ~ (conf.high / exp(1))*100,
-    .default = conf.high
-  )) %>%
   mutate(name = case_when(
-    parameter == "A" ~ "<i>A</i>, Asymptotic basal<br>diameter (mm)",
-    parameter == "k" ~ "<i>k<sub>G</sub> / e</i>, Maximum relative<br>growth rate (% year<sup>-1</sup>)",
-    parameter == "delay" ~ "<i>T<sub>i</sub></i>, Time to reach max<br>growth rate (years)"
+    parameter == "logA" ~ "log <i>A</i>, Asymptotic<br>basal diameter (mm)",
+    parameter == "logkG" ~ "log <i>k<sub>G</sub></i>, Growth<br>rate coefficient",
+    parameter == "Ti" ~ "<i>T<sub>i</sub></i>, Time to reach max<br>growth rate (years)"
   ))
 ```
 
@@ -113,8 +100,8 @@ my_coef_tab %>%
 
 ```{r}
 model_survival <-
-  readRDS(here::here("output", "models", "survival",
-                     "survival_model_allo_nocenter.rds"))
+  readRDS(here::here("output", "models",
+                     "survival_model.rds"))
 ```
 
 ```{r}

@@ -1,6 +1,6 @@
 # Figures of growth curves with data points
 eleanorjackson
-2026-01-06
+2026-02-02
 
 - [Tree level](#tree-level)
 
@@ -15,23 +15,12 @@ library("ggview")
 ``` r
 mod_gro <-
   readRDS(here::here("output", "models",
-                     "growth_model_base_p3_allo.rds"))
+                     "growth_model.rds"))
 ```
 
 ``` r
-data <-
-  readRDS(here::here("data", "derived", "data_cleaned.rds")) %>%
-  filter(survival == 1)
-
-well_sampled_trees <-
-  data %>%
-  group_by(plant_id) %>%
-  summarise(records = sum(!is.na(dbase_mean))) %>%
-  filter(records > 2)
-
 data_gro <-
-  data %>%
-  filter(plant_id %in% well_sampled_trees$plant_id)
+  mod_gro$data
 ```
 
 ``` r
@@ -130,7 +119,7 @@ well_sampled <-
   data_gro %>% 
   filter(genus_species == "Dipterocarpus_conformis") %>% 
   group_by(plant_id) %>% 
-  summarise(n = sum(survival)) %>% 
+  summarise(n = n_distinct(years)) %>% 
   filter(n >10)
 
 d_conformis_ids <- 
@@ -171,6 +160,7 @@ ggplot() +
              aes(x = years, y = dbase_mean),
              shape = 16,
              size = 1,
+             alpha = 0.8,
              show.legend = FALSE) +
   facet_wrap(~forest_type_name,
              ncol = 4) +
@@ -178,7 +168,8 @@ ggplot() +
   scale_colour_manual(values = pal) +
   labs(y = "Basal diameter mm",
        x = "Years since first measurement") +
-  ggtitle("D conformis, n = 20")
+  ggtitle("<i>Dipterocarpus conformis</i>, n = 20") +
+  theme(plot.title = element_markdown()) 
 ```
 
 ![](figures/2025-12-19_supp-growth-fits-w-data/unnamed-chunk-9-1.png)
@@ -203,7 +194,8 @@ ggplot() +
   scale_colour_manual(values = pal) +
   labs(y = "Basal diameter mm",
        x = "Years since first measurement") +
-  ggtitle("D conformis, n = 20")
+  ggtitle("<i>Dipterocarpus conformis</i>, n = 20") +
+  theme(plot.title = element_markdown()) 
 ```
 
 ![](figures/2025-12-19_supp-growth-fits-w-data/unnamed-chunk-10-1.png)

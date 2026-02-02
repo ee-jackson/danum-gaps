@@ -118,7 +118,11 @@ breast height, to find the value which gave the lowest Root Mean Squared Error.
 
 # Growth curves over time 
 
-![Basal diameter measurements for all seedlings over time (black points). Coloured lines show posterior predictions for a species in the old-growth (green) and logged (yellow) forest. ](../code/notebooks/figures/2025-12-19_supp-growth-fits-w-data/sp_preds.png){#fig-gro-data width=325}
+![Basal diameter measurements for all seedlings over time (black points). Coloured lines show posterior predictions for a typical seedling of each of the 15 species in the old-growth (green) and logged (yellow) forest. ](../code/notebooks/figures/2025-12-19_supp-growth-fits-w-data/sp_preds.png){#fig-gro-data width=325}
+
+![Basal diameter measurements for 20 randomly selected _Dipterocarpus conformis_ seedlings over time (black points). Coloured lines show posterior predictions for individuals in the old-growth (green) and logged (yellow) forest. ](../code/notebooks/figures/2025-12-19_supp-growth-fits-w-data/unnamed-chunk-9-1.png){#fig-gro-data-dc-ft width=325}
+
+![Basal diameter measurements for 20 randomly selected _Dipterocarpus conformis_ seedlings over time (black points). These are the same individuals which are shown in @fig-gro-data-dc-ft above. Coloured lines show posterior predictions for individuals in the old-growth (green) and logged (yellow) forest. Note that the y-axis scale varies between panels. ](../code/notebooks/figures/2025-12-19_supp-growth-fits-w-data/unnamed-chunk-10-1.png){#fig-gro-data-dc-ind width=325}
 
 # Posterior predictive checks
 

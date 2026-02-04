@@ -27,10 +27,10 @@ where all lianas $\ge$ 10 cm in height were cut at the base in 2011 and 2014 [se
 Including the climber cutting treatment as a fixed effect in our growth and survival models
 did not change our results.
 
-![Comparison of parameter estimates for the growth model with and without a fixed effect of climber cutting. Facet columns indicate the parameters of the growth function with estimates for the old-growth and logged forest types on the _y_ axis. Facet rows show results from the original model presented in the main text, and a model with the addition of a fixed effect for climber cutting treatment. Point shows the mean of the posterior distribution with lines dentoting the 95% credible interval.](../code/notebooks/figures/2025-09-09_supp-climber-cutting/unnamed-chunk-6-1.png){#fig-climber-cutting-gro width=400}
+![Comparison of parameter estimates for the growth model with and without a fixed effect of climber cutting. Facet columns indicate the parameters of the growth function with estimates for the old-growth and logged forest types on the _y_ axis. Facet rows show results from the original model presented in the main text, and a model with the addition of a fixed effect for climber cutting treatment. Point shows the median of the posterior distribution with lines dentoting the 95% credible interval.](../code/notebooks/figures/2025-09-09_supp-climber-cutting/unnamed-chunk-6-1.png){#fig-climber-cutting-gro width=400}
 
 
-![Comparison of effect size from survival models with and without a fixed effect of climber cutting. Facet rows show results from the original model presented in the main text, and a model with the addition of a fixed effect for climber cutting treatment. Point shows the mean of the posterior distribution with lines dentoting the 95% credible interval.](../code/notebooks/figures/2025-09-09_supp-climber-cutting/unnamed-chunk-12-1.png){#fig-climber-cutting-surv width=400}
+![Comparison of parameters from survival models with and without a fixed effect of climber cutting. Facet rows show results from the original model presented in the main text, and a model with the addition of a fixed effect for climber cutting treatment. Point shows the median of the posterior distribution with lines dentoting the 95% credible interval.](../code/notebooks/figures/2025-09-09_supp-climber-cutting/unnamed-chunk-12-1.png){#fig-climber-cutting-surv width=400}
 
 
 # Species taxonomy
@@ -114,7 +114,7 @@ breast height, to find the value which gave the lowest Root Mean Squared Error.
 
 ![Prior and posterior distributions for the growth model. Facet columns indicate parameters estimated by the model. Facet rows indicate the prior and posterior distributions. Note that the same priors were set for both forest types, and that axes are not preserved across panels.](../code/notebooks/figures/2025-06-13_growth-prior-vs-posterior/unnamed-chunk-4-1.png){#fig-prior-gro width=400}
 
-![Prior and posterior distributions for the survival model. Prior and posterior distributions are displayed in separate panels and colours represent regression coefficients for the population-level, or "fixed" effects. Note that the same prior was set across all the population-level parameters, and that axes are not preserved across panels. ](../code/notebooks/figures/2025-06-18_survival-prior-vs-posterior/unnamed-chunk-4-1.png){#fig-prior-surv width=400}
+![Prior and posterior distributions for the survival model. Prior and posterior distributions are displayed in separate panels and colours indicate parameters estimated by the model. Note that the same prior was set across all the population-level parameters, and that axes are not preserved across panels. ](../code/notebooks/figures/2025-06-18_survival-prior-vs-posterior/unnamed-chunk-4-1.png){#fig-prior-surv width=400}
 
 # Growth curves over time 
 
@@ -130,7 +130,7 @@ breast height, to find the value which gave the lowest Root Mean Squared Error.
 
 ```{r}
 #| label: tab-growth-params
-#| tbl-cap: "Posterior estimates of fixed effects from the growth model"
+#| tbl-cap: "Posterior estimates of fixed effects from the growth model on the response scale"
 
 readr::read_csv(
         here::here(
@@ -144,7 +144,7 @@ readr::read_csv(
 
 ```{r}
 #| label: tab-survival-params
-#| tbl-cap: "Posterior estimates of population-level effects from the survival model"
+#| tbl-cap: "Posterior estimates of population-level effects from the survival model. The regression coefficient, $\\beta$, is reported on the link scale and the Weibull scale parameter, $\\lambda$, has been back-transformed to the response scale (years)."
 
 readr::read_csv(
         here::here(

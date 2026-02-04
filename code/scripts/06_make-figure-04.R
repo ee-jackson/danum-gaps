@@ -84,12 +84,18 @@ post_summary_surv <-
   summary(mod_surv, robust = TRUE)$fixed %>%
   rownames_to_column(var = "Parameter") %>%
   mutate(Parameter = case_when(
-    grepl("forest_typelogged", Parameter) ~ "Logged forest",
-    grepl("forest_typeprimary", Parameter) ~ "Old-growth forest",
-    grepl("dbase_mean_sc", Parameter) ~ "Basal diameter")) %>%
+    grepl("forest_typelogged", Parameter) ~ "$\\lambda$, Logged forest",
+    grepl("forest_typeprimary", Parameter) ~ "$\\lambda$, Old-growth forest",
+    grepl("dbase_mean_sc", Parameter) ~ "$\\beta$, Basal diameter")) %>%
   mutate(Parameter = str_split_i(string = Parameter, pattern ="_", i = 1)) %>%
   select(Parameter, Estimate, `l-95% CI`,
          `u-95% CI`, Rhat, Bulk_ESS, Tail_ESS) %>%
+  mutate(across(c(Estimate, `l-95% CI`, `u-95% CI`), ~
+                  case_when(
+                    Parameter == "$\\lambda$, Logged forest" |
+                      Parameter == "$\\lambda$, Old-growth forest" ~ exp(.),
+                    .default = .
+                  ))) %>%
   rename(`Posterior median` = Estimate,
          `Bulk effective sample size` = Bulk_ESS,
          `Tail effective sample size` = Tail_ESS) %>%
@@ -141,16 +147,24 @@ ft_ests_surv <-
   mutate(forest_type = case_when(
     grepl("logged", .variable) ~ "Logged",
     grepl("primary", .variable) ~ "Old-growth")) %>%
+  mutate(.value = exp(.value)) %>%
   mutate(parameter = "survival")
 
 # combine growth and survival
 ft_ests <-
   bind_rows(ft_ests_grow, ft_ests_surv) %>%
+  ungroup() %>%
   mutate(name = case_when(
     parameter == "A" ~ "<i>A</i>, Asymptotic basal diameter (mm)",
     parameter == "kG" ~ "<i>k<sub>G</sub> / e</i>, Maximum relative growth rate (% year<sup>-1</sup>)",
     parameter == "Ti" ~ "<i>T<sub>i</sub></i>, Time to reach max growth rate (years)",
-    parameter == "survival" ~ "Effect of forest type on <i>time to mortality</i> (years)"
+    parameter == "survival" ~ "&lambda;, Survival time (years)"
+  )) %>%
+  mutate(name = fct_relevel(name,
+                             "<i>A</i>, Asymptotic basal diameter (mm)",
+                             "<i>k<sub>G</sub> / e</i>, Maximum relative growth rate (% year<sup>-1</sup>)",
+                             "<i>T<sub>i</sub></i>, Time to reach max growth rate (years)",
+                             "&lambda;, Survival time (years)"
   ))
 
 
@@ -237,6 +251,7 @@ sp_ests_surv <-
                              r_genus_species + b_forest_typeprimary,
                            forest_type == "forest_typelogged" ~
                              r_genus_species + b_forest_typelogged)) %>%
+  mutate(value = exp(value)) %>%
   mutate(forest_type = case_when(
     forest_type == "forest_typelogged" ~ "Logged",
     forest_type == "forest_typeprimary" ~ "Old-growth")) %>%
@@ -254,7 +269,13 @@ sp_ests <-
     parameter == "A" ~ "<i>A</i>, Asymptotic basal diameter (mm)",
     parameter == "kG" ~ "<i>k<sub>G</sub> / e</i>, Maximum relative growth rate (% year<sup>-1</sup>)",
     parameter == "Ti" ~ "<i>T<sub>i</sub></i>, Time to reach max growth rate (years)",
-    parameter == "survival" ~ "Effect of forest type on <i>time to mortality</i> (years)"
+    parameter == "survival" ~ "&lambda;, Survival time (years)"
+  )) %>%
+  mutate(name = fct_relevel(name,
+                             "<i>A</i>, Asymptotic basal diameter (mm)",
+                             "<i>k<sub>G</sub> / e</i>, Maximum relative growth rate (% year<sup>-1</sup>)",
+                             "<i>T<sub>i</sub></i>, Time to reach max growth rate (years)",
+                             "&lambda;, Survival time (years)"
   )) %>%
   mutate(Species = str_replace(Species, "_", " ")) %>%
   mutate(Species = paste0("<i>", Species, "</i>", sep = ""))
@@ -295,6 +316,8 @@ pb <-
 
 pc <-
   sp_ests %>%
+  filter(case_when(parameter == "survival" ~ value <35,
+                   .default = value == value)) %>%
   ggplot(aes(x = value, y = Species,
              fill = forest_type)) +
   stat_halfeye(.width = 0.95, slab_alpha = 0.5, interval_size = 0.05,
@@ -307,6 +330,8 @@ pc <-
 
 pd <-
   sp_ests %>%
+  filter(case_when(parameter == "survival" ~ value <35,
+                   .default = value == value)) %>%
   ungroup() %>%
   pivot_wider(names_from = forest_type,
               values_from = value) %>%

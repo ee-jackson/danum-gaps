@@ -41,8 +41,7 @@ pc_data_A <-
     grepl("primary", name) ~ "Old-growth")) %>%
   mutate(Species = str_split_i(string = name, pattern ="\\[", i = 2)) %>%
   mutate(Species = str_split_i(string = Species, pattern =",", i = 1)) %>%
-  mutate(Parameter = "A") %>%
-  mutate(value = exp(value)) %>%
+  mutate(Parameter = "logA") %>%
   select(- b_logA_forest_typeprimary, -b_logA_forest_typelogged, -name)
 
 pc_data_kG <-
@@ -64,10 +63,8 @@ pc_data_kG <-
     grepl("primary", name) ~ "Old-growth")) %>%
   mutate(Species = str_split_i(string = name, pattern ="\\[", i = 2)) %>%
   mutate(Species = str_split_i(string = Species, pattern =",", i = 1)) %>%
-  mutate(Parameter = "kG") %>%
-  select(- b_logkG_forest_typeprimary, -b_logkG_forest_typelogged, -name) %>%
-  mutate(value = exp(value)) %>%
-  mutate(value = (value / exp(1))*100)
+  mutate(Parameter = "logkG") %>%
+  select(- b_logkG_forest_typeprimary, -b_logkG_forest_typelogged, -name)
 
 pc_data_Ti <-
   mod_gro %>%
@@ -172,15 +169,22 @@ param_traits_median <-
   traits_both %>%
   left_join(all_params) %>%
   mutate(names = case_when(
-    Parameter == "A" ~ "<i>A</i>, Asymptotic basal<br>diameter (mm)",
-    Parameter == "kG" ~ "<i>k<sub>G</sub> / e</i>, Maximum relative<br>growth rate (% year<sup>-1</sup>)",
-    Parameter == "Ti" ~ "<i>T<sub>i</sub></i>, Time to reach max<br>growth rate (years)",
-    Parameter == "survival" ~ "<i>survival</i>, Time to typical<br>mortality (years)"
+    Parameter == "logA" ~ "log <i>A</i>, Asymptotic basal<br>diameter",
+    Parameter == "logkG" ~ "log <i>k<sub>G</sub></i>, Growth rate<br> coefficient",
+    Parameter == "Ti" ~ "<i>T<sub>i</sub></i>, Time to reach max<br>growth rate",
+    Parameter == "survival" ~ "log &lambda;, Survival time"
   )) %>%
   group_by(Species, Parameter, names,
            sla_med, sla_iqr, wood_density_med, wood_density_iqr) %>%
   summarise(
-    diff_mean = mean(diff, na.rm = TRUE))
+    diff_mean = mean(diff, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(names = fct_relevel(names,
+                             "log <i>A</i>, Asymptotic basal<br>diameter",
+                             "log <i>k<sub>G</sub></i>, Growth rate<br> coefficient",
+                             "<i>T<sub>i</sub></i>, Time to reach max<br>growth rate",
+                             "log &lambda;, Survival time"
+                             ))
 
 # Plot --------------------------------------------------------------------
 

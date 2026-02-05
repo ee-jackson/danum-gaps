@@ -30,7 +30,7 @@ mod_gro <-
 # Get data ----------------------------------------------------------------
 
 data_surv <-
-  mod_surv$data
+  readRDS("data/derived/data_survival.rds")
 
 data_gro <-
   mod_gro$data

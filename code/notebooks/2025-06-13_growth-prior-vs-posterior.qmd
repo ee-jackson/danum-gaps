@@ -36,7 +36,7 @@ library("ggh4x")
 ```{r}
 mod_gro <-
   readRDS(here::here("output", "models", 
-                     "growth_model_base_p3_allo_priors5.rds"))
+                     "growth_model.rds"))
 ```
 
 ```{r}
@@ -73,14 +73,9 @@ prior_post %>%
   mutate(dist = str_to_sentence(dist)) %>%
   mutate(dist = factor(dist, levels = c("Prior", "Posterior"))) %>%
   mutate(name = case_when(
-    parameter == "logA" ~ "log <i>A</i>, Asymptotic basal<br>diameter (mm)",
-    parameter == "logkG" ~ "log <i>k<sub>G</sub></i>, Growth rate<br>coefficient",
-    parameter == "Ti" ~ "<i>T<sub>i</sub></i>, Time to reach max<br>growth rate (years)"
-  )) %>%
-  mutate(value = case_when(
-    parameter == "logA" ~ value,
-    parameter == "logkG" ~ value,
-    parameter == "Ti" ~ value
+    parameter == "logA" ~ "log <i>A</i>, Asymptotic<br>basal diameter",
+    parameter == "logkG" ~ "log <i>k<sub>G</sub></i>, Growth<br>rate coefficient",
+    parameter == "Ti" ~ "<i>T<sub>i</sub></i>, Time to reach<br>max growth rate"
   )) %>%
   filter(value < 50) %>% 
   filter(value > -50) %>% 

@@ -1,17 +1,18 @@
 # Plotting priors vs posteriors for our survival model
 eleanorjackson
-2026-01-29
+2026-02-06
 
 ``` r
 library("tidyverse")
 library("tidybayes")
 library("brms")
+library("ggtext")
 ```
 
 ``` r
 mod_surv <-
-  readRDS(here::here("output", "models", "survival",
-                     "survival_model_allo_nocenter.rds"))
+  readRDS(here::here("output", "models", 
+                     "survival_model.rds"))
 ```
 
 ``` r
@@ -30,9 +31,9 @@ prior_post <-
   mutate(parameter = str_split_i(string = name, 
                                  pattern ="_", i = 2)) %>% 
   mutate(type = case_when(
-    grepl("logged", name) ~ "Logged forest",
-    grepl("primary", name) ~ "Old-growth forest",
-    grepl("b_dbase_mean_sc", name) ~ "Basal diameter")) %>% 
+    grepl("logged", name) ~ "log &lambda;, Logged forest",
+    grepl("primary", name) ~ "log &lambda;, Old-growth forest",
+    grepl("b_dbase_mean_sc", name) ~ "&beta;, Basal diameter")) %>% 
   mutate(parameter = str_remove(string = parameter, 
                                  pattern ="logged")) %>% 
   mutate(parameter = str_remove(string = parameter, 
@@ -41,9 +42,9 @@ prior_post <-
 
 ``` r
 pal <-
-  c("Logged forest" = "#e69f00", 
-    "Old-growth forest" = "#009e73",
-    "Basal diameter" = "#56B4E9")
+  c("log &lambda;, Logged forest" = "#e69f00", 
+    "log &lambda;, Old-growth forest" = "#009e73",
+    "&beta;, Basal diameter" = "#56B4E9")
 
 prior_post %>% 
   filter(value > -25) %>% 
@@ -54,7 +55,8 @@ prior_post %>%
   geom_density(alpha = 0.5) +
   facet_wrap(~dist, scales = "free", ncol = 1) +
   scale_fill_manual(values = pal, breaks = ~ .x[!is.na(.x)]) +
-  theme(legend.title = element_blank())
+  theme(legend.title = element_blank(),
+        legend.text = element_markdown()) 
 ```
 
 ![](figures/2025-06-18_survival-prior-vs-posterior/unnamed-chunk-4-1.png)

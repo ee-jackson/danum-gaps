@@ -78,9 +78,9 @@ my_coef_tab <-
              .default = forest_type
              )) %>% 
   mutate(name = case_when(
-    parameter == "logA" ~ "log <i>A</i>, Asymptotic<br>basal diameter (mm)",
+    parameter == "logA" ~ "log <i>A</i>, Asymptotic<br>basal diameter",
     parameter == "logkG" ~ "log <i>k<sub>G</sub></i>, Growth<br>rate coefficient",
-    parameter == "Ti" ~ "<i>T<sub>i</sub></i>, Time to reach max<br>growth rate (years)"
+    parameter == "Ti" ~ "<i>T<sub>i</sub></i>, Time to reach<br>max growth rate"
   ))
 ```
 
@@ -138,10 +138,10 @@ my_coef_tab_survival <-
   mutate(forest_type = str_remove(forest_type, "type")) %>% 
   mutate(forest_type =
            case_when(
-             forest_type == "primary" ~ "Old-growth forest",
-             forest_type == "logged" ~ "Logged forest",
-             forest_type == "mean" ~ "Basal diameter",
-             forest_type == "cut1" ~ "Climber cutting",
+             forest_type == "primary" ~ "log &lambda;, Old-growth forest",
+             forest_type == "logged" ~ "log &lambda;, Logged forest",
+             forest_type == "mean" ~ "&beta;, Basal diameter",
+             forest_type == "cut1" ~ "&beta;, Climber cutting",
              .default = forest_type
              )) 
 ```
@@ -157,5 +157,6 @@ my_coef_tab_survival %>%
   coord_flip() +
   facet_grid(rows = vars(model), 
              scales = "fixed") +
-  theme(strip.text = element_markdown())
+  theme(strip.text = element_markdown(),
+        axis.text.y = element_markdown())
 ```

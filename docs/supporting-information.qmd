@@ -144,7 +144,7 @@ readr::read_csv(
 
 ```{r}
 #| label: tab-survival-params
-#| tbl-cap: "Posterior estimates of population-level effects from the survival model. The regression coefficient, $\\beta$, is reported on the link scale and the Weibull scale parameter, $\\lambda$, has been back-transformed to the response scale (years)."
+#| tbl-cap: "Posterior estimates of population-level effects from the survival model. The Weibull scale parameter, $\\lambda$, has been back-transformed to the response scale (years)."
 
 readr::read_csv(
         here::here(

@@ -14,7 +14,7 @@ library("patchwork")
 library("rtry")
 library("ggtext")
 library("ggpmisc")
-
+library("zen4R")
 
 # Get growth --------------------------------------------------------------
 
@@ -135,14 +135,23 @@ all_params <-
 
 # Get traits --------------------------------------------------------------
 
-# From Both et al. 2018 https://doi.org/10.1111/nph.15444
+# download data from Both et al. 2019
+zen4R::download_zenodo(
+  doi = "https://doi.org/10.5281/zenodo.3247631",
+  path = here::here(
+    "data",
+    "raw",
+    "traits"
+  )
+)
+
 traits_both <-
   readxl::read_excel(
     here::here(
       "data",
       "raw",
       "traits",
-      "Both_tree_functional_traits_subset RV.xlsx"
+      "Both_tree_functional_traits.xlsx"
     ),
     sheet = 4,
     skip = 6,
@@ -152,7 +161,7 @@ traits_both <-
            str_replace(species, "\\.", "_")) %>%
   select(tree_id, Species, forest_type, location,
          WD_NB, LA_cm2_mean, dry_weight_mg_mean) %>%
-  filter(forest_type == "OG") %>%
+  filter(forest_type == "OG") %>% # Only Danum and Maliau Basin
   filter(Species %in% all_params$Species) %>%
   mutate(LA_mm2_mean = LA_cm2_mean * 100) %>%
   mutate(sla = LA_mm2_mean / dry_weight_mg_mean) %>%
@@ -241,6 +250,7 @@ jpeg(
   res = 600,
   pointsize = 6,
   units = "cm",
+  bg = "white",
   type = "cairo"
 )
 

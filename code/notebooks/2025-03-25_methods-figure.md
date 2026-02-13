@@ -1,6 +1,6 @@
 # Create a figure explaining the analysis?
 eleanorjackson
-2026-01-29
+2026-02-13
 
 - [Growth](#growth)
   - [First panel](#first-panel)
@@ -25,7 +25,7 @@ library("ggtext")
 ``` r
 growth_model <- readRDS(here::here("output",
                                    "models",
-                                   "growth_model_base_p3_allo_priors5.rds"))
+                                   "growth_model.rds"))
 ```
 
 ``` r
@@ -271,7 +271,7 @@ p3
 ``` r
 survival_model <- 
   readRDS(here::here("output", "models", 
-                     "survival", "survival_model_allo_nocenter.rds"))
+                     "survival_model.rds"))
 ```
 
 ``` r
@@ -350,11 +350,21 @@ p5
 ## Sixth panel
 
 ``` r
+scale_basal <- function(x) {
+  x / attr(survival_data$dbase_mean_sc, "scaled:scale")
+}
+
+unscale_basal <- function(x) {
+  x*attr(survival_data$dbase_mean_sc, "scaled:scale")
+}
+```
+
+``` r
 sp_sizes <-
   survival_data %>%
   group_by(genus_species) %>%
   summarise(min = min(dbase_mean_sc, na.rm = T),
-            max = max(dbase_mean_sc, na.rm = T)) %>%
+            max = scale_basal(200)) %>%
   mutate(dbase_mean_sc = map2(min, max, .f = seq, length.out = 50)) %>%
   select(-c(min, max))
 
@@ -364,21 +374,11 @@ surv_pred_sp <-
   left_join(sp_sizes, by = c("genus_species")) %>%
   unnest(dbase_mean_sc) %>%
   add_linpred_draws(object = survival_model, ndraws = NULL,
-                    re_formula = NULL, dpar = TRUE
+                    re_formula = NULL, dpar = TRUE, transform = TRUE
   ) %>%
   rowwise() %>%
   mutate(scale = mu/gamma(1+(1/shape))) %>%
-  mutate(surv = exp(-(dbase_mean_sc/scale)^shape))
-```
-
-``` r
-scale_basal <- function(x) {
-  x / attr(survival_data$dbase_mean_sc, "scaled:scale")
-}
-
-unscale_basal <- function(x) {
-  x*attr(survival_data$dbase_mean_sc, "scaled:scale")
-}
+  mutate(surv = exp(-(20/scale)^shape)) #survival to 20yrs
 ```
 
 ``` r

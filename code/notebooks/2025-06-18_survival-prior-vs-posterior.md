@@ -1,6 +1,6 @@
 # Plotting priors vs posteriors for our survival model
 eleanorjackson
-2026-02-06
+2026-02-13
 
 ``` r
 library("tidyverse")
@@ -31,8 +31,8 @@ prior_post <-
   mutate(parameter = str_split_i(string = name, 
                                  pattern ="_", i = 2)) %>% 
   mutate(type = case_when(
-    grepl("logged", name) ~ "log &lambda;, Logged forest",
-    grepl("primary", name) ~ "log &lambda;, Old-growth forest",
+    grepl("logged", name) ~ "log &mu;, Logged forest",
+    grepl("primary", name) ~ "log &mu;, Old-growth forest",
     grepl("b_dbase_mean_sc", name) ~ "&beta;, Basal diameter")) %>% 
   mutate(parameter = str_remove(string = parameter, 
                                  pattern ="logged")) %>% 
@@ -42,8 +42,8 @@ prior_post <-
 
 ``` r
 pal <-
-  c("log &lambda;, Logged forest" = "#e69f00", 
-    "log &lambda;, Old-growth forest" = "#009e73",
+  c("log &mu;, Logged forest" = "#e69f00", 
+    "log &mu;, Old-growth forest" = "#009e73",
     "&beta;, Basal diameter" = "#56B4E9")
 
 prior_post %>% 

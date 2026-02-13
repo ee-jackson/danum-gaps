@@ -181,7 +181,7 @@ param_traits_median <-
     Parameter == "logA" ~ "log <i>A</i>, Asymptotic basal<br>diameter",
     Parameter == "logkG" ~ "log <i>k<sub>G</sub></i>, Growth rate<br> coefficient",
     Parameter == "Ti" ~ "<i>T<sub>i</sub></i>, Time to reach max<br>growth rate",
-    Parameter == "survival" ~ "log &lambda;, Survival time"
+    Parameter == "survival" ~ "log &mu;, Survival time"
   )) %>%
   group_by(Species, Parameter, names,
            sla_med, sla_iqr, wood_density_med, wood_density_iqr) %>%
@@ -192,7 +192,7 @@ param_traits_median <-
                              "log <i>A</i>, Asymptotic basal<br>diameter",
                              "log <i>k<sub>G</sub></i>, Growth rate<br> coefficient",
                              "<i>T<sub>i</sub></i>, Time to reach max<br>growth rate",
-                             "log &lambda;, Survival time"
+                             "log &mu;, Survival time"
                              ))
 
 # Plot --------------------------------------------------------------------

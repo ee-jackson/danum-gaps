@@ -84,16 +84,16 @@ post_summary_surv <-
   summary(mod_surv, robust = TRUE)$fixed %>%
   rownames_to_column(var = "Parameter") %>%
   mutate(Parameter = case_when(
-    grepl("forest_typelogged", Parameter) ~ "$\\lambda$, Logged forest",
-    grepl("forest_typeprimary", Parameter) ~ "$\\lambda$, Old-growth forest",
+    grepl("forest_typelogged", Parameter) ~ "$\\mu$, Logged forest",
+    grepl("forest_typeprimary", Parameter) ~ "$\\mu$, Old-growth forest",
     grepl("dbase_mean_sc", Parameter) ~ "$\\beta$, Basal diameter")) %>%
   mutate(Parameter = str_split_i(string = Parameter, pattern ="_", i = 1)) %>%
   select(Parameter, Estimate, `l-95% CI`,
          `u-95% CI`, Rhat, Bulk_ESS, Tail_ESS) %>%
   mutate(across(c(Estimate, `l-95% CI`, `u-95% CI`), ~
                   case_when(
-                    Parameter == "$\\lambda$, Logged forest" |
-                      Parameter == "$\\lambda$, Old-growth forest" ~ exp(.),
+                    Parameter == "$\\mu$, Logged forest" |
+                      Parameter == "$\\mu$, Old-growth forest" ~ exp(.),
                     .default = .
                   ))) %>%
   rename(`Posterior median` = Estimate,
@@ -158,13 +158,13 @@ ft_ests <-
     parameter == "A" ~ "<i>A</i>, Asymptotic basal diameter (mm)",
     parameter == "kG" ~ "<i>k<sub>G</sub> / e</i>, Maximum relative growth rate (% year<sup>-1</sup>)",
     parameter == "Ti" ~ "<i>T<sub>i</sub></i>, Time to reach max growth rate (years)",
-    parameter == "survival" ~ "&lambda;, Survival time (years)"
+    parameter == "survival" ~ "&mu;, Survival time (years)"
   )) %>%
   mutate(name = fct_relevel(name,
                              "<i>A</i>, Asymptotic basal diameter (mm)",
                              "<i>k<sub>G</sub> / e</i>, Maximum relative growth rate (% year<sup>-1</sup>)",
                              "<i>T<sub>i</sub></i>, Time to reach max growth rate (years)",
-                             "&lambda;, Survival time (years)"
+                             "&mu;, Survival time (years)"
   ))
 
 
@@ -269,13 +269,13 @@ sp_ests <-
     parameter == "A" ~ "<i>A</i>, Asymptotic basal diameter (mm)",
     parameter == "kG" ~ "<i>k<sub>G</sub> / e</i>, Maximum relative growth rate (% year<sup>-1</sup>)",
     parameter == "Ti" ~ "<i>T<sub>i</sub></i>, Time to reach max growth rate (years)",
-    parameter == "survival" ~ "&lambda;, Survival time (years)"
+    parameter == "survival" ~ "&mu;, Survival time (years)"
   )) %>%
   mutate(name = fct_relevel(name,
                              "<i>A</i>, Asymptotic basal diameter (mm)",
                              "<i>k<sub>G</sub> / e</i>, Maximum relative growth rate (% year<sup>-1</sup>)",
                              "<i>T<sub>i</sub></i>, Time to reach max growth rate (years)",
-                             "&lambda;, Survival time (years)"
+                             "&mu;, Survival time (years)"
   )) %>%
   mutate(Species = str_replace(Species, "_", " ")) %>%
   mutate(Species = paste0("<i>", Species, "</i>", sep = ""))

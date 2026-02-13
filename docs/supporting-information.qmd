@@ -1,6 +1,6 @@
 ---
 title: "Supporting Information"
-subtitle: "Lower growth rates and earlier mortality of enrichment planted dipterocarp seedlings in logged versus old-growth forest"
+subtitle: "Contrasting growth trajectories but convergent size-dependent survival of enrichment-planted seedlings in logged and old-growth forests"
 knitr:
   opts_chunk: 
     echo: false
@@ -144,7 +144,7 @@ readr::read_csv(
 
 ```{r}
 #| label: tab-survival-params
-#| tbl-cap: "Posterior estimates of population-level effects from the survival model. The Weibull scale parameter, $\\lambda$, has been back-transformed to the response scale (years)."
+#| tbl-cap: "Posterior estimates of population-level effects from the survival model. The mean of the Weibull distribution, $\\mu$, has been back-transformed to the response scale (years)."
 
 readr::read_csv(
         here::here(

@@ -138,8 +138,8 @@ my_coef_tab_survival <-
   mutate(forest_type = str_remove(forest_type, "type")) %>% 
   mutate(forest_type =
            case_when(
-             forest_type == "primary" ~ "log &lambda;, Old-growth forest",
-             forest_type == "logged" ~ "log &lambda;, Logged forest",
+             forest_type == "primary" ~ "log &mu;, Old-growth forest",
+             forest_type == "logged" ~ "log &mu;, Logged forest",
              forest_type == "mean" ~ "&beta;, Basal diameter",
              forest_type == "cut1" ~ "&beta;, Climber cutting",
              .default = forest_type

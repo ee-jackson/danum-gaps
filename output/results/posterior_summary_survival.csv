@@ -1,4 +1,4 @@
 Parameter,Posterior median,l-95% CI,u-95% CI,Rhat,Bulk effective sample size,Tail effective sample size
-"$\lambda$, Logged forest",2.877,2.32,3.507,1.001,2090.704,3589.735
-"$\lambda$, Old-growth forest",5.518,3.696,8.213,1,2583.691,4432.72
+"$\mu$, Logged forest",2.877,2.32,3.507,1.001,2090.704,3589.735
+"$\mu$, Old-growth forest",5.518,3.696,8.213,1,2583.691,4432.72
 "$\beta$, Basal diameter",2.599,2.432,2.775,1,10644.645,7872.663

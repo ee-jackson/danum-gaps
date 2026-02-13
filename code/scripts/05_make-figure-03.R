@@ -50,59 +50,22 @@ unscale_basal <- function(x) {
   x*attr(data_surv$dbase_mean_sc, "scaled:scale")
 }
 
-# Function to generate a sequence with increasing step sizes
-increasing_step_sequence <- function(min_val, max_val, n_steps, growth_rate = 1.2) {
-  # Input validation
-  if (min_val >= max_val) {
-    stop("min_val must be less than max_val")
-  }
-  if (n_steps < 2) {
-    stop("n_steps must be at least 2")
-  }
-  if (growth_rate <= 1) {
-    stop("growth_rate must be greater than 1")
-  }
-
-  # Initialize the sequence with the starting value
-  sequence <- numeric(n_steps)
-  sequence[1] <- min_val
-
-  # Calculate total distance to cover
-  total_distance <- max_val - min_val
-
-  # Generate weights that increase exponentially
-  weights <- growth_rate ^ (0:(n_steps-2))
-
-  # Normalize weights so they sum to the total distance
-  step_sizes <- weights * (total_distance / sum(weights))
-
-  # Build the sequence by adding decreasing steps
-  for (i in 2:n_steps) {
-    sequence[i] <- sequence[i-1] + step_sizes[i-1]
-  }
-
-  # Ensure the last value exactly equals max_val (handle floating point precision)
-  sequence[n_steps] <- max_val
-
-  return(sequence)
-}
-
 my_sequence <-
-  increasing_step_sequence(
-    min_val = min(data_surv$dbase_mean_sc, na.rm = T),
-    max_val = max(data_surv$dbase_mean_sc, na.rm = T),
-    n_steps = 20)
+  seq(
+    from = min(data_surv$dbase_mean_sc, na.rm = T),
+    to = scale_basal(150),
+    length.out = 20)
 
 surv_pred <-
   data_surv %>%
   data_grid(dbase_mean_sc = my_sequence,
             forest_type = c("logged", "primary")) %>%
   add_linpred_draws(object = mod_surv, ndraws = NULL,
-                    re_formula = NA, dpar = TRUE
+                    re_formula = NA, dpar = TRUE, transform = TRUE
   ) %>%
   rowwise() %>%
   mutate(scale = mu/gamma(1+(1/shape))) %>%
-  mutate(surv = exp(-(dbase_mean_sc/scale)^shape)) %>%
+  mutate(surv = exp(-(20/scale)^shape)) %>% # survival to 20 yrs given size
   group_by(dbase_mean_sc, forest_type) %>%
   point_interval(surv,
                  .width = 0.95,
@@ -122,11 +85,11 @@ sp_sizes <-
   data_surv %>%
   group_by(genus_species) %>%
   summarise(min = min(dbase_mean_sc, na.rm = T),
-            max = max(dbase_mean_sc, na.rm = T)) %>%
-  mutate(dbase_mean_sc = map2(min, max,
-                              .f = increasing_step_sequence,
-                              n_steps = 10,
-                              growth_rate = 1.5))
+            max = pluck(quantile(dbase_mean_sc, na.rm = T), 4)) %>%
+  mutate(dbase_mean_sc = map2(min(data_surv$dbase_mean_sc, na.rm = T),
+                              scale_basal(150),
+                              .f = seq,
+                              length.out = 20))
 
 sp_sizes_l <- sp_sizes %>% mutate(forest_type = "logged")
 sp_sizes_p <- sp_sizes %>% mutate(forest_type = "primary")
@@ -142,11 +105,11 @@ surv_pred_sp <-
   left_join(sp_sizes_pl, by = c("genus_species", "forest_type")) %>%
   unnest(dbase_mean_sc) %>%
   add_linpred_draws(object = mod_surv, ndraws = NULL,
-                    re_formula = NULL, dpar = TRUE
+                    re_formula = NULL, dpar = TRUE, transform = TRUE
   ) %>%
   rowwise() %>%
   mutate(scale = mu/gamma(1+(1/shape))) %>%
-  mutate(surv = exp(-(dbase_mean_sc/scale)^shape)) %>%
+  mutate(surv = exp(-(20/scale)^shape)) %>%
   group_by(dbase_mean_sc, forest_type, genus_species) %>%
   point_interval(surv,
                  .width = 0.95,
@@ -336,7 +299,7 @@ jpeg(
     patchwork::plot_layout(heights = c(4,1,1)) &
     theme_bw(base_size = 4.5) +
     theme(legend.position = "inside",
-          legend.position.inside = c(0.9, 0.9),
+          legend.position.inside = c(0.1, 0.9),
           axis.title.y = element_markdown(),
           strip.text = element_markdown(),
           legend.title = element_blank(),

@@ -1,31 +1,11 @@
----
-title: "Survival curves"
-author: 'eleanorjackson'
-date: '`r format(Sys.time(), "%d %B, %Y")`' 
-format: 
-  gfm:
-    toc: true
-editor: source
-execute:
-  warning: false
----
+# Survival curves
+eleanorjackson
+2026-02-13
 
-```{r setup}
-#| include: false
+- [Survival ~ size](#survival--size)
+- [Survival ~ time](#survival--time)
 
-file_name <- knitr::current_input()
-
-knitr::opts_chunk$set(
-  fig.path =
-    paste0("figures/", sub("\\.rmarkdown$", "", basename(file_name)), 
-           "/", sep = "")
-)
-
-set.seed(20497)
-ggplot2::theme_set(ggplot2::theme_bw(base_size = 10))
-```
-
-```{r}
+``` r
 library("tidyverse")
 library("tidybayes")
 library("brms")
@@ -34,16 +14,15 @@ library("patchwork")
 library("ggtext")
 ```
 
-```{r}
+``` r
 mod_surv <-
   readRDS(here::here("output", "models",
                      "survival_model.rds"))
 
 data_surv <- mod_surv$data
-
 ```
 
-```{r}
+``` r
 # Functions to scale and unscale basal diameter values
 scale_basal <- function(x) {
   x / attr(data_surv$dbase_mean_sc, "scaled:scale")
@@ -54,7 +33,7 @@ unscale_basal <- function(x) {
 }
 ```
 
-```{r}
+``` r
 my_sequence <-
   seq(
     from = min(data_surv$dbase_mean_sc, na.rm = T),
@@ -62,7 +41,7 @@ my_sequence <-
     length.out = 20)
 ```
 
-```{r}
+``` r
 surv_pred_20yrs <-
   data_surv %>%
   data_grid(dbase_mean_sc = my_sequence,
@@ -81,7 +60,7 @@ surv_pred_20yrs <-
                  na.rm = TRUE) 
 ```
 
-```{r}
+``` r
 surv_pred_5yrs <-
   data_surv %>%
   data_grid(dbase_mean_sc = my_sequence,
@@ -100,14 +79,14 @@ surv_pred_5yrs <-
                  na.rm = TRUE) 
 ```
 
-```{r}
+``` r
 pal <-
   c("Logged" = "#e69f00", "Old-growth" = "#009e73")
 ```
 
 ## Survival ~ size
 
-```{r}
+``` r
 surv_pred_5yrs %>%
     mutate(dbase_mean_sc = unscale_basal(dbase_mean_sc)) %>%
     mutate(forest_type = case_when(
@@ -147,9 +126,11 @@ surv_pred_20yrs %>%
   patchwork::plot_layout(guides = "collect")
 ```
 
+![](figures/2026-02-13_survival-curves/unnamed-chunk-8-1.png)
+
 ## Survival ~ time
 
-```{r}
+``` r
 surv_pred_50mm <-
   data_surv %>%
   data_grid(dbase_mean_sc = scale_basal(50),
@@ -169,7 +150,7 @@ surv_pred_50mm <-
                  na.rm = TRUE) 
 ```
 
-```{r}
+``` r
 surv_pred_10mm <-
   data_surv %>%
   data_grid(dbase_mean_sc = scale_basal(10),
@@ -189,8 +170,7 @@ surv_pred_10mm <-
                  na.rm = TRUE) 
 ```
 
-
-```{r}
+``` r
 surv_pred_50mm %>%
     mutate(forest_type = case_when(
       grepl("logged", forest_type) ~ "Logged",
@@ -227,3 +207,5 @@ surv_pred_50mm %>%
   
   patchwork::plot_layout(guides = "collect")
 ```
+
+![](figures/2026-02-13_survival-curves/unnamed-chunk-11-1.png)

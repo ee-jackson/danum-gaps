@@ -37,7 +37,7 @@ bform <-
     time_to_last_alive | cens(x = censor, y2 = time_to_dead) ~
       0 + forest_type + dbase_mean_sc +
       (0 + forest_type | genus_species),
-    family = brmsfamily("weibull")
+    family = brmsfamily("weibull", link = "log", link_shape = "log")
   )
 
 

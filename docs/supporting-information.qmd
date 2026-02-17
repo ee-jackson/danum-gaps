@@ -22,7 +22,7 @@ library("tidyverse")
 
 Three of the Sabah Biodiversity Experiment plots included in this study received 
 a complete climber cutting treatment as part of a different experiment (plots numbered 5, 11 and 14), 
-where all lianas $\ge$ 10 cm in height were cut at the base in 2011 and 2014 [see @obrienPositiveEffectsLiana2019].
+where all lianas $\ge$ 10 cm in height were cut at the base in 2011 and 2014. ^[O’Brien, M. J. et al. Positive effects of liana cutting on seedlings are reduced during El Niño-induced drought. Journal of Applied Ecology 56, 891–901 (2019). doi: [10.1111/1365-2664.13335](https://doi.org/10.1111/1365-2664.13335)]
 
 Including the climber cutting treatment as a fixed effect in our growth and survival models
 did not change our results.
@@ -94,7 +94,7 @@ Results are presented in @fig-cens1-surv and @fig-cens1-corrsurv.
 
 # Estimating missing values of basal diameter
 
-There are 190 missing values of basal diameter in our data (0.73% of all records for living trees). For these missing values, we estimated basal diameter from diameter at breast height using a known allometric equation [@cushmanImprovingEstimatesBiomass2014];
+There are 190 missing values of basal diameter in our data (0.73% of all records for living trees). For these missing values, we estimated basal diameter from diameter at breast height using a known allometric equation, ^[Cushman, K. C. et al. Improving estimates of biomass change in buttressed trees using tree taper models. Methods in Ecology and Evolution 5, 573–582 (2014). doi: [10.1111/2041-210X.12187](https://doi.org/10.1111/2041-210X.12187)]
 
 $$
 d_{h2} = \frac{D_{h1}}{exp(b_1 h1 - h2)}

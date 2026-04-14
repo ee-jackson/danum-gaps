@@ -112,14 +112,14 @@ p1 <-
   stat_lineribbon(data = pl1_preds,
                   aes(x = years, y = .epred,
                       group = plant_id),
-                  colour = "forestgreen",
+                  colour = "#0072B2",
                   .width = 0,
-                  linewidth = 1,
+                  linewidth = 0.5,
                   alpha = 0.4) +
   geom_point(data = growth_data_pl1,
              aes(x = years, y = dbase_mean),
-             shape = 4, stroke = 0.75, size = 2,
-             colour = "forestgreen") +
+             shape = 4, stroke = 0.5, size = 0.5,
+             colour = "#0072B2") +
   theme(legend.position = "none") +
   ylab("Basal diameter mm") +
   xlab("Years") +
@@ -146,14 +146,14 @@ p2 <-
   stat_lineribbon(data = sp1_preds_s,
                   aes(x = years, y = .epred,
                       group = plant_id),
-                  colour = "forestgreen",
+                  colour = "#0072B2",
                   .width = 0,
-                  linewidth = 1,
+                  linewidth = 0.25,
                   alpha = 0.3) +
   stat_lineribbon(data = sp1_preds_s,
                   aes(x = years, y = .epred),
                   .width = 0,
-                  linewidth = 1,
+                  linewidth = 0.5,
                   alpha = 1,
                   linetype = 2) +
   theme(legend.position = "none") +
@@ -236,13 +236,13 @@ p3 <-
                 group = plant_id), 
             alpha = 0.3,
             stat = "smooth",
-            colour = "forestgreen",
-            linewidth = 1) +
+            colour = "#0072B2",
+            linewidth = 0.25) +
   geom_path(data = all_gr_sp1_s,
             aes(x = .epred, y = growth_mmyr), 
-            linewidth = 1,
             alpha = 1,
-            linetype = 2) +
+            linetype = 2,
+            linewidth = 0.5) +
   xlab("Basal diameter mm") +
   ylab("Growth rate mm year<sup>-1</sup>") +
   scale_x_continuous(expand = c(0, 0)) +
@@ -285,7 +285,7 @@ p4 <-
   mutate(survival = ifelse(survival == 0, "Dead", "Alive")) %>% 
   ggplot(aes(y = plant_id, x = years,
              shape = as.ordered(survival))) +
-  geom_point(size = 2, colour = "grey20", stroke = 0.75) +
+  geom_point(size = 0.5, colour = "grey20", stroke = 0.25) +
   scale_shape_manual(values = c(19, 4)) +
   theme(axis.text.y = element_blank(),
         axis.ticks.y = element_blank(),
@@ -311,13 +311,13 @@ p5 <-
   ggplot(aes(x = dbase_mean)) +
   geom_histogram(
           position = "identity",
-          fill = "forestgreen",
+          fill = "#0072B2",
           alpha = 0.6,
           bins = 60
          ) +
   geom_step(
     aes(y = ..count..),
-    colour = "forestgreen",
+    colour = "#0072B2",
     stat = "bin",
     bins = 60,
     direction = "mid"
@@ -371,13 +371,13 @@ surv_pred_sp <-
 p6 <-
   ggplot() +
   stat_lineribbon(data = surv_pred_sp, 
-    aes(x = unscale_basal(dbase_mean_sc), 
-               y = surv), colour = "forestgreen", fill = "forestgreen",
-               .width = 0.95, alpha = 0.5, show.legend = FALSE) +
+    aes(x = unscale_basal(dbase_mean_sc), y = surv), 
+    colour = "#0072B2", fill = "#0072B2", 
+    .width = 0.95, alpha = 0.25, show.legend = FALSE) +
   stat_lineribbon(data = surv_pred_sp, 
     aes(x = unscale_basal(dbase_mean_sc), 
-               y = surv), colour = "forestgreen", 
-               .width = 0, show.legend = FALSE) +
+               y = surv), colour = "#0072B2", 
+               .width = 0, show.legend = FALSE, linewidth = 0.25) +
   ylab("Survival probability")+
   xlab("Basal diameter mm") +
   theme(legend.position = "bottom") +
@@ -405,5 +405,32 @@ p1 + p2 + p3 + p4 + p5 + p6 +
       )
   )
 
+```
+
+
+```{r}
+ggplot2::theme_set(ggplot2::theme_classic(base_size = 8))
+
+png(
+  here::here("output", "figures", "figure_01.png"),
+  width = 8,
+  height = 13,
+  res = 600,
+  pointsize = 3,
+  units = "cm",
+  type = "cairo",
+  bg = "white"
+)
+p1 + p2 + p3 + p4 + p5 + p6 +
+  patchwork::plot_layout(ncol = 2) +
+  patchwork::plot_annotation(
+    tag_levels = "a",
+    title = "Hopea sangal",
+    subtitle = "Logged forest",
+    theme = theme(
+      plot.title = element_text(face = "italic")
+      )
+  ) 
+dev.off()
 ```
 

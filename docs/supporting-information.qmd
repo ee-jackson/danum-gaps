@@ -35,7 +35,7 @@ did not change our results.
 
 # Species taxonomy
 
-In the main text we use species names which are consistent with prior publications involving the Sabah Biodiversity Experiment. Here, we list the current accepted names for reference. Species names were matched to a static copy of [The World Flora Online (WFO)](http://www.worldfloraonline.org)  v.2024.12 [zenodo.14538251](https://doi.org/10.5281/zenodo.14538251) using the function `WFO.match` from the R package {WorldFlora}. The function `WFO.one` was then used to find one unique matching name for each submitted name. using the argument `priority = "Accepted"`, it first limits candidates to accepted names, with a possible second step of eliminating accepted names that are synonyms.
+In the main text we use current accepted species names. Here, for reference, we list the old names, which are consistent with prior publications involving the Sabah Biodiversity Experiment. Species names were matched to a static copy of [The World Flora Online (WFO)](http://www.worldfloraonline.org)  v.2024.12 [zenodo.14538251](https://doi.org/10.5281/zenodo.14538251) using the function `WFO.match` from the R package {WorldFlora}. The function `WFO.one` was then used to find one unique matching name for each submitted name. using the argument `priority = "Accepted"`, it first limits candidates to accepted names, with a possible second step of eliminating accepted names that are synonyms.
 
 ```{r}
 #| label: tab-species

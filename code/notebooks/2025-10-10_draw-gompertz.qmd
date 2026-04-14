@@ -73,7 +73,7 @@ toy_fig <-
   ggplot(df, aes(x = t)) +
   geom_line(
     aes(y = size, color = "Gompertz curve"),
-    colour = "forestgreen",
+    colour = "#0072B2",
     .width = 0,
     linewidth = 1,
     alpha = 0.6
@@ -101,9 +101,9 @@ toy_fig <-
   ) +
   scale_color_manual(
     values = c(
-      "Gompertz curve" = "forestgreen",
+      "Gompertz curve" = "#0072B2",
       "Absolute maximum<br>growth rate, _A k<sub>G</sub> / e_" = "gray40",
-      "Inflection point" = "blue"
+      "Inflection point" = "#D55E00"
     ),
     breaks = c(
       "Gompertz curve",
@@ -173,7 +173,7 @@ toy_fig2 <-
   ggplot(aes(x = size, y = growth)) +
   geom_line(
     stat = "smooth",
-    colour = "forestgreen",
+    colour = "#0072B2",
     linewidth = 1,
     alpha = 0.6
   ) +
@@ -210,8 +210,8 @@ toy_fig + toy_fig2 +
 ```
 
 ```{r}
-jpeg(
-  here::here("output", "figures", "figure_02.jpeg"),
+png(
+  here::here("output", "figures", "figure_02.png"),
   width = 80,
   height = 120,
   res = 600,

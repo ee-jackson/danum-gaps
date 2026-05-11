@@ -64,18 +64,8 @@ post_summary_gro <-
     grepl("typelogged", `Forest type`) ~ "Logged",
     grepl("typeprimary", `Forest type`) ~ "Old-growth")) %>%
   mutate(Parameter = str_split_i(string = Parameter, pattern ="_", i = 1)) %>%
-  mutate(across(c(Estimate, `l-95% CI`, `u-95% CI`), ~
-                  case_when(
-                    Parameter == "logkG" | Parameter == "logA" ~ exp(.),
-                    .default = .
-                  ))) %>%
-  mutate(across(c(Estimate, `l-95% CI`, `u-95% CI`), ~
-                  case_when(
-                    Parameter == "logkG" ~ (. / exp(1))*100,
-                    .default = .
-                  ))) %>%
   mutate(Parameter = ifelse(Parameter == "Ti", "T~i~", Parameter)) %>%
-  mutate(Parameter = ifelse(Parameter == "logkG", "k~G~/e", Parameter)) %>%
+  mutate(Parameter = ifelse(Parameter == "logkG", "logk~G~/e", Parameter)) %>%
   mutate(Parameter = ifelse(Parameter == "logA", "A", Parameter)) %>%
   select(Parameter, `Forest type`, Estimate, `l-95% CI`,
          `u-95% CI`, Rhat, Bulk_ESS, Tail_ESS) %>%
@@ -137,17 +127,29 @@ ft_ests_grow <-
     grepl("primary", .variable) ~ "Old-growth"
   )) %>%
   mutate(parameter = case_when(
-    grepl("logA", .variable) ~ "A",
-    grepl("logkG", .variable) ~ "kG",
+    grepl("logA", .variable) ~ "logA",
+    grepl("logkG", .variable) ~ "logkG",
     grepl("Ti", .variable) ~ "Ti"
   )) %>%
-  mutate(.value =
-           case_when(parameter == "kG" |
-                       parameter == "A" ~ exp(.value),
-                     .default = .value)) %>%
-  mutate(.value =
-           case_when(parameter == "kG" ~ (.value / exp(1)) * 100,
-                     .default = .value))
+  ungroup() %>%
+  select(.draw, forest_type, parameter, .value) %>%
+  pivot_wider(names_from = parameter, values_from = .value)
+
+# compute S20
+ft_ests_grow <-
+  ft_ests_grow %>%
+  mutate(
+    kG = exp(logkG),
+    logS20 = logA - exp(-(kG * (20 - Ti))),
+    S20 = exp(logS20),
+    kG_e = (kG / exp(1)) * 100
+  ) %>%
+  select(.draw, forest_type, S20, kG_e, Ti) %>%
+  pivot_longer(
+    cols = c(S20, kG_e, Ti),
+    names_to = "parameter",
+    values_to = ".value"
+  )
 
 # survival model parameter estimates
 ft_ests_surv <-
@@ -166,13 +168,13 @@ ft_ests <-
   bind_rows(ft_ests_grow, ft_ests_surv) %>%
   ungroup() %>%
   mutate(name = case_when(
-    parameter == "A" ~ "<i>A</i>, Asymptotic basal diameter (mm)",
-    parameter == "kG" ~ "<i>k<sub>G</sub> / e</i>, Maximum relative growth rate (% year<sup>-1</sup>)",
+    parameter == "S20" ~ "<i>S<sub>20</sub></i>, Basal diameter at 20 years (mm)",
+    parameter == "kG_e" ~ "<i>k<sub>G</sub> / e</i>, Maximum relative growth rate (% year<sup>-1</sup>)",
     parameter == "Ti" ~ "<i>T<sub>i</sub></i>, Time to reach max growth rate (years)",
     parameter == "survival" ~ "&mu;, Survival time (years)"
   )) %>%
   mutate(name = fct_relevel(name,
-                            "<i>A</i>, Asymptotic basal diameter (mm)",
+                            "<i>S<sub>20</sub></i>, Basal diameter at 20 years (mm)",
                             "<i>k<sub>G</sub> / e</i>, Maximum relative growth rate (% year<sup>-1</sup>)",
                             "<i>T<sub>i</sub></i>, Time to reach max growth rate (years)",
                             "&mu;, Survival time (years)"
@@ -201,9 +203,8 @@ sp_ests_A <-
     grepl("primary", name) ~ "Old-growth")) %>%
   mutate(Species = str_split_i(string = name, pattern ="\\[", i = 2)) %>%
   mutate(Species = str_split_i(string = Species, pattern =",", i = 1)) %>%
-  mutate(parameter = "A") %>%
-  select(-c("b_logA_forest_typeprimary", "b_logA_forest_typelogged")) %>%
-  mutate(value = exp(value))
+  mutate(parameter = "logA") %>%
+  select(-c("b_logA_forest_typeprimary", "b_logA_forest_typelogged"))
 
 # kG parameter
 sp_ests_kG <-
@@ -225,9 +226,8 @@ sp_ests_kG <-
     grepl("primary", name) ~ "Old-growth")) %>%
   mutate(Species = str_split_i(string = name, pattern ="\\[", i = 2)) %>%
   mutate(Species = str_split_i(string = Species, pattern =",", i = 1)) %>%
-  mutate(parameter = "kG") %>%
-  mutate(value = exp(value)) %>%
-  mutate(value = (value / exp(1))*100) %>%
+  mutate(parameter = "logkG") %>%
+  #mutate(value = (value / exp(1))*100) %>%
   select(-c("b_logkG_forest_typeprimary", "b_logkG_forest_typelogged"))
 
 # delay parameter
@@ -275,15 +275,29 @@ sp_ests <-
   bind_rows(sp_ests_A,
             sp_ests_Ti,
             sp_ests_kG,
-            sp_ests_surv)%>%
+            sp_ests_surv) %>%
+  select(.draw, forest_type, parameter, value, Species) %>%
+  pivot_wider(names_from = parameter, values_from = value) %>%
+  mutate(
+    kG = exp(logkG),
+    logS20 = logA - exp(-(kG * (20 - Ti))),
+    S20 = exp(logS20),
+    kG_e = (kG / exp(1)) * 100
+  ) %>%
+  select(.draw, forest_type, Species, S20, kG_e, Ti, survival) %>%
+  pivot_longer(
+    cols = c(S20, kG_e, Ti, survival),
+    names_to = "parameter",
+    values_to = ".value"
+  ) %>%
   mutate(name = case_when(
-    parameter == "A" ~ "<i>A</i>, Asymptotic basal diameter (mm)",
-    parameter == "kG" ~ "<i>k<sub>G</sub> / e</i>, Maximum relative growth rate (% year<sup>-1</sup>)",
+    parameter == "S20" ~ "<i>S<sub>20</sub></i>, Basal diameter at 20 years (mm)",
+    parameter == "kG_e" ~ "<i>k<sub>G</sub> / e</i>, Maximum relative growth rate (% year<sup>-1</sup>)",
     parameter == "Ti" ~ "<i>T<sub>i</sub></i>, Time to reach max growth rate (years)",
     parameter == "survival" ~ "&mu;, Survival time (years)"
   )) %>%
   mutate(name = fct_relevel(name,
-                            "<i>A</i>, Asymptotic basal diameter (mm)",
+                            "<i>S<sub>20</sub></i>, Basal diameter at 20 years (mm)",
                             "<i>k<sub>G</sub> / e</i>, Maximum relative growth rate (% year<sup>-1</sup>)",
                             "<i>T<sub>i</sub></i>, Time to reach max growth rate (years)",
                             "&mu;, Survival time (years)"
@@ -301,9 +315,9 @@ pa <-
   ft_ests %>%
   # adding line breaks to facet labels for panels a and b
   mutate(name = case_when(
-    parameter == "A" ~
-      "<i>A</i>, Asymptotic<br>basal diameter (mm)",
-    parameter == "kG" ~
+    parameter == "S20" ~
+      "<i>S<sub>20</sub></i>, Basal diameter<br>at 20 years (mm)",
+    parameter == "kG_e" ~
       "<i>k<sub>G</sub> / e</i>, Maximum relative<br>growth rate (% year<sup>-1</sup>)",
     parameter == "Ti" ~
       "<i>T<sub>i</sub></i>, Time to reach max<br>growth rate (years)",
@@ -311,7 +325,7 @@ pa <-
       "&mu;, Survival time (years)"
   )) %>%
   mutate(name = fct_relevel(name,
-                            "<i>A</i>, Asymptotic<br>basal diameter (mm)",
+                            "<i>S<sub>20</sub></i>, Basal diameter<br>at 20 years (mm)",
                             "<i>k<sub>G</sub> / e</i>, Maximum relative<br>growth rate (% year<sup>-1</sup>)",
                             "<i>T<sub>i</sub></i>, Time to reach max<br>growth rate (years)",
                             "&mu;, Survival time (years)"
@@ -329,9 +343,9 @@ pa <-
 pb <-
   ft_ests %>%
   mutate(name = case_when(
-    parameter == "A" ~
-      "<i>A</i>, Asymptotic<br>basal diameter (mm)",
-    parameter == "kG" ~
+    parameter == "S20" ~
+      "<i>S<sub>20</sub></i>, Basal diameter<br>at 20 years (mm)",
+    parameter == "kG_e" ~
       "<i>k<sub>G</sub> / e</i>, Maximum relative<br>growth rate (% year<sup>-1</sup>)",
     parameter == "Ti" ~
       "<i>T<sub>i</sub></i>, Time to reach max<br>growth rate (years)",
@@ -339,7 +353,7 @@ pb <-
       "&mu;, Survival time (years)"
   )) %>%
   mutate(name = fct_relevel(name,
-                            "<i>A</i>, Asymptotic<br>basal diameter (mm)",
+                            "<i>S<sub>20</sub></i>, Basal diameter<br>at 20 years (mm)",
                             "<i>k<sub>G</sub> / e</i>, Maximum relative<br>growth rate (% year<sup>-1</sup>)",
                             "<i>T<sub>i</sub></i>, Time to reach max<br>growth rate (years)",
                             "&mu;, Survival time (years)"
@@ -362,9 +376,9 @@ pb <-
 
 pc <-
   sp_ests %>%
-  filter(case_when(parameter == "survival" ~ value <35,
-                   .default = value == value)) %>%
-  ggplot(aes(x = value, y = Species,
+  filter(case_when(parameter == "survival" ~ .value <35,
+                   .default = .value == .value)) %>%
+  ggplot(aes(x = .value, y = Species,
              fill = forest_type)) +
   stat_halfeye(.width = 0.95, slab_alpha = 0.5, interval_size = 0.05,
                normalize = "groups", point_size = 0.25,
@@ -376,11 +390,11 @@ pc <-
 
 pd <-
   sp_ests %>%
-  filter(case_when(parameter == "survival" ~ value <35,
-                   .default = value == value)) %>%
+  filter(case_when(parameter == "survival" ~ .value <35,
+                   .default = .value == .value)) %>%
   ungroup() %>%
   pivot_wider(names_from = forest_type,
-              values_from = value) %>%
+              values_from = .value) %>%
   mutate(diff = Logged - `Old-growth`) %>%
   ggplot(aes(x = diff, y = Species)) +
   stat_halfeye(.width = 0.95, slab_alpha = 0.5, interval_size = 0.05,
@@ -397,7 +411,7 @@ pd <-
 # Combine panels ----------------------------------------------------------
 
 png(
-  here::here("output", "figures", "figure_05.png"),
+  here::here("output", "figures", "figure_05_2.png"),
   width = 18,
   height = 20,
   res = 600,

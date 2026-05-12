@@ -1,6 +1,6 @@
 ---
-title: "Supporting Information"
-subtitle: "Contrasting growth trajectories but convergent size-dependent survival of enrichment-planted seedlings in logged and old-growth forests"
+title: "Lower early growth rates and survival of seedlings in a logged versus old-growth tropical forest"
+subtitle: "Supporting Information"
 knitr:
   opts_chunk: 
     echo: false
@@ -130,7 +130,7 @@ breast height, to find the value which gave the lowest Root Mean Squared Error.
 
 ```{r}
 #| label: tab-growth-params
-#| tbl-cap: "Posterior estimates of fixed effects from the growth model on the response scale"
+#| tbl-cap: "Posterior estimates of population-level effects from the growth model on the link scale"
 
 readr::read_csv(
         here::here(
@@ -144,7 +144,7 @@ readr::read_csv(
 
 ```{r}
 #| label: tab-survival-params
-#| tbl-cap: "Posterior estimates of population-level effects from the survival model. The mean of the Weibull distribution, $\\mu$, has been back-transformed to the response scale (years)."
+#| tbl-cap: "Posterior estimates of population-level effects from the survival model on the link scale"
 
 readr::read_csv(
         here::here(
@@ -154,3 +154,6 @@ readr::read_csv(
   knitr::kable()
 ```
 
+# Growth-survival correlations
+
+![Pairwise Pearson's correlation coefficients for growth and survival parameters.](../code/notebooks/figures/2026-05-12_growth_survival_trade_off/unnamed-chunk-6-1.png){#fig-gro-surv-corr width=400}

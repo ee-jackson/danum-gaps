@@ -84,18 +84,12 @@ post_summary_surv <-
   summary(mod_surv, robust = TRUE)$fixed %>%
   rownames_to_column(var = "Parameter") %>%
   mutate(Parameter = case_when(
-    grepl("forest_typelogged", Parameter) ~ "$\\mu$, Logged forest",
-    grepl("forest_typeprimary", Parameter) ~ "$\\mu$, Old-growth forest",
+    grepl("forest_typelogged", Parameter) ~ "log $\\mu$, Logged forest",
+    grepl("forest_typeprimary", Parameter) ~ "log $\\mu$, Old-growth forest",
     grepl("dbase_mean_sc", Parameter) ~ "$\\beta$, Basal diameter")) %>%
   mutate(Parameter = str_split_i(string = Parameter, pattern ="_", i = 1)) %>%
   select(Parameter, Estimate, `l-95% CI`,
          `u-95% CI`, Rhat, Bulk_ESS, Tail_ESS) %>%
-  mutate(across(c(Estimate, `l-95% CI`, `u-95% CI`), ~
-                  case_when(
-                    Parameter == "$\\mu$, Logged forest" |
-                      Parameter == "$\\mu$, Old-growth forest" ~ exp(.),
-                    .default = .
-                  ))) %>%
   rename(`Posterior median` = Estimate,
          `Bulk effective sample size` = Bulk_ESS,
          `Tail effective sample size` = Tail_ESS) %>%
@@ -381,6 +375,7 @@ pc <-
                point_interval = "median_qi") +
   theme(legend.position = "bottom") +
   facet_wrap(~name, scales = "free", nrow = 4) +
+  scale_y_discrete(limits = rev) +
   scale_fill_manual(values = pal) +
   labs(x = "Estimate", y = "Species")
 
@@ -398,6 +393,7 @@ pd <-
                point_interval = "median_qi") +
   theme(legend.position = "bottom") +
   facet_wrap(~name, scales = "free", nrow = 4) +
+  scale_y_discrete(limits = rev) +
   geom_vline(xintercept = 0, linetype = 2, colour = "red", linewidth = 0.25) +
   labs(x = "Additional effect of logging
        <br>(logged forest estimate - old-growth forest estimate)",

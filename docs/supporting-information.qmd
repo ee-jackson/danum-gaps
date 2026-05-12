@@ -1,5 +1,5 @@
 ---
-title: "Lower early growth rates and survival of seedlings in a logged versus old-growth tropical forest"
+title: "Lower growth rates and earlier mortality of seedlings in a logged versus old-growth tropical forest"
 subtitle: "Supporting Information"
 knitr:
   opts_chunk: 

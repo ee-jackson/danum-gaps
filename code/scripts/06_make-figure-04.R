@@ -150,9 +150,15 @@ pal <-
 
 # Build figure ------------------------------------------------------------
 
+names_list <-
+  names %>%
+  pull(scientificName) %>%
+  sort()
+
 p1 <-
   gro_rate_epred_sp %>%
   left_join(names) %>%
+  filter(scientificName %in% names_list[1:8]) %>%
   mutate(Species = paste0("<i>", scientificName, "</i>", sep = "")) %>%
   mutate(forest_type = case_when(
     grepl("logged", forest_type) ~ "Logged",
@@ -170,7 +176,34 @@ p1 <-
   facet_wrap(~Species, ncol = 1, scales = "free") +
   scale_y_continuous(n.breaks = 3) +
   scale_fill_manual(values = pal) +
-  scale_colour_manual(values = pal) +
+  scale_colour_manual(values = pal,
+                      guide = guide_legend(override.aes = list(size = 5))) +
+  labs(x = "Basal diameter (mm)",
+       y = "Basal diameter growth (mm year<sup>-1</sup>)")
+
+p3 <-
+  gro_rate_epred_sp %>%
+  left_join(names) %>%
+  filter(scientificName %in% names_list[9:15]) %>%
+  mutate(Species = paste0("<i>", scientificName, "</i>", sep = "")) %>%
+  mutate(forest_type = case_when(
+    grepl("logged", forest_type) ~ "Logged",
+    grepl("primary", forest_type) ~ "Old-growth")) %>%
+  ggplot(aes(x = x_value, y = y_value,
+             xmin = x_min, xmax = x_max,
+             ymin = y_min, ymax = y_max,
+             colour = forest_type,
+             fill = forest_type)) +
+  geom_pointinterval(interval_alpha = 0.5, orientation = "y",
+                     size = 0.01, show.legend = FALSE, stroke = 0) +
+  geom_pointinterval(interval_alpha = 0.5, orientation = "x",
+                     size = 0.01, show.legend = FALSE, stroke = 0) +
+  geom_line(show.legend = FALSE, linewidth = 0.25) +
+  facet_wrap(~Species, ncol = 1, scales = "free") +
+  scale_y_continuous(n.breaks = 3) +
+  scale_fill_manual(values = pal) +
+  scale_colour_manual(values = pal,
+                      guide = guide_legend(override.aes = list(size = 5))) +
   labs(x = "Basal diameter (mm)",
        y = "Basal diameter growth (mm year<sup>-1</sup>)")
 
@@ -178,6 +211,7 @@ p2 <-
   surv_pred_sp %>%
   mutate(x_value = unscale_basal(x_value)) %>%
   left_join(names) %>%
+  filter(scientificName %in% names_list[1:8]) %>%
   mutate(Species = paste0("<i>", scientificName, "</i>", sep = "")) %>%
   mutate(forest_type = case_when(
     grepl("logged", forest_type) ~ "Logged",
@@ -191,15 +225,39 @@ p2 <-
   geom_line(show.legend = FALSE, linewidth = 0.25) +
   facet_wrap(~Species, ncol = 1, scales = "free_x") +
   scale_fill_manual(values = pal) +
-  scale_colour_manual(values = pal) +
+  scale_colour_manual(values = pal,
+                      guide = guide_legend(override.aes = list(size = 5))) +
   scale_y_continuous(breaks = c(0, 0.5, 1)) +
   labs(x = "Basal diameter (mm)",
        y = "Survival probability")
 
+p4 <-
+  surv_pred_sp %>%
+  mutate(x_value = unscale_basal(x_value)) %>%
+  left_join(names) %>%
+  filter(scientificName %in% names_list[9:15]) %>%
+  mutate(Species = paste0("<i>", scientificName, "</i>", sep = "")) %>%
+  mutate(forest_type = case_when(
+    grepl("logged", forest_type) ~ "Logged",
+    grepl("primary", forest_type) ~ "Old-growth")) %>%
+  ggplot(aes(x = x_value, y = y_value,
+             ymin = y_min, ymax = y_max,
+             colour = forest_type,
+             fill = forest_type)) +
+  geom_pointinterval(interval_alpha = 0.5, orientation = "x",
+                     size = 0.01, stroke = 0) +
+  geom_line(show.legend = FALSE, linewidth = 0.25) +
+  facet_wrap(~Species, ncol = 1, scales = "free_x") +
+  scale_fill_manual(values = pal) +
+  scale_colour_manual(values = pal,
+                      guide = guide_legend(override.aes = list(size = 5))) +
+  scale_y_continuous(breaks = c(0, 0.5, 1)) +
+  labs(x = "Basal diameter (mm)",
+       y = "Survival probability")
 
 png(
   here::here("output", "figures", "figure_04.png"),
-  width = 8,
+  width = 18,
   height = 20,
   res = 600,
   pointsize = 6,
@@ -207,13 +265,13 @@ png(
   type = "cairo",
   bg = "white"
 )
-(p1 | p2) +
-  patchwork::plot_annotation(tag_levels = "a") &
-  theme_bw(base_size = 6) +
-  theme(legend.position = "right",
+(p1 | p2 | p3 | p4) +
+  patchwork::plot_layout(guides = "collect") &
+  theme_bw(base_size = 7) +
+  theme(legend.position = "bottom",
         legend.margin = margin(0, 0, 0, 0),
         axis.title.y = element_markdown(),
         strip.text = element_markdown(),
         legend.title = element_blank(),
-        legend.text = element_text(size = 6))
+        legend.text = element_text(size = 7))
 dev.off()

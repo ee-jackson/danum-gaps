@@ -407,7 +407,7 @@ pd <-
 # Combine panels ----------------------------------------------------------
 
 png(
-  here::here("output", "figures", "figure_05_2.png"),
+  here::here("output", "figures", "figure_05.png"),
   width = 18,
   height = 20,
   res = 600,

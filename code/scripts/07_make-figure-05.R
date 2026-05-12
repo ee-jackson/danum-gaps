@@ -66,7 +66,6 @@ post_summary_gro <-
   mutate(Parameter = str_split_i(string = Parameter, pattern ="_", i = 1)) %>%
   mutate(Parameter = ifelse(Parameter == "Ti", "T~i~", Parameter)) %>%
   mutate(Parameter = ifelse(Parameter == "logkG", "logk~G~/e", Parameter)) %>%
-  mutate(Parameter = ifelse(Parameter == "logA", "A", Parameter)) %>%
   select(Parameter, `Forest type`, Estimate, `l-95% CI`,
          `u-95% CI`, Rhat, Bulk_ESS, Tail_ESS) %>%
   rename(`Posterior median` = Estimate,
@@ -197,7 +196,6 @@ sp_ests_A <-
                 ~ .x + b_logA_forest_typelogged)) %>%
   ungroup() %>%
   pivot_longer(cols = contains("r_genus_species__logA")) %>%
-
   mutate(forest_type = case_when(
     grepl("logged", name) ~ "Logged",
     grepl("primary", name) ~ "Old-growth")) %>%
@@ -220,14 +218,12 @@ sp_ests_kG <-
                 ~ .x + b_logkG_forest_typelogged)) %>%
   ungroup() %>%
   pivot_longer(cols = contains("r_genus_species__logkG")) %>%
-
   mutate(forest_type = case_when(
     grepl("logged", name) ~ "Logged",
     grepl("primary", name) ~ "Old-growth")) %>%
   mutate(Species = str_split_i(string = name, pattern ="\\[", i = 2)) %>%
   mutate(Species = str_split_i(string = Species, pattern =",", i = 1)) %>%
   mutate(parameter = "logkG") %>%
-  #mutate(value = (value / exp(1))*100) %>%
   select(-c("b_logkG_forest_typeprimary", "b_logkG_forest_typelogged"))
 
 # delay parameter

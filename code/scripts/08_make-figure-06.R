@@ -79,7 +79,6 @@ pc_data_Ti <-
                 ~ .x + b_Ti_forest_typelogged)) %>%
   ungroup() %>%
   pivot_longer(cols = contains("r_genus_species__Ti")) %>%
-
   mutate(forest_type = case_when(
     grepl("logged", name) ~ "Logged",
     grepl("primary", name) ~ "Old-growth")) %>%
@@ -178,10 +177,10 @@ param_traits_median <-
   traits_both %>%
   left_join(all_params) %>%
   mutate(names = case_when(
-    Parameter == "logA" ~ "log <i>A</i>, Asymptotic basal<br>diameter",
-    Parameter == "logkG" ~ "log <i>k<sub>G</sub></i>, Growth rate<br> coefficient",
-    Parameter == "Ti" ~ "<i>T<sub>i</sub></i>, Time to reach max<br>growth rate",
-    Parameter == "survival" ~ "log &mu;, Survival time"
+    Parameter == "logA" ~ "log <i>A</i>",
+    Parameter == "logkG" ~ "log <i>k<sub>G</sub></i>",
+    Parameter == "Ti" ~ "<i>T<sub>i</sub></i>",
+    Parameter == "survival" ~ "log &mu;"
   )) %>%
   group_by(Species, Parameter, names,
            sla_med, sla_iqr, wood_density_med, wood_density_iqr) %>%
@@ -189,10 +188,10 @@ param_traits_median <-
     diff_mean = mean(diff, na.rm = TRUE)) %>%
   ungroup() %>%
   mutate(names = fct_relevel(names,
-                             "log <i>A</i>, Asymptotic basal<br>diameter",
-                             "log <i>k<sub>G</sub></i>, Growth rate<br> coefficient",
-                             "<i>T<sub>i</sub></i>, Time to reach max<br>growth rate",
-                             "log &mu;, Survival time"
+                             "log <i>A</i>",
+                             "log <i>k<sub>G</sub></i>",
+                             "<i>T<sub>i</sub></i>",
+                             "log &mu;"
   ))
 
 # Plot --------------------------------------------------------------------
@@ -206,7 +205,7 @@ fig_sla <-
   facet_wrap(~names, scales = "free") +
   geom_hline(yintercept = 0, colour = "red", linetype = 2, linewidth = 0.25) +
   ggpmisc::stat_correlation(r.conf.level = 0.95,method = "pearson",
-                            size = 1.5, mapping = use_label("R", "R.CI"),
+                            size = 1.7, mapping = use_label("R", "R.CI"),
                             label.y = 0.95) +
   labs(y = "Additional effect of logging
        <br>(logged forest estimate - old-growth forest estimate)",
@@ -227,7 +226,7 @@ fig_wd <-
   facet_wrap(~names, scales = "free") +
   geom_hline(yintercept = 0, colour = "red", linetype = 2, linewidth = 0.25) +
   ggpmisc::stat_correlation(r.conf.level = 0.95,method = "pearson",
-                            size = 1.5, mapping = use_label("R", "R.CI"),
+                            size = 1.7, mapping = use_label("R", "R.CI"),
                             label.y = 0.95) +
   labs(y = "Additional effect of logging
        <br>(logged forest estimate - old-growth forest estimate)",
@@ -244,7 +243,7 @@ fig_wd <-
 # Combined figure
 
 png(
-  here::here("output", "figures", "figure_06.png"),
+  here::here("output", "figures", "figure_06_2.png"),
   width = 8,
   height = 16,
   res = 600,

@@ -156,4 +156,4 @@ readr::read_csv(
 
 # Growth-survival correlations
 
-![Pairwise Pearson's correlation coefficients for growth and survival parameters.](../code/notebooks/figures/2026-05-12_growth_survival_trade_off/unnamed-chunk-6-1.png){#fig-gro-surv-corr width=400}
+![Pairwise Pearson's correlation coefficients for growth and survival parameters.](../code/notebooks/figures/2026-05-12_growth-survival-trade-off/unnamed-chunk-6-1.png){#fig-gro-surv-corr width=400}

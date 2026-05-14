@@ -1,6 +1,6 @@
 # Test for growth-survival trade-off in our model parameters
 eleanorjackson
-2026-05-12
+2026-05-14
 
 ``` r
 # Packages ----------------------------------------------------------------
@@ -184,4 +184,4 @@ GGally::ggpairs(
   theme(strip.text = element_text(size = 11))
 ```
 
-![](figures/2026-05-12_growth_survival_trade_off/unnamed-chunk-6-1.png)
+![](figures/2026-05-12_growth-survival-trade-off/unnamed-chunk-6-1.png)

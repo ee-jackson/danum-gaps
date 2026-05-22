@@ -65,7 +65,7 @@ post_summary_gro <-
     grepl("typeprimary", `Forest type`) ~ "Old-growth")) %>%
   mutate(Parameter = str_split_i(string = Parameter, pattern ="_", i = 1)) %>%
   mutate(Parameter = ifelse(Parameter == "Ti", "T~i~", Parameter)) %>%
-  mutate(Parameter = ifelse(Parameter == "logkG", "logk~G~/e", Parameter)) %>%
+  mutate(Parameter = ifelse(Parameter == "logkG", "logk~G~", Parameter)) %>%
   select(Parameter, `Forest type`, Estimate, `l-95% CI`,
          `u-95% CI`, Rhat, Bulk_ESS, Tail_ESS) %>%
   rename(`Posterior median` = Estimate,

@@ -366,8 +366,6 @@ pb <-
 
 pc <-
   sp_ests %>%
-  filter(case_when(parameter == "survival" ~ .value <100,
-                   .default = .value == .value)) %>%
   ggplot(aes(x = .value, y = Species,
              fill = forest_type)) +
   stat_halfeye(.width = 0.95, slab_alpha = 0.5, interval_size = 0.05,
@@ -381,8 +379,6 @@ pc <-
 
 pd <-
   sp_ests %>%
-  filter(case_when(parameter == "survival" ~ .value <35,
-                   .default = .value == .value)) %>%
   ungroup() %>%
   pivot_wider(names_from = forest_type,
               values_from = .value) %>%

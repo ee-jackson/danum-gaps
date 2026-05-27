@@ -1,6 +1,6 @@
 # Test for growth-survival trade-off in our model parameters
 eleanorjackson
-2026-05-14
+2026-05-27
 
 ``` r
 # Packages ----------------------------------------------------------------

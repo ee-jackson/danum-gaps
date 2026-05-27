@@ -366,7 +366,7 @@ pb <-
 
 pc <-
   sp_ests %>%
-  filter(case_when(parameter == "survival" ~ .value <35,
+  filter(case_when(parameter == "survival" ~ .value <100,
                    .default = .value == .value)) %>%
   ggplot(aes(x = .value, y = Species,
              fill = forest_type)) +

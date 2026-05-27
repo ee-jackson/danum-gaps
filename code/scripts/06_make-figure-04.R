@@ -86,7 +86,8 @@ surv_pred_sp <-
   left_join(sp_sizes_pl, by = c("genus_species", "forest_type")) %>%
   unnest(dbase_mean_sc) %>%
   add_linpred_draws(object = mod_surv, ndraws = NULL,
-                    re_formula = NULL, dpar = TRUE, transform = TRUE
+                    re_formula = "~ (0 + forest_type | genus_species)",
+                    dpar = TRUE, transform = TRUE
   ) %>%
   rowwise() %>%
   mutate(scale = mu/gamma(1+(1/shape))) %>%

@@ -36,7 +36,8 @@ bform <-
   bf(
     time_to_last_alive | cens(x = censor, y2 = time_to_dead) ~
       0 + forest_type + dbase_mean_sc +
-      (0 + forest_type | genus_species),
+      (0 + forest_type | genus_species) +
+      (1 | forest_type:plot),
     family = brmsfamily("weibull", link = "log", link_shape = "log")
   )
 
@@ -53,6 +54,7 @@ survival_model <-
       chains = 4,
       seed = 123,
       init = 0,
+      control = list(adapt_delta = 0.95),
       file_refit = "always",
       file = "output/models/survival_model")
 

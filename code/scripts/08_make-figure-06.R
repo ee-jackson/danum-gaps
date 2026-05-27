@@ -243,7 +243,7 @@ fig_wd <-
 # Combined figure
 
 png(
-  here::here("output", "figures", "figure_06_2.png"),
+  here::here("output", "figures", "figure_06.png"),
   width = 8,
   height = 16,
   res = 600,

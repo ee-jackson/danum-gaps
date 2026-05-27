@@ -71,13 +71,16 @@ gompertz <-
   bf(dbase_mean ~ logA - exp(-(exp(logkG) * (years - Ti))),
      logA ~ 0 + forest_type +
        (0 + forest_type|genus_species) +
-       (1 | plant_id),
+       (1 | plant_id) +
+       (1 | forest_type:plot),
      logkG ~ 0 + forest_type +
        (0 + forest_type|genus_species) +
-       (1 | plant_id),
+       (1 | plant_id) +
+       (1 | forest_type:plot),
      Ti ~ 0 + forest_type +
        (0 + forest_type|genus_species) +
-       (1 | plant_id),
+       (1 | plant_id) +
+       (1 | forest_type:plot),
      nl = TRUE)
 
 

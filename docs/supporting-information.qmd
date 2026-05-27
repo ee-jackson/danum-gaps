@@ -1,6 +1,6 @@
 ---
-title: "Lower growth rates and earlier mortality of seedlings in a logged versus old-growth tropical forest"
-subtitle: "Supporting Information"
+title: "Supporting Information"
+subtitle: "Dynamic growth and survival trajectories lead to similar outcomes for seedlings in a logged and old-growth tropical forest after two decades"
 knitr:
   opts_chunk: 
     echo: false
@@ -12,7 +12,26 @@ format:
     toc: true
     number-sections: true
     colorlinks: true
+author:
+  - name: Eleanor E. Jackson
+  - name: Toby D. Jackson
+  - name: Francisco Navarro-Rosales
+  - name: Ryan Veryard
+  - name: Sabine Both
+  - name: Elia Godoong
+  - name: Christopher D. Phillipson
+  - name: Glen Reynolds
+  - name: Elizabeth H. Raine
+  - name: Meta-Lina Spohn
+  - name: Matteo Tanadini
+  - name: Michael J. O'Brien
+  - name: David F.R.P. Burslem
+  - name: David A. Coomes
+  - name: Tomasso Jucker
+  - name: Andy Hector
 ---
+
+{{< pagebreak >}}
 
 ```{r}
 library("tidyverse")
@@ -126,7 +145,7 @@ breast height, to find the value which gave the lowest Root Mean Squared Error.
 
 # Posterior predictive checks
 
-![Posterior predictive check for the growth model, where the observed data is in dark blue (_y_) and 50 draws from the posterior distribution are in light blue (_yrep_).](../code/notebooks/figures/2025-09-12_posterior-predictive-checks/unnamed-chunk-4-1.png){#fig-ppcheck-gro width=400}
+![Posterior predictive check for the growth model, where the observed data is in dark blue (_y_) and 50 draws from the posterior distribution are in light blue (_y~rep~_).](../code/notebooks/figures/2025-09-12_posterior-predictive-checks/unnamed-chunk-4-1.png){#fig-ppcheck-gro width=400}
 
 ```{r}
 #| label: tab-growth-params
@@ -140,7 +159,7 @@ readr::read_csv(
   knitr::kable()
 ```
 
-![Posterior predictive check for the survival model, where the observed data is in dark blue (_y_) and 50 draws from the posterior distribution are in light blue (_yrep_). Conditional Kaplan-Meier curves, represented by _y_, were estimated for seedlings at representive values of basal diameter (the 0.25, 0.5 and 0.75 quartiles +/- the standard distribution multiplied by 0.01). Posterior preditions (_yrep_), were made for seedlings of these exact sizes (the 0.25, 0.5 and 0.75 quartiles). ](../code/notebooks/figures/2025-09-12_posterior-predictive-checks/unnamed-chunk-13-1.png){#fig-ppcheck-surv width=400}
+![Posterior predictive check for the survival model, where the observed data is in dark blue (_y_) and 50 draws from the posterior distribution are in light blue (_y~rep~_). Conditional Kaplan-Meier curves, represented by _y_, were estimated for seedlings at representive values of basal diameter (the 0.25, 0.5 and 0.75 quartiles +/- the standard distribution multiplied by 0.01). Posterior preditions (_y~rep~_), were made for seedlings of these exact sizes (the 0.25, 0.5 and 0.75 quartiles). ](../code/notebooks/figures/2025-09-12_posterior-predictive-checks/unnamed-chunk-13-1.png){#fig-ppcheck-surv width=400}
 
 ```{r}
 #| label: tab-survival-params
@@ -156,4 +175,22 @@ readr::read_csv(
 
 # Growth-survival correlations
 
-![Pairwise Pearson's correlation coefficients for growth and survival parameters.](../code/notebooks/figures/2026-05-12_growth-survival-trade-off/unnamed-chunk-6-1.png){#fig-gro-surv-corr width=400}
+![Pairwise Pearson's correlation coefficients for growth and survival parameters at the species level. _S~20~_ is the model derived basal diameter at 20 years (mm), _k~G~/e_ is the maximum relative growth rate, _T~i~_ is the time (years) at inflection of the growth curve, i.e., the time to reach maximum growth rate, and $\mu$ is the mean of the Weibull distribtuion, representing survival time. ](../code/notebooks/figures/2026-05-12_growth-survival-trade-off/unnamed-chunk-6-1.png){#fig-gro-surv-corr width=400}
+
+# Temporal change in canopy cover and microclimate
+
+LiDAR data collected in 2013, 2014 and 2020^[Jackson, T.D. _et al._ Airborne laser scanning data for the Sabah Biodiversity Experiment from 2013 and 2020. Zenodo. (2025). doi: [10.5281/zenodo.14917551](https://doi.org/10.5281/zenodo.14917551)] were used to estimate canopy cover and derive microclimate predictions using methods adapted from Jucker _et al._ (2018).^[Jucker, T. _et al._ Canopy structure and topography jointly constrain the microclimate of human-modified tropical landscapes. Global Change Biology 24, 5243-5258 (2018). doi: [10.1111/gcb.14415](https://doi.org/10.1111/gcb.14415)] 
+
+Canopy height models and digital terrain models were used to generate 30 m resolution rasters describing elevation, slope, topographic position index, mean and maximum canopy height, and canopy cover above 10 m. Canopy cover was defined as the proportion of each 30 × 30 m pixel with vegetation taller than 10 m.
+
+Regression models were fitted using microclimate measurements from SAFE, Danum Valley and Maliau Basin, following Jucker _et al._ (2018) with four modifications: predictors were derived at 30 m rather than 50 m resolution; canopy cover above 10 m replaced canopy cover above 2 m; plant area index was not included; and interaction terms were omitted. The models were used to predict mean and maximum temperature across the logged and old-growth forest sites.
+
+For reference, seedlings in the logged forest plots were planted in 2002–2003 and last censused in 2025, while seedlings in old-growth forest plots were planted in 2004 and last censused in 2023. Plot-level raster values were extracted from the 30 m pixel containing the plot centre. Because the LiDAR survey was not designed to provide coverage of the old-growth forest plots, 2020 data were unavailable for 14 of the 40 plots.
+
+![Temporal change in canopy cover for each plot in logged and old-growth forest. Individual plots are shown as points, with repeated measurements from the same plot connected by lines. Violins represent the distribution of canopy cover values for each year within each forest type. Colour indicates the net change in canopy cover over time and where data were only avalible at one time point they are coloured grey. Canopy cover is defined as the proportion of vegetation cover above 10 m. Note that the old-growth understory plots were not included in the analysis for the current manuscript, but are presented here for the sake of comparison. ](../code/notebooks/figures/2026-05-13_canopy-cover/unnamed-chunk-8-1.png){#fig-canopy-cover width=400}
+
+![Temporal change in maximum predicted temperature for each plot in logged and old-growth forest. Individual plots are shown as points, with repeated estimates for the same plot connected by lines. Violins represent the distribution of values for each year within each forest type. Colour indicates the net change in max temperature over time and where data were only avalible at one time point they are coloured grey. Note that the old-growth understory plots were not included in the analysis for the current manuscript, but are presented here for the sake of comparison.](../code/notebooks/figures/2026-05-13_canopy-cover/unnamed-chunk-13-1.png){#fig-max-temp width=400}
+
+![Temporal change in mean predicted temperature for each plot in logged and old-growth forest. Individual plots are shown as points, with repeated estimates for the same plot connected by lines. Violins represent the distribution of values for each year within each forest type. Colour indicates the net change in mean temperature over time and where data were only avalible at one time point they are coloured grey. Note that the old-growth understory plots were not included in the analysis for the current manuscript, but are presented here for the sake of comparison.](../code/notebooks/figures/2026-05-13_canopy-cover/unnamed-chunk-18-1.png){#fig-mean-temp width=400}
+
+

@@ -1,6 +1,6 @@
 # Create a figure explaining the analysis?
 eleanorjackson
-2026-02-13
+2026-05-27
 
 - [Growth](#growth)
   - [First panel](#first-panel)
@@ -75,9 +75,10 @@ sp_1 <-
 keys <- 
   growth_data %>%
   filter(genus_species == sp_1) %>% 
-  select(plant_id, forest_type) %>%
+  select(plant_id, plot, forest_type) %>%
   distinct(plant_id, .keep_all = TRUE) %>%
-  mutate(plant_id = droplevels(plant_id))
+  mutate(plant_id = droplevels(plant_id))  %>%
+  mutate(plot = droplevels(plot))
 
 growth_data_sp1 <- 
   growth_data %>% 
@@ -87,7 +88,8 @@ sp1_preds <-
   growth_data_sp1 %>%
   data_grid(years = seq_range(years, n = 10),
             genus_species = sp_1,
-            plant_id = droplevels(unique(keys$plant_id))) %>%
+            plant_id = droplevels(unique(keys$plant_id)),
+            plot = droplevels(unique(keys$plot))) %>%
   left_join(keys) %>%
   filter(forest_type == "logged") %>% 
   add_epred_draws(growth_model,
@@ -119,14 +121,14 @@ p1 <-
   stat_lineribbon(data = pl1_preds,
                   aes(x = years, y = .epred,
                       group = plant_id),
-                  colour = "forestgreen",
+                  colour = "#0072B2",
                   .width = 0,
-                  linewidth = 1,
+                  linewidth = 0.5,
                   alpha = 0.4) +
   geom_point(data = growth_data_pl1,
              aes(x = years, y = dbase_mean),
-             shape = 4, stroke = 0.75, size = 2,
-             colour = "forestgreen") +
+             shape = 4, stroke = 0.5, size = 0.5,
+             colour = "#0072B2") +
   theme(legend.position = "none") +
   ylab("Basal diameter mm") +
   xlab("Years") +
@@ -154,14 +156,14 @@ p2 <-
   stat_lineribbon(data = sp1_preds_s,
                   aes(x = years, y = .epred,
                       group = plant_id),
-                  colour = "forestgreen",
+                  colour = "#0072B2",
                   .width = 0,
-                  linewidth = 1,
+                  linewidth = 0.25,
                   alpha = 0.3) +
   stat_lineribbon(data = sp1_preds_s,
                   aes(x = years, y = .epred),
                   .width = 0,
-                  linewidth = 1,
+                  linewidth = 0.5,
                   alpha = 1,
                   linetype = 2) +
   theme(legend.position = "none") +
@@ -248,13 +250,13 @@ p3 <-
                 group = plant_id), 
             alpha = 0.3,
             stat = "smooth",
-            colour = "forestgreen",
-            linewidth = 1) +
+            colour = "#0072B2",
+            linewidth = 0.25) +
   geom_path(data = all_gr_sp1_s,
             aes(x = .epred, y = growth_mmyr), 
-            linewidth = 1,
             alpha = 1,
-            linetype = 2) +
+            linetype = 2,
+            linewidth = 0.5) +
   xlab("Basal diameter mm") +
   ylab("Growth rate mm year<sup>-1</sup>") +
   scale_x_continuous(expand = c(0, 0)) +
@@ -297,7 +299,7 @@ p4 <-
   mutate(survival = ifelse(survival == 0, "Dead", "Alive")) %>% 
   ggplot(aes(y = plant_id, x = years,
              shape = as.ordered(survival))) +
-  geom_point(size = 2, colour = "grey20", stroke = 0.75) +
+  geom_point(size = 0.5, colour = "grey20", stroke = 0.25) +
   scale_shape_manual(values = c(19, 4)) +
   theme(axis.text.y = element_blank(),
         axis.ticks.y = element_blank(),
@@ -325,13 +327,13 @@ p5 <-
   ggplot(aes(x = dbase_mean)) +
   geom_histogram(
           position = "identity",
-          fill = "forestgreen",
+          fill = "#0072B2",
           alpha = 0.6,
           bins = 60
          ) +
   geom_step(
     aes(y = ..count..),
-    colour = "forestgreen",
+    colour = "#0072B2",
     stat = "bin",
     bins = 60,
     direction = "mid"
@@ -374,7 +376,8 @@ surv_pred_sp <-
   left_join(sp_sizes, by = c("genus_species")) %>%
   unnest(dbase_mean_sc) %>%
   add_linpred_draws(object = survival_model, ndraws = NULL,
-                    re_formula = NULL, dpar = TRUE, transform = TRUE
+                    re_formula = "~ (0 + forest_type | genus_species)", 
+                    dpar = TRUE, transform = TRUE
   ) %>%
   rowwise() %>%
   mutate(scale = mu/gamma(1+(1/shape))) %>%
@@ -384,19 +387,31 @@ surv_pred_sp <-
 ``` r
 p6 <-
   ggplot() +
-  stat_lineribbon(data = surv_pred_sp, 
-    aes(x = unscale_basal(dbase_mean_sc), 
-               y = surv), colour = "forestgreen", fill = "forestgreen",
-               .width = 0.95, alpha = 0.5, show.legend = FALSE) +
-  stat_lineribbon(data = surv_pred_sp, 
-    aes(x = unscale_basal(dbase_mean_sc), 
-               y = surv), colour = "forestgreen", 
-               .width = 0, show.legend = FALSE) +
-  ylab("Survival probability")+
+  stat_lineribbon(
+    data = surv_pred_sp,
+    aes(x = unscale_basal(dbase_mean_sc), y = surv),
+    colour = "#0072B2",
+    fill = "#0072B2",
+    .width = 0.95,
+    alpha = 0.25,
+    show.legend = FALSE,
+    linewidth = 0.25
+  ) +
+  stat_lineribbon(
+    data = surv_pred_sp,
+    aes(x = unscale_basal(dbase_mean_sc), y = surv),
+    colour = "#0072B2",
+    .width = 0,
+    show.legend = FALSE,
+    linewidth = 0.25
+  ) +
+  ylab("Survival probability") +
   xlab("Basal diameter mm") +
   theme(legend.position = "bottom") +
   scale_x_continuous(limits = c(0, 200), expand = c(0, 0)) +
-  scale_y_continuous(expand = c(0, 0)) 
+  scale_y_continuous(limits = c(0, 1), 
+                     breaks = c(0, 0.5, 1), 
+                     expand = c(0, 0))
 
 p6
 ```
@@ -419,3 +434,32 @@ p1 + p2 + p3 + p4 + p5 + p6 +
 ```
 
 ![](figures/2025-03-25_methods-figure/unnamed-chunk-19-1.png)
+
+``` r
+ggplot2::theme_set(ggplot2::theme_classic(base_size = 8))
+
+png(
+  here::here("output", "figures", "figure_01.png"),
+  width = 8,
+  height = 13,
+  res = 600,
+  pointsize = 3,
+  units = "cm",
+  type = "cairo",
+  bg = "white"
+)
+p1 + p2 + p3 + p4 + p5 + p6 +
+  patchwork::plot_layout(ncol = 2) +
+  patchwork::plot_annotation(
+    tag_levels = "a",
+    title = "Hopea sangal",
+    subtitle = "Logged forest",
+    theme = theme(
+      plot.title = element_text(face = "italic")
+      )
+  ) 
+dev.off()
+```
+
+    quartz_off_screen 
+                    2 

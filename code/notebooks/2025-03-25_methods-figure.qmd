@@ -68,9 +68,10 @@ sp_1 <-
 keys <- 
   growth_data %>%
   filter(genus_species == sp_1) %>% 
-  select(plant_id, forest_type) %>%
+  select(plant_id, plot, forest_type) %>%
   distinct(plant_id, .keep_all = TRUE) %>%
-  mutate(plant_id = droplevels(plant_id))
+  mutate(plant_id = droplevels(plant_id))  %>%
+  mutate(plot = droplevels(plot))
 
 growth_data_sp1 <- 
   growth_data %>% 
@@ -80,7 +81,8 @@ sp1_preds <-
   growth_data_sp1 %>%
   data_grid(years = seq_range(years, n = 10),
             genus_species = sp_1,
-            plant_id = droplevels(unique(keys$plant_id))) %>%
+            plant_id = droplevels(unique(keys$plant_id)),
+            plot = droplevels(unique(keys$plot))) %>%
   left_join(keys) %>%
   filter(forest_type == "logged") %>% 
   add_epred_draws(growth_model,
@@ -360,7 +362,8 @@ surv_pred_sp <-
   left_join(sp_sizes, by = c("genus_species")) %>%
   unnest(dbase_mean_sc) %>%
   add_linpred_draws(object = survival_model, ndraws = NULL,
-                    re_formula = NULL, dpar = TRUE, transform = TRUE
+                    re_formula = "~ (0 + forest_type | genus_species)", 
+                    dpar = TRUE, transform = TRUE
   ) %>%
   rowwise() %>%
   mutate(scale = mu/gamma(1+(1/shape))) %>%
@@ -370,19 +373,31 @@ surv_pred_sp <-
 ```{r}
 p6 <-
   ggplot() +
-  stat_lineribbon(data = surv_pred_sp, 
-    aes(x = unscale_basal(dbase_mean_sc), y = surv), 
-    colour = "#0072B2", fill = "#0072B2", 
-    .width = 0.95, alpha = 0.25, show.legend = FALSE) +
-  stat_lineribbon(data = surv_pred_sp, 
-    aes(x = unscale_basal(dbase_mean_sc), 
-               y = surv), colour = "#0072B2", 
-               .width = 0, show.legend = FALSE, linewidth = 0.25) +
-  ylab("Survival probability")+
+  stat_lineribbon(
+    data = surv_pred_sp,
+    aes(x = unscale_basal(dbase_mean_sc), y = surv),
+    colour = "#0072B2",
+    fill = "#0072B2",
+    .width = 0.95,
+    alpha = 0.25,
+    show.legend = FALSE,
+    linewidth = 0.25
+  ) +
+  stat_lineribbon(
+    data = surv_pred_sp,
+    aes(x = unscale_basal(dbase_mean_sc), y = surv),
+    colour = "#0072B2",
+    .width = 0,
+    show.legend = FALSE,
+    linewidth = 0.25
+  ) +
+  ylab("Survival probability") +
   xlab("Basal diameter mm") +
   theme(legend.position = "bottom") +
   scale_x_continuous(limits = c(0, 200), expand = c(0, 0)) +
-  scale_y_continuous(expand = c(0, 0)) 
+  scale_y_continuous(limits = c(0, 1), 
+                     breaks = c(0, 0.5, 1), 
+                     expand = c(0, 0))
 
 p6
 ```

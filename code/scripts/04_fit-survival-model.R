@@ -26,13 +26,13 @@ data <-
 
 # Set priors --------------------------------------------------------------
 
-priors3 <- c(
+priors <- c(
   prior(student_t(3, 0, 2.5), class = "b")
 )
 
 # Define formula ----------------------------------------------------------
 
-bform <-
+weibull <-
   bf(
     time_to_last_alive | cens(x = censor, y2 = time_to_dead) ~
       0 + forest_type + dbase_mean_sc +
@@ -45,9 +45,9 @@ bform <-
 # Fit model ---------------------------------------------------------------
 
 survival_model <-
-  brm(bform,
+  brm(weibull,
       data = data,
-      prior = priors3,
+      prior = priors,
       sample_prior = "yes",
       iter = 5000,
       cores = 4,

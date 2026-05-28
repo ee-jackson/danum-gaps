@@ -39,7 +39,7 @@ data_sample <-
 
 # Set priors --------------------------------------------------------------
 
-priors5 <- c(
+priors <- c(
   # logA (Student-t, heavy-tailed)
   # Centered at ln(50) ≈ 3.9120
   # Scale chosen so ~99% prior mass for A < 2000 mm
@@ -68,20 +68,23 @@ priors5 <- c(
 # and give A and kG on the response scale as A = exp(logA) or kG = exp(logkG)
 
 gompertz <-
-  bf(dbase_mean ~ logA - exp(-(exp(logkG) * (years - Ti))),
-     logA ~ 0 + forest_type +
-       (0 + forest_type|genus_species) +
-       (1 | plant_id) +
-       (1 | forest_type:plot),
-     logkG ~ 0 + forest_type +
-       (0 + forest_type|genus_species) +
-       (1 | plant_id) +
-       (1 | forest_type:plot),
-     Ti ~ 0 + forest_type +
-       (0 + forest_type|genus_species) +
-       (1 | plant_id) +
-       (1 | forest_type:plot),
-     nl = TRUE)
+  bf(
+    dbase_mean ~ logA - exp(-(exp(logkG) * (years - Ti))),
+    logA ~ 0 + forest_type +
+      (0 + forest_type | genus_species) +
+      (1 | plant_id) +
+      (1 | forest_type:plot),
+    logkG ~ 0 + forest_type +
+      (0 + forest_type | genus_species) +
+      (1 | plant_id) +
+      (1 | forest_type:plot),
+    Ti ~ 0 + forest_type +
+      (0 + forest_type | genus_species) +
+      (1 | plant_id) +
+      (1 | forest_type:plot),
+    nl = TRUE,
+    family = brmsfamily("lognormal", link = "identity", link_sigma = "log")
+  )
 
 
 # Fit model ---------------------------------------------------------------
@@ -89,9 +92,7 @@ gompertz <-
 growth_model <-
   brm(gompertz,
       data = data_sample,
-      family = brmsfamily("lognormal",
-                          link = "identity", link_sigma = "log"),
-      prior = priors5,
+      prior = priors,
       sample_prior = "yes",
       cores = 4,
       chains = 4,

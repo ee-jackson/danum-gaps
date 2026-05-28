@@ -27,7 +27,7 @@ author:
   - name: Michael J. O'Brien
   - name: David F.R.P. Burslem
   - name: David A. Coomes
-  - name: Tomasso Jucker
+  - name: Tommaso Jucker
   - name: Andy Hector
 ---
 
@@ -54,7 +54,7 @@ did not change our results.
 
 # Species taxonomy
 
-In the main text we use current accepted species names. Here, for reference, we list the old names, which are consistent with prior publications involving the Sabah Biodiversity Experiment. Species names were matched to a static copy of [The World Flora Online (WFO)](http://www.worldfloraonline.org)  v.2024.12 [zenodo.14538251](https://doi.org/10.5281/zenodo.14538251) using the function `WFO.match` from the R package {WorldFlora}. The function `WFO.one` was then used to find one unique matching name for each submitted name. using the argument `priority = "Accepted"`, it first limits candidates to accepted names, with a possible second step of eliminating accepted names that are synonyms.
+In the main text we use current accepted species names. Here, for reference, we list the old names, which are consistent with prior publications involving the Sabah Biodiversity Experiment. Species names were matched to a static copy of [The World Flora Online (WFO)](http://www.worldfloraonline.org)  v.2024.12 [zenodo.14538251](https://doi.org/10.5281/zenodo.14538251) using the function `WFO.match` from the R package {WorldFlora}. The function `WFO.one` was then used to find one unique matching name for each submitted name. Using the argument `priority = "Accepted"`, it first limits candidates to accepted names, with a possible second step of eliminating accepted names that are synonyms.
 
 ```{r}
 #| label: tab-species
@@ -107,7 +107,7 @@ The predictor was a fixed effect of species.
 We use a regularising prior of `normal(0, 2)`, a common choice for Bernoulli models. 
 Results are presented in @fig-cens1-surv and @fig-cens1-corrsurv. 
 
-![Posterior estimates of survival probability in the time period between planting and the first census of cohort one and two seedlings in the logged forest. The posterior median is represented by a point with the line showing the 66% and 95% credible interval. The dashed red line shows where the likelihood of survival is 50%. No _Dipterocarpus conformis_ seedlings were planted in the second cohort due to insufficient avalibility.](../code/notebooks/figures/2025-09-30_never-alive-seedlings/unnamed-chunk-16-1.png){#fig-cens1-surv width=400}
+![Estimates of survival probability in the time period between planting and the first census of cohort one and two seedlings in the logged forest. The posterior median is represented by a point with the line showing the 66% and 95% credible interval. The dashed red line shows where the likelihood of survival is 50%. No _Dipterocarpus conformis_ seedlings were planted in the second cohort due to insufficient avalibility.](../code/notebooks/figures/2025-09-30_never-alive-seedlings/unnamed-chunk-16-1.png){#fig-cens1-surv width=400}
 
 ![Median posterior estimates of survival probability for seedlings in cohort one (_y_ axis) and two (_x_ axis) in the time period between planting and their first census.](../code/notebooks/figures/2025-09-30_never-alive-seedlings/unnamed-chunk-17-1.png){#fig-cens1-corrsurv width=400}
 
@@ -137,11 +137,11 @@ breast height, to find the value which gave the lowest Root Mean Squared Error.
 
 # Growth curves over time 
 
-![Basal diameter measurements for all seedlings over time (black points). Coloured lines show posterior predictions for a typical seedling of each of the 15 species in the old-growth (green) and logged (yellow) forest. ](../code/notebooks/figures/2025-12-19_supp-growth-fits-w-data/sp_preds.png){#fig-gro-data width=325}
+![Basal diameter measurements for all seedlings over time (black points). Coloured lines show the predicted growth curve for a typical seedling of each of the 15 species in the old-growth (green) and logged (yellow) forest. ](../code/notebooks/figures/2025-12-19_supp-growth-fits-w-data/sp_preds.png){#fig-gro-data width=325}
 
-![Basal diameter measurements for 20 randomly selected _Dipterocarpus conformis_ seedlings over time (black points). Coloured lines show posterior predictions for individuals in the old-growth (green) and logged (yellow) forest. ](../code/notebooks/figures/2025-12-19_supp-growth-fits-w-data/unnamed-chunk-9-1.png){#fig-gro-data-dc-ft width=325}
+![Basal diameter measurements for 20 randomly selected _Dipterocarpus conformis_ seedlings over time (black points). Coloured lines show the predicted growth curve for each individual in the old-growth (green) and logged (yellow) forest. ](../code/notebooks/figures/2025-12-19_supp-growth-fits-w-data/unnamed-chunk-9-1.png){#fig-gro-data-dc-ft width=325}
 
-![Basal diameter measurements for 20 randomly selected _Dipterocarpus conformis_ seedlings over time (black points). These are the same individuals which are shown in @fig-gro-data-dc-ft above. Coloured lines show posterior predictions for individuals in the old-growth (green) and logged (yellow) forest. Note that the y-axis scale varies between panels. ](../code/notebooks/figures/2025-12-19_supp-growth-fits-w-data/unnamed-chunk-10-1.png){#fig-gro-data-dc-ind width=325}
+![Basal diameter measurements for 20 randomly selected _Dipterocarpus conformis_ seedlings over time (black points). These are the same individuals which are shown in @fig-gro-data-dc-ft above. Coloured lines show the predicted growth curve for each individual in the old-growth (green) and logged (yellow) forest. Note that the y-axis scale varies between panels. ](../code/notebooks/figures/2025-12-19_supp-growth-fits-w-data/unnamed-chunk-10-1.png){#fig-gro-data-dc-ind width=325}
 
 # Posterior predictive checks
 
@@ -175,7 +175,7 @@ readr::read_csv(
 
 # Growth-survival correlations
 
-![Pairwise Pearson's correlation coefficients for growth and survival parameters at the species level. _S~20~_ is the model derived basal diameter at 20 years (mm), _k~G~/e_ is the maximum relative growth rate, _T~i~_ is the time (years) at inflection of the growth curve, i.e., the time to reach maximum growth rate, and $\mu$ is the mean of the Weibull distribtuion, representing survival time. ](../code/notebooks/figures/2026-05-12_growth-survival-trade-off/unnamed-chunk-6-1.png){#fig-gro-surv-corr width=400}
+![Pairwise Pearson's correlation coefficients for growth and survival parameters at the species level. _S~20~_ is the model derived basal diameter at 20 years (mm), _k~G~/e_ is the maximum relative growth rate, _T~i~_ is the time (years) at inflection of the growth curve, i.e., the time to reach maximum growth rate, and $\mu$ is the mean of the Weibull distribution, representing survival time. ](../code/notebooks/figures/2026-05-12_growth-survival-trade-off/unnamed-chunk-6-1.png){#fig-gro-surv-corr width=400}
 
 # Temporal change in canopy cover and microclimate
 

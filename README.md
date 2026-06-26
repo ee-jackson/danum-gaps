@@ -1,6 +1,8 @@
 # danum-gaps
 
-This repository contains the [research compendium](https://research-compendium.science) for the project: Growth and survival of enrichment planted tree seedlings in old-growth and selectively logged lowland dipterocarp rainforest.
+This repository contains the [research compendium](https://research-compendium.science) 
+for our in-prep manuscript: 
+Dynamic growth and survival trajectories lead to similar outcomes for seedlings in a logged and old-growth tropical forest after two decades.
 
 ## Contents:
 
@@ -21,4 +23,4 @@ The [`output/`](output/) directory contains the subdirectories [`figures/`](outp
 The [`docs/`](docs/) directory contains the [data dictionary](docs/data-dictionary.md) (i.e. metadata), [protocols](docs/protocols.md) and any other relevant documents.
 
 ## Usage
-To reproduce results and figures run the `.R` scripts in [`code/scripts/`](code/scripts/) in the order in which they are labelled.
+To reproduce results and figures from the paper run the `.R` scripts in [`code/scripts/`](code/scripts/) in the order in which they are labelled.

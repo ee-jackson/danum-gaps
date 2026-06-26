@@ -12,34 +12,21 @@ library("tidyverse")
 library("here")
 library("patchwork")
 library("janitor")
+library("zen4R")
 
 
 # Get primary forest data -------------------------------------------------
 
-file_names <-
-  as.list(dir(path = here::here("data", "raw", "dv"),
-              pattern = "DanumGaps_Data_*",
-              full.names = TRUE))
-
-data_list <-
-  lapply(X = file_names,
-         FUN = readxl::read_excel,
-         range = readxl::cell_cols("A:K"),
-         na = c("", "NA"),
-         col_types = c("date",
-                       "text",
-                       "text",
-                       "text",
-                       "text",
-                       "numeric",
-                       "numeric",
-                       "numeric",
-                       "numeric",
-                       "numeric",
-                       "text") )
-
-names(data_list) <-
-  lapply(file_names, basename)
+# download Danum data from Zenodo
+zen4R::download_zenodo(
+  doi = "https://doi.org/10.5281/zenodo.10701332",
+  files = "DataGrowthSurvivalClean_v2.txt",
+  path = here::here(
+    "data",
+    "raw",
+    "dv"
+  )
+)
 
 data_dv_sps <-
   read_csv(
@@ -47,65 +34,26 @@ data_dv_sps <-
     col_types = "fcc"
   )
 
-# Some older primary forest data is in this file and formatted differently
-data_dv_older <-
-  readxl::read_excel(
-    here::here("data", "raw", "dv", "AllDataClean2018_DanumGaps.xlsx"),
-    na = c("", "NA"),
-    range = readxl::cell_cols("A:AE"),
-    col_types = c("text","date","numeric","numeric",
-                  "numeric","text","text","numeric",
-                  "text","numeric","text","numeric",
-                  "text","text","text","numeric",
-                  "numeric","numeric","numeric","numeric",
-                  "numeric","numeric","numeric","numeric",
-                  "numeric","numeric","numeric","numeric",
-                  "numeric","numeric","text") ) %>%
-  select(Census, Survey.date, Year, Team, Canopy, Block, Subplot, Plant.no,
-         Survival, Diam1, Diam2, DBH.1, DBH.2, Comments, Height.apex) %>%
-  janitor::clean_names() %>%
-  mutate_at(c("plant_no", "canopy"), toupper)
-
-# Some data is replicated in DanumGaps_Data_* files
-data_dv_pre2015 <-
-  data_dv_older %>%
-  filter(year < 2015 |
-           year == 2015 & team == "Malua") %>%
-  select(- year, - team) %>%
-  rename(census_id = census) %>%
-  mutate(census_id = as.factor(census_id))
-
-
-# Combine primary forest data sources -------------------------------------
-
+# Clean up and reformat the Danum data
 data_dv <-
-  bind_rows(data_list, .id = 'census_id') %>%
-  mutate(census_id = as.factor(census_id)) %>%
+  read_tsv(
+    here::here("data", "raw", "DataGrowthSurvivalClean_v2.txt")
+  ) %>%
+  mutate(Survey.date = as.Date(Survey.date, "%d/%m/%Y")) %>%
   clean_names() %>%
-  mutate_at(c("plant_no", "canopy", "subplot"), toupper) %>%
-  mutate(height_apex = NA) %>%
-  bind_rows(data_dv_pre2015) %>%
-  rename(plot = block,
-         dbh1 = dbh_1,
-         dbh2 = dbh_2) %>%
-
   # Only plots without drought treatment
   filter(subplot == "A") %>%
-  select(- subplot) %>%
-
-  # Repairing individual cases of missing plant number
-  mutate(plant_no = case_when(canopy == "G" & is.na(plant_no) & plot == "1" ~ "8",
-                              canopy == "G" & plant_no == "6.8" & plot == "6" ~ "8",
-                              canopy == "G" & plant_no == "7A" & plot == "2" ~ "7",
-                              canopy == "G" & plant_no == "7" & plot == "18" ~ "7A",
-                              .default = plant_no) ) %>%
-
-  # Plant nos are unique to species
-  mutate(plant_sp_id =
-    str_extract(plant_no, pattern = "\\d+")
-  ) %>%
-  left_join(data_dv_sps, by = c("plant_sp_id" = "plant_no")) %>%
-
+  mutate_at(c("canopy", "subplot"), toupper) %>%
+  select(- plot) %>%
+  rename(plot = block,
+         dbh1 = dbh_1,
+         dbh2 = dbh_2,
+         survival = surv,
+         census_id = census) %>%
+  left_join(data_dv_sps) %>%
+  mutate(plant_no_let =
+           str_extract(plant_id, pattern = "[A-Z]+")) %>%
+  unite(plant_no, c(plant_no, plant_no_let), sep = "", na.rm = TRUE) %>%
   # Create unique ID per individual
   mutate(plot = as.numeric(plot)) %>%
   mutate(plot = formatC(plot,
@@ -115,7 +63,6 @@ data_dv <-
          survey_date = ymd(survey_date)) %>%
   mutate(plant_id = paste(plot, plant_no, canopy, sep = "_"),
          genus_species = paste(genus, species, sep = "_")) %>%
-
   # Making cols match the primary forest data
   mutate(line = NA, position = NA, old_new = NA,
          planting_date = NA, height_apex = NA, forest_type = "primary",
@@ -125,11 +72,20 @@ data_dv <-
          planting_date, census_id, survey_date,
          survival, height_apex, diam1, diam2, dbh1, dbh2)
 
-rm(data_list)
-
 
 # Get logged forest data -----------------------------------------------
 
+# download SBE data from Zenodo
+zen4R::download_zenodo(
+  doi = "https://doi.org/10.5281/zenodo.10815814",
+  path = here::here(
+    "data",
+    "raw",
+    "sbe"
+  )
+)
+
+# Clean up and reformat the SBE data
 data_sbe <-
   read_csv(
     here::here("data", "raw", "sbe", "SBE_compiled_data_2002-2024.csv")

@@ -2,6 +2,7 @@
 
 data/
 docs/r-veryard
+docs/submission
 code/notebooks/*html
 code/notebooks/**/*tex
 code/notebooks/**/*pdf

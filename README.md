@@ -1,5 +1,7 @@
 # danum-gaps
 
+[![DOI](https://zenodo.org/badge/813121892.svg)](https://doi.org/10.5281/zenodo.21336184)
+
 This repository contains the [research compendium](https://research-compendium.science) 
 for our in-prep manuscript: 
 Dynamic seedling growth and survival trajectories in logged and old-growth tropical forest over two decades.

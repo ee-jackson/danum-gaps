@@ -1,6 +1,6 @@
 ---
 title: "Supporting Information"
-subtitle: "Dynamic growth and survival trajectories lead to similar outcomes for seedlings in a logged and old-growth tropical forest after two decades"
+subtitle: "Dynamic seedling growth and survival trajectories in logged and old-growth tropical forest over two decades"
 knitr:
   opts_chunk: 
     echo: false

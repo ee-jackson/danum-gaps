@@ -1,2 +1,6 @@
 *
-!/code/scripts
+!code/
+code/*
+!code/scripts/
+code/scripts/*
+!code/scripts/**

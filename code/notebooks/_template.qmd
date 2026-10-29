@@ -1,0 +1,20 @@
+---
+title: "Title"
+---
+
+```{r setup}
+#| include: false
+
+document_name <- tools::file_path_sans_ext(
+	basename(knitr::current_input())
+)
+
+knitr::opts_chunk$set(
+	fig.path = file.path("figures", document_name, "")
+)
+
+set.seed(as.numeric(Sys.Date()))
+
+source(here::here("code", "functions", "plotting.R"))
+ggplot2::theme_set(theme_sbe())
+```

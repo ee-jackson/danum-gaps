@@ -9,9 +9,24 @@ code/notebooks/**/*pdf
 code/graveyard
 output/plots
 output/models
+
+## Microsoft Office ignores
 *.doc
 *.docx
+*.ppt
+*.pptx
 *.xlsx
+*.xls
+
+## Positron / VS Code ignores
+.vscode
+
+## Quarto
+.quarto/
+_quarto.yml.local
+
+# used by Typst
+*svg
 
 ## R ignores:
 

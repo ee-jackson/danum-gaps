@@ -1,0 +1,76 @@
+# Performance of understory vs gap seedlings in the old-growth forest
+
+12 November, 2026
+
+- [Survival](#survival)
+- [Growth](#growth)
+- [Combine](#combine)
+
+R1.14: The authors refer to seedlings planted under shade as well as in
+canopy gaps. It could be interesting to see these understorey planted
+seedlings in the SI, as it may reveal something on light requirements
+for successful planting
+
+``` r
+library("tidyverse")
+library("patchwork")
+
+clean_data <- read_rds(here::here(
+    "data",
+    "derived",
+    "data_cleaned_incl_understory.rds"
+)) |>
+    filter(forest_type == "primary")
+
+surv_data <- read_rds(here::here(
+    "data",
+    "derived",
+    "data_survival_incl_understory.rds"
+)) |>
+    filter(forest_type == "primary")
+```
+
+## Survival
+
+``` r
+p_survival <-
+    clean_data |>
+    mutate(canopy = ifelse(canopy == "G", "Gap", "Understory")) |>
+    mutate(survival = as.factor(survival)) |>
+    ggplot(aes(x = census_no, group = survival, fill = survival)) +
+    geom_bar(alpha = 0.75) +
+    facet_wrap(~canopy, ncol = 1, axis.labels = "all_x", axes = "all_x") +
+    guides(x = guide_axis(angle = 90)) +
+    scale_fill_manual(values = c("grey", "#009e73")) +
+    theme(legend.position = "top", legend.justification = "left") +
+    labs(
+        x = "Census number",
+        y = "Count of seedlings",
+        fill = "Survival"
+    )
+```
+
+## Growth
+
+``` r
+p_growth <-
+    clean_data |>
+    mutate(canopy = ifelse(canopy == "G", "Gap", "Understory")) |>
+    ggplot(aes(y = log(dbase_mean), x = years)) +
+    geom_point(alpha = 0.25, shape = 20, colour = "#009e73") +
+    theme(legend.position = "top", legend.justification = "left") +
+    labs(
+        x = "Years since first measurment",
+        y = "log Basal diameter (mm)",
+        title = "Old-growth forest seedlings, planted in:"
+    ) +
+    facet_wrap(~canopy)
+```
+
+## Combine
+
+``` r
+p_growth / p_survival + plot_annotation(tag_levels = "a")
+```
+
+![](figures/2026-11-12_gap-v-understory/unnamed-chunk-4-1.png)

@@ -1,8 +1,8 @@
 ---
-title: "Supporting Information"
-subtitle: "Dynamic seedling growth and survival trajectories in logged and old-growth tropical forest over two decades"
+title: "Dynamic seedling growth and survival trajectories in logged and old-growth tropical forest over two decades"
+subtitle: "Supporting Information"
 knitr:
-  opts_chunk: 
+  opts_chunk:
     echo: false
     message: false
     warning: false
@@ -39,8 +39,8 @@ library("tidyverse")
 
 # Climber cutting
 
-Three of the Sabah Biodiversity Experiment plots included in this study received 
-a complete climber cutting treatment as part of a different experiment (plots numbered 5, 11 and 14), 
+Three of the Sabah Biodiversity Experiment plots included in this study received
+a complete climber cutting treatment as part of a different experiment (plots numbered 5, 11 and 14),
 where all lianas $\ge$ 10 cm in height were cut at the base in 2011 and 2014. ^[O’Brien, M. J. et al. Positive effects of liana cutting on seedlings are reduced during El Niño-induced drought. Journal of Applied Ecology 56, 891–901 (2019). doi: [10.1111/1365-2664.13335](https://doi.org/10.1111/1365-2664.13335)]
 
 Including the climber cutting treatment as a fixed effect in our growth and survival models
@@ -61,51 +61,57 @@ In the main text we use current accepted species names. Here, for reference, we 
 #| tbl-cap: "Taxonomy of species included in the study"
 
 readr::read_csv(
-        here::here(
-          "data",
-          "derived",
-          "taxonomy.csv")) |>
-  select(genus_species.ORIG,
-         scientificName,
-         taxonID,
-         scientificNameAuthorship) |>
-  rename("Original name" = genus_species.ORIG,
-         "New accepted name" = scientificName,
-         "WFO ID" = taxonID,
-         "Authorship" = scientificNameAuthorship) |>
-  arrange(`Original name`) |>
-  knitr::kable()
+	here::here(
+		"data",
+		"derived",
+		"taxonomy.csv"
+	)
+) |>
+	select(
+		genus_species.ORIG,
+		scientificName,
+		taxonID,
+		scientificNameAuthorship
+	) |>
+	rename(
+		"Original name" = genus_species.ORIG,
+		"New accepted name" = scientificName,
+		"WFO ID" = taxonID,
+		"Authorship" = scientificNameAuthorship
+	) |>
+	arrange(`Original name`) |>
+	knitr::kable()
 ```
 
 
 # Survival analysis of logged forest seedlings in their first census
 
-57% of all individuals were never recorded as alive (5,868 out of 10,272) 
-i.e., they died in the period between planting and their first census. 
-This occurs exclusively in the logged forest 
-since unlike in the old-growth forest, 
-diameter measurements were not taken at the time of planting. 
+57% of all individuals were never recorded as alive (5,868 out of 10,272)
+i.e., they died in the period between planting and their first census.
+This occurs exclusively in the logged forest
+since unlike in the old-growth forest,
+diameter measurements were not taken at the time of planting.
 
-We excluded these individuals from the main analysis since they 
-lack data both on size and exact age, 
+We excluded these individuals from the main analysis since they
+lack data both on size and exact age,
 hence the seedlings cannot be directly compared.
-For the first cohort of seedlings planted into the logged forest, 
-between 18 and 20 months elapsed between planting and censusing, 
+For the first cohort of seedlings planted into the logged forest,
+between 18 and 20 months elapsed between planting and censusing,
 in that time 70% of seedlings died (5,034 out of 7,222).
-For the second cohort (replacing dead seedlings from cohort one), 
+For the second cohort (replacing dead seedlings from cohort one),
 between 7 and 28 months elapsed between planting and censusing, and
 30% died (834 out of 2,746).
 
-Nevertheless, this data might provide some insight on which species are more likely to survive over these time periods, 
+Nevertheless, this data might provide some insight on which species are more likely to survive over these time periods,
 and we present a simple analysis here.
 
 Survival of seedlings from cohort one and two were assessed in separate models with identical formulae.
-We fit the models in the `R` package `brms` 
-with a Bernoulli response distribution, 
-where zero indicated the seedling was dead in it's first census and one indicated it was alive. 
-The predictor was a fixed effect of species. 
-We use a regularising prior of `normal(0, 2)`, a common choice for Bernoulli models. 
-Results are presented in @fig-cens1-surv and @fig-cens1-corrsurv. 
+We fit the models in the `R` package `brms`
+with a Bernoulli response distribution,
+where zero indicated the seedling was dead in it's first census and one indicated it was alive.
+The predictor was a fixed effect of species.
+We use a regularising prior of `normal(0, 2)`, a common choice for Bernoulli models.
+Results are presented in @fig-cens1-surv and @fig-cens1-corrsurv.
 
 ![Estimates of survival probability in the time period between planting and the first census of cohort one and two seedlings in the logged forest. The posterior median is represented by a point with the line showing the 66% and 95% credible interval. The dashed red line shows where the likelihood of survival is 50%. No _Dipterocarpus conformis_ seedlings were planted in the second cohort due to insufficient avalibility.](../code/notebooks/figures/2025-09-30_never-alive-seedlings/unnamed-chunk-16-1.png){#fig-cens1-surv width=400}
 
@@ -120,11 +126,11 @@ d_{h2} = \frac{D_{h1}}{exp(b_1 h1 - h2)}
 $$
 
 where $d_{h2}$ is the estimated diameter (mm) at height $h_2$ (m),
-$D_{h1}$ is the known diameter (mm) at height $h_1$ (m), 
+$D_{h1}$ is the known diameter (mm) at height $h_1$ (m),
 and $b_1$ is a taper parameter.
 
-We chose the value for our taper parameter $b_1 = 3.91$ by 
-optimising on trees where we had diameter measurements both at the base and at 
+We chose the value for our taper parameter $b_1 = 3.91$ by
+optimising on trees where we had diameter measurements both at the base and at
 breast height, to find the value which gave the lowest Root Mean Squared Error.
 
 ![In (a), estimated values of basal diameter are plotted against their true values. The red line indicates where the estimate is equal to the true value. (b) Shows the distribution of the error around zero (red line).](../code/notebooks/figures/2025-07-28_estimate-basal-diameter/unnamed-chunk-7-1.png){#fig-est-basal width=400}
@@ -135,7 +141,7 @@ breast height, to find the value which gave the lowest Root Mean Squared Error.
 
 ![Prior and posterior distributions for the survival model on the link scale. Prior and posterior distributions are displayed in separate panels and colours indicate parameters estimated by the model. Note that the same prior was set across all the population-level parameters, and that axes are not preserved across panels. ](../code/notebooks/figures/2025-06-18_survival-prior-vs-posterior/unnamed-chunk-4-1.png){#fig-prior-surv width=400}
 
-# Growth curves over time 
+# Growth curves over time
 
 ![Basal diameter measurements for all seedlings over time (black points). Coloured lines show the predicted growth curve for a typical seedling of each of the 15 species in the old-growth (green) and logged (yellow) forest. ](../code/notebooks/figures/2025-12-19_supp-growth-fits-w-data/sp_preds.png){#fig-gro-data width=325}
 
@@ -152,11 +158,13 @@ breast height, to find the value which gave the lowest Root Mean Squared Error.
 #| tbl-cap: "Posterior estimates of population-level effects from the growth model on the link scale"
 
 readr::read_csv(
-        here::here(
-          "output",
-          "results",
-          "posterior_summary_growth.csv")) |>
-  knitr::kable()
+	here::here(
+		"output",
+		"results",
+		"posterior_summary_growth.csv"
+	)
+) |>
+	knitr::kable()
 ```
 
 ![Posterior predictive check for the survival model, where the observed data is in dark blue (_y_) and 50 draws from the posterior distribution are in light blue (_y~rep~_). Conditional Kaplan-Meier curves, represented by _y_, were estimated for seedlings at representive values of basal diameter (the 0.25, 0.5 and 0.75 quartiles +/- the standard distribution multiplied by 0.01). Posterior preditions (_y~rep~_), were made for seedlings of these exact sizes (the 0.25, 0.5 and 0.75 quartiles). ](../code/notebooks/figures/2025-09-12_posterior-predictive-checks/unnamed-chunk-13-1.png){#fig-ppcheck-surv width=400}
@@ -166,11 +174,13 @@ readr::read_csv(
 #| tbl-cap: "Posterior estimates of population-level effects from the survival model on the link scale"
 
 readr::read_csv(
-        here::here(
-          "output",
-          "results",
-          "posterior_summary_survival.csv")) |>
-  knitr::kable()
+	here::here(
+		"output",
+		"results",
+		"posterior_summary_survival.csv"
+	)
+) |>
+	knitr::kable()
 ```
 
 # Growth-survival correlations
@@ -179,7 +189,7 @@ readr::read_csv(
 
 # Temporal change in canopy cover and microclimate
 
-LiDAR data collected in 2013, 2014 and 2020^[Jackson, T.D. _et al._ Airborne laser scanning data for the Sabah Biodiversity Experiment from 2013 and 2020. Zenodo. (2025). doi: [10.5281/zenodo.14917551](https://doi.org/10.5281/zenodo.14917551)] were used to estimate canopy cover and derive microclimate predictions using methods adapted from Jucker _et al._ (2018).^[Jucker, T. _et al._ Canopy structure and topography jointly constrain the microclimate of human-modified tropical landscapes. Global Change Biology 24, 5243-5258 (2018). doi: [10.1111/gcb.14415](https://doi.org/10.1111/gcb.14415)] 
+LiDAR data collected in 2013, 2014 and 2020^[Jackson, T.D. _et al._ Airborne laser scanning data for the Sabah Biodiversity Experiment from 2013 and 2020. Zenodo. (2025). doi: [10.5281/zenodo.14917551](https://doi.org/10.5281/zenodo.14917551)] were used to estimate canopy cover and derive microclimate predictions using methods adapted from Jucker _et al._ (2018).^[Jucker, T. _et al._ Canopy structure and topography jointly constrain the microclimate of human-modified tropical landscapes. Global Change Biology 24, 5243-5258 (2018). doi: [10.1111/gcb.14415](https://doi.org/10.1111/gcb.14415)]
 
 Canopy height models and digital terrain models were used to generate 30 m resolution rasters describing elevation, slope, topographic position index, mean and maximum canopy height, and canopy cover above 10 m. Canopy cover was defined as the proportion of each 30 × 30 m pixel with vegetation taller than 10 m.
 
@@ -194,3 +204,8 @@ For reference, seedlings in the logged forest plots were planted in 2002–2003 
 ![Temporal change in mean predicted temperature for each plot in logged and old-growth forest. Individual plots are shown as points, with repeated estimates for the same plot connected by lines. Violins represent the distribution of values for each year within each forest type. Colour indicates the net change in mean temperature over time and where data were only avalible at one time point they are coloured grey. Note that the old-growth understory plots were not included in the analysis for the current manuscript, but are presented here for the sake of comparison.](../code/notebooks/figures/2026-05-13_canopy-cover/unnamed-chunk-18-1.png){#fig-mean-temp width=400}
 
 
+# Old-growth forest understory plots
+
+In the old-growth forest, each canopy gap seedling plot was paired with a plot 30 m from the gap, under closed canopy. We included only the gap plots in our analysis since they are likely more comparable to the selectively logged forest site in terms of light conditions and were monitored for 10 years longer than the understory plots. However, we provide a visualisation of the understory plot data here for context (@fig-understory).
+
+![Survival and basal diameter growth of seedlings planted in canopy gaps and the understory of old-growth forest. (a) Shows the relationship between time and log-transformed mean basal diameter (mm) for individual seedlings. Each point represents a seedling. (b) Shows the number of seedlings recorded as alive or dead at each census in gap and understory planting sites. Not every plot was visited in each census, hence the total count of seedlings can vary.](../code/notebooks/figures/2026-11-12_gap-v-understory/unnamed-chunk-4-1.png){#fig-understory width=400}

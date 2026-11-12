@@ -115,3 +115,6 @@ Backup[ ]of[ ]*.pages/
 Backup[ ]of[ ]*.key/
 Backup[ ]of[ ]*.numbers/
 .positai
+
+/.quarto/
+**/*.quarto_ipynb

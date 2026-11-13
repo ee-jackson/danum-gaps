@@ -1,6 +1,6 @@
 # Performance of understory vs gap seedlings in the old-growth forest
 
-12 November, 2026
+13 November, 2026
 
 - [Survival](#survival)
 - [Growth](#growth)

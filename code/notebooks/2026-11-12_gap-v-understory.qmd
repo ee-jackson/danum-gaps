@@ -15,7 +15,7 @@ knitr::opts_chunk$set(
 
 set.seed(as.numeric(Sys.Date()))
 
-ggplot2::theme_set(ggplot2::theme_bw(base_size = 12))
+ggplot2::theme_set(ggplot2::theme_bw(base_size = 15))
 ```
 
 R1.14: The authors refer to seedlings planted under shade as well as in canopy gaps. It could be interesting to see these understorey planted seedlings in the SI, as it may reveal something on light requirements for successful planting

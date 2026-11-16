@@ -137,9 +137,9 @@ breast height, to find the value which gave the lowest Root Mean Squared Error.
 
 # Prior choice
 
-![Prior and posterior distributions for the growth model on the link scale. Facet columns indicate parameters estimated by the model. Facet rows indicate the prior and posterior distributions. Note that the same priors were set for both forest types, and that axes are not preserved across panels.](../code/notebooks/figures/2025-06-13_growth-prior-vs-posterior/unnamed-chunk-4-1.png){#fig-prior-gro width=400}
+![Prior and posterior distributions of growth model parameters on the link scale. Columns show model parameters; rows show prior and posterior distributions. The prior density is also shown in grey behind each posterior distribution, over the range displayed in that panel. The same prior was specified for both forest types. Axis scales vary among panels.](../code/notebooks/figures/2025-06-13_growth-prior-vs-posterior/unnamed-chunk-4-1.png){#fig-prior-gro width=400}
 
-![Prior and posterior distributions for the survival model on the link scale. Prior and posterior distributions are displayed in separate panels and colours indicate parameters estimated by the model. Note that the same prior was set across all the population-level parameters, and that axes are not preserved across panels. ](../code/notebooks/figures/2025-06-18_survival-prior-vs-posterior/unnamed-chunk-4-1.png){#fig-prior-surv width=400}
+![Prior and posterior distributions of survival model parameters on the link scale. Prior and posterior distributions are displayed in separate panels and colours indicate parameters estimated by the model. The same prior was specified for all the population-level parameters. Axis scales vary among panels.](../code/notebooks/figures/2025-06-18_survival-prior-vs-posterior/unnamed-chunk-4-1.png){#fig-prior-surv width=400}
 
 # Growth curves over time
 

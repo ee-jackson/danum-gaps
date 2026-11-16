@@ -1,8 +1,8 @@
 ---
 title: "Plotting priors vs posteriors for our growth model"
 author: 'eleanorjackson'
-date: '`r format(Sys.time(), "%d %B, %Y")`' 
-format: 
+date: '`r format(Sys.time(), "%d %B, %Y")`'
+format:
   gfm:
     toc: true
 editor: source
@@ -16,9 +16,12 @@ execute:
 file_name <- knitr::current_input()
 
 knitr::opts_chunk$set(
-  fig.path =
-    paste0("figures/", sub("\\.rmarkdown$", "", basename(file_name)), 
-           "/", sep = "")
+	fig.path = paste0(
+		"figures/",
+		sub("\\.rmarkdown$", "", basename(file_name)),
+		"/",
+		sep = ""
+	)
 )
 
 set.seed(123)
@@ -35,89 +38,144 @@ library("ggh4x")
 
 ```{r}
 mod_gro <-
-  readRDS(here::here("output", "models", 
-                     "growth_model.rds"))
+	readRDS(here::here("output", "models", "growth_model.rds"))
 ```
 
 ```{r}
-prior_draws <- 
-  prior_draws(mod_gro) %>% 
-  select(contains("b_"))
+prior_draws <-
+	prior_draws(mod_gro) %>%
+	select(contains("b_"))
 
-post_draws <- 
-  as_draws_df(mod_gro, variable = "^b_", regex = TRUE)
+post_draws <-
+	as_draws_df(mod_gro, variable = "^b_", regex = TRUE)
 
-prior_post <- 
-  bind_rows(prior = prior_draws, 
-          posterior = post_draws,
-          .id = "dist") %>% 
-  pivot_longer(cols = contains("b_")) %>% 
-  mutate(parameter = str_split_i(string = name, 
-                                 pattern ="_", i = 2)) %>% 
-  mutate(forest_type = case_when(
-    grepl("logged", name) ~ "Logged forest",
-    grepl("primary", name) ~ "Old-growth forest")) %>% 
-  mutate(parameter = str_remove(string = parameter, 
-                                 pattern ="logged")) %>% 
-  mutate(parameter = str_remove(string = parameter, 
-                                 pattern ="primary"))
-  
+prior_post <-
+	bind_rows(prior = prior_draws, posterior = post_draws, .id = "dist") %>%
+	pivot_longer(cols = contains("b_")) %>%
+	mutate(parameter = str_split_i(string = name, pattern = "_", i = 2)) %>%
+	mutate(
+		forest_type = case_when(
+			grepl("logged", name) ~ "Logged forest",
+			grepl("primary", name) ~ "Old-growth forest"
+		)
+	) %>%
+	mutate(parameter = str_remove(string = parameter, pattern = "logged")) %>%
+	mutate(parameter = str_remove(string = parameter, pattern = "primary"))
 ```
 
 ```{r}
-
 pal <-
-  c("Logged forest" = "#e69f00", "Old-growth forest" = "#009e73")
+	c("Logged forest" = "#e69f00", "Old-growth forest" = "#009e73")
 
-prior_post %>% 
-  mutate(dist = str_to_sentence(dist)) %>%
-  mutate(dist = factor(dist, levels = c("Prior", "Posterior"))) %>%
-  mutate(name = case_when(
-    parameter == "logA" ~ "log <i>A</i>, Asymptotic<br>basal diameter",
-    parameter == "logkG" ~ "log <i>k<sub>G</sub></i>, Growth<br>rate coefficient",
-    parameter == "Ti" ~ "<i>T<sub>i</sub></i>, Time to reach<br>max growth rate"
-  )) %>%
-  filter(value < 50) %>% 
-  filter(value > -50) %>% 
-  ggplot(aes(x = value, fill = forest_type)) +
-  geom_density(alpha = 0.5) +
-  ggh4x::facet_grid2(dist~name, scales = "free", independent = "all") +
-  scale_fill_manual(values = pal, breaks = ~ .x[!is.na(.x)]) +
-  theme(legend.position = "bottom",
-        strip.text = element_markdown(),
-        legend.title = element_blank())
+plot_data <- prior_post %>%
+	mutate(dist = str_to_sentence(dist)) %>%
+	mutate(dist = factor(dist, levels = c("Prior", "Posterior"))) %>%
+	mutate(
+		name = case_when(
+			parameter == "logA" ~ "log <i>A</i>, Asymptotic<br>basal diameter",
+			parameter ==
+				"logkG" ~ "log <i>k<sub>G</sub></i>, Growth<br>rate coefficient",
+			parameter ==
+				"Ti" ~ "<i>T<sub>i</sub></i>, Time to reach<br>max growth rate"
+		)
+	)
+
+prior_ranges <- plot_data %>%
+	filter(dist == "Prior", is.finite(value)) %>%
+	summarise(
+		x_min = quantile(value, 0.01),
+		x_max = quantile(value, 0.99),
+		.by = name
+	)
+
+posterior_ranges <- plot_data %>%
+	filter(dist == "Posterior", is.finite(value)) %>%
+	summarise(x_min = min(value), x_max = max(value), .by = name) %>%
+	mutate(
+		x_width = x_max - x_min,
+		x_min = x_min - 0.20 * x_width,
+		x_max = x_max + 0.20 * x_width
+	) %>%
+	select(-x_width)
+
+prior_background <- plot_data %>%
+	filter(dist == "Prior", is.finite(value)) %>%
+	inner_join(posterior_ranges, by = join_by(name)) %>%
+	group_by(name) %>%
+	group_modify(
+		~ {
+			prior_density <- density(
+				.x$value,
+				from = first(.x$x_min),
+				to = first(.x$x_max)
+			)
+			tibble(value = prior_density$x, density = prior_density$y)
+		}
+	) %>%
+	ungroup() %>%
+	mutate(dist = factor("Posterior", levels = c("Prior", "Posterior")))
+
+plot_data %>%
+	ggplot(aes(x = value, fill = forest_type)) +
+	geom_area(
+		data = prior_background,
+		aes(x = value, y = density),
+		inherit.aes = FALSE,
+		fill = "grey50",
+		alpha = 0.5
+	) +
+	geom_density(alpha = 0.5) +
+	ggh4x::facet_grid2(dist ~ name, scales = "free", independent = "all") +
+	ggh4x::facetted_pos_scales(
+		x = lapply(seq_len(nrow(prior_ranges)), \(index) {
+			rlang::new_formula(
+				rlang::expr(dist == "Prior" & name == !!prior_ranges$name[[index]]),
+				scale_x_continuous(
+					limits = c(prior_ranges$x_min[[index]], prior_ranges$x_max[[index]])
+				)
+			)
+		})
+	) +
+	scale_fill_manual(values = pal, breaks = ~ .x[!is.na(.x)]) +
+	theme(
+		legend.position = "bottom",
+		strip.text = element_markdown(),
+		legend.title = element_blank()
+	)
+```
+
+On the response scale:
+
+```{r}
+prior_post %>%
+	filter(parameter == "logA") %>%
+	mutate(A = exp(value)) %>%
+	ggplot(aes(x = A, fill = forest_type)) +
+	geom_density(alpha = 0.5) +
+	facet_wrap(dist ~ parameter, scales = "free") +
+	labs(x = "Diameter at base (mm)") +
+	xlim(c(0, 500))
 ```
 
 ```{r}
-prior_post %>% 
-  filter(parameter == "logA") %>% 
-  mutate(A = exp(value)) %>% 
-  ggplot(aes(x = A, fill = forest_type)) +
-  geom_density(alpha = 0.5) +
-  facet_wrap(dist~parameter, scales = "free") +
-  labs(x = "Diameter at base (mm)") +
-  xlim(c(0,500))
+prior_post %>%
+	filter(parameter == "Ti") %>%
+	ggplot(aes(x = value, fill = forest_type)) +
+	geom_density(alpha = 0.5, bounds = c(-20, 20)) +
+	facet_wrap(dist ~ parameter, scales = "free") +
+	xlab("Years")
 ```
 
 ```{r}
-prior_post %>% 
-  filter(parameter == "Ti") %>% 
-  ggplot(aes(x = value, fill = forest_type)) +
-  geom_density(alpha = 0.5, bounds = c(-20, 20)) +
-  facet_wrap(dist~parameter, scales = "free") +
-  xlab("Years")
-```
-
-```{r}
-prior_post %>% 
-  filter(parameter == "logkG") %>% 
-  drop_na(value) %>% 
-  mutate(kG = exp(value)) %>% 
-  rowwise() %>% 
-  mutate(rgr = (kG / exp(1))*100) %>% 
-  ggplot(aes(x = rgr, fill = forest_type)) +
-  geom_density(alpha = 0.5) +
-  facet_wrap(dist~parameter, scales = "free") +
-  xlab("Relative growth rate (% year-1)") +
-  xlim(c(0, 50))
+prior_post %>%
+	filter(parameter == "logkG") %>%
+	drop_na(value) %>%
+	mutate(kG = exp(value)) %>%
+	rowwise() %>%
+	mutate(rgr = (kG / exp(1)) * 100) %>%
+	ggplot(aes(x = rgr, fill = forest_type)) +
+	geom_density(alpha = 0.5) +
+	facet_wrap(dist ~ parameter, scales = "free") +
+	xlab("Relative growth rate (% year-1)") +
+	xlim(c(0, 50))
 ```

@@ -10,6 +10,7 @@ format:
   pdf:
     fig-pos: H
     toc: true
+    toc-depth: 1
     number-sections: true
     colorlinks: true
 author:
@@ -271,3 +272,93 @@ readr::read_rds(
 ```
 
 :::
+
+# Statistical model specification
+
+We fitted separate models of basal diameter growth and survival. Both models estimated differences between forest types while accounting for variation among species and plots. The growth model described individual seedling growth trajectories over time, allowing all three Gompertz parameters to vary among individuals. Prior distributions and their justification are described in the main text.
+
+In the equations below, $n$ identifies an individual seedling and $j$ identifies a measurement. The notation $f[n]$, $s[n]$, and $p[n]$ identifies the forest type, species, and plot of seedling $n$, respectively. Plots are nested within forest type. The symbol $\sim$ means "is assumed to follow the distribution", and all logarithms are natural logarithms. Normal distributions are written in terms of their mean and variance.
+
+## Growth model
+
+Each seedling was described by a Gompertz growth curve. Here, $\widetilde{B}_{nj}$ is the predicted median basal diameter (mm) of seedling $n$ at time $t_{nj}$ (years since its first measurement):
+
+$$
+\widetilde{B}_{nj}
+=
+A_n \exp\!\left\{
+-\exp\!\left[-k_{G,n}(t_{nj}-T_{i,n})\right]
+\right\},
+$$
+
+where $A_n$ is asymptotic basal diameter (mm), $k_{G,n}$ is the growth rate coefficient (year$^{-1}$), and $T_{i,n}$ is the time of maximum growth rate (years). The subscript $i$ in $T_{i,n}$ denotes inflection, as in the main text; $n$ identifies the seedling.
+
+Observed basal diameters $B_{nj}$ were assumed to follow a lognormal distribution around this curve. Equivalently, their logarithms followed a normal distribution:
+
+$$
+\log B_{nj}
+\sim \operatorname{Normal}
+\!\left(\log\widetilde{B}_{nj},\sigma_B^2\right).
+$$
+
+The parameter $\sigma_B$ describes the remaining variation on the logarithmic scale. The three growth parameters varied among forest types, species, individual seedlings, and plots:
+
+$$
+\begin{aligned}
+\log A_n
+&= \alpha_{A,f[n]} + b_{A,s[n],f[n]}
+   + u_{A,n} + v_{A,p[n]}, \\
+\log k_{G,n}
+&= \alpha_{k_G,f[n]} + b_{k_G,s[n],f[n]}
+   + u_{k_G,n} + v_{k_G,p[n]}, \\
+T_{i,n}
+&= \alpha_{T_i,f[n]} + b_{T_i,s[n],f[n]}
+   + u_{T_i,n} + v_{T_i,p[n]}.
+\end{aligned}
+$$
+
+Each growth parameter combines a forest-specific population value ($\alpha$) with deviations associated with species ($b$), individual seedlings ($u$), and plots ($v$). For example, $\log A_n$ is the population value for seedling $n$’s forest type, adjusted for its species, individual identity, and plot. A positive deviation increases the parameter on the scale on which it is modelled, and a negative deviation decreases it. Modelling $A_n$ and $k_{G,n}$ on the logarithmic scale ensures that both remain positive. $T_{i,n}$ is modelled directly in years and may be negative, indicating an inflection before the first measurement.
+
+Individual and plot deviations followed zero-centred normal distributions. For each growth parameter, species deviations in the two forest types followed a joint normal distribution, allowing a species’ deviations to be correlated across forest types. Deviations for different growth parameters were modelled independently.
+
+## Survival model
+
+We modelled time to death using a Weibull distribution. $Z_n$ denotes the time to death of seedling $n$, measured in years since its first measurement. The Weibull distribution is specified by a shared shape parameter $k_S$ and a seedling-specific scale parameter $\lambda_n$:
+
+$$
+\begin{aligned}
+Z_n
+&\sim \operatorname{Weibull}(k_S,\lambda_n), \\
+\lambda_n
+&= \frac{\mu_n}{\Gamma(1+1/k_S)}.
+\end{aligned}
+$$
+
+Here, $\mu_n$ is the mean survival time of seedling $n$, and $\Gamma$ denotes the gamma function. The shape parameter $k_S$ determines whether mortality hazard (the instantaneous mortality rate among surviving seedlings) increases ($k_S>1$), decreases ($k_S<1$), or remains constant ($k_S=1$) through time.
+
+Mean survival time depended on forest type, basal diameter, species, and plot:
+
+$$
+\log\mu_n
+= \alpha_{S,f[n]} + \beta_B x_n
+   + b_{S,s[n],f[n]} + v_{S,p[n]}.
+$$
+
+Here, $x_n$ is basal diameter at the last live census, scaled without centring using R's `scale(..., center = FALSE, scale = TRUE)`. The coefficient $\beta_B$ describes its effect and is shared across forest types. A positive coefficient corresponds to longer mean survival time. As in the growth model, $\alpha$ denotes forest-specific population values, $b$ denotes species deviations within each forest type, and $v$ denotes plot deviations. Plot deviations followed a zero-centred normal distribution, and species deviations in the two forest types followed a zero-centred joint normal distribution, allowing them to be correlated across forest types.
+
+The probability that seedling $n$ survives beyond time $t$ is:
+
+$$
+S_n(t)
+= \exp\!\left[-\left(\frac{t}{\lambda_n}\right)^{k_S}\right].
+$$
+
+Death times were not observed exactly. For seedlings recorded dead, death occurred between the last live census ($L_n$) and the first dead census ($U_n$); these observations were interval-censored. Both times are measured in years since the seedling's first measurement. Seedlings never recorded dead were right-censored: their survival time exceeded $L_n$. The model therefore used the probability of death within the observed interval, or the probability of surviving beyond the last observation, respectively. Each seedling's contribution to the likelihood, $\mathcal{L}_n$, was:
+
+$$
+\mathcal{L}_n =
+\begin{cases}
+S_n(L_n)-S_n(U_n), & \text{interval-censored}, \\
+S_n(L_n), & \text{right-censored}.
+\end{cases}
+$$

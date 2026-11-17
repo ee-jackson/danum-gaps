@@ -215,3 +215,59 @@ In the old-growth forest, each canopy gap seedling plot was paired with a plot 3
 Basal diameter measurements were substantially more complete than measurements taken at breast height (DBH), as DBH could only be recorded once seedlings had reached the required height. DBH was missing for 55% of observations of living seedlings, compared with just 0.73% for basal diameter. Consequently, we fitted our models using basal diameter. However, the DBH growth data largely followed the same trajectories as those observed for basal diameter (@fig-diameters).
 
 ![Seedling (a) basal diameter and (b) diameter at breast height (DBH) over time in logged and old-growth forests. Points show individual measurements; lines show generalized additive model (GAM) fits, with shaded 95% confidence intervals. GAMs were fit with `ggplot2::geom_smooth(method = "gam")`. Sample sizes indicate the number of plotted measurements in each panel.](../code/notebooks/figures/2026-11-13_dbh-vs-dbase/unnamed-chunk-3-1.png){#fig-diameters width=400}
+
+# Summary of seedling observations by census and plot
+
+```{r}
+#| label: tab-summary-logged
+#| tbl-cap: "Count of observed living seedlings in each census of the logged forest plots. Each column corresponds to a plot and each row to a census. Not every plot was included in every census and in censuses 11-19, only two planting lines of five plots were surveyed. Censuses are not evenly spaced in time and each full census took several months to complete. Approximately 1,320 seedlings were planted in each plot, and any seedlings which had died by census 01, were replanted between censuses 05 and 06."
+
+readr::read_rds(
+	here::here(
+		"data",
+		"derived",
+		"data_cleaned.rds"
+	)
+) |>
+	filter(forest_type == "logged") |>
+	group_by(census_no, plot) |>
+	summarise(n = sum(survival)) |>
+	pivot_wider(values_from = n, names_from = plot, names_prefix = "Plot ") |>
+	mutate(total = rowSums(pick(where(is.numeric)), na.rm = TRUE)) |>
+	rename(
+		"Census no." = census_no,
+		"Total" = total
+	) |>
+	arrange(`Census no.`) |>
+	knitr::kable(format = "latex", linesep = "", booktabs = TRUE) |>
+	kableExtra::kable_styling(font_size = 8)
+```
+
+::: {.landscape}
+
+```{r}
+#| label: tab-summary-oldg
+#| tbl-cap: "Count of observed living seedlings in each census of the old-growth forest canopy gap plots. Each column corresponds to a plot and each row to a census. Censuses are not evenly spaced in time and not every plot was included in every census. Each plot was planted with 25 individual seedlings, with the intention of including one individual from each of the 25 species. However, due to occasional misidentification or limited availability, some species were represented by multiple individuals, while others were absent. In this study, we focus on the 15 species that were also planted in the logged forest site. Consequently, the initial number of individuals occasionally differs from 15, with some plots containing 14 or 16 individuals."
+
+readr::read_rds(
+	here::here(
+		"data",
+		"derived",
+		"data_cleaned.rds"
+	)
+) |>
+	filter(forest_type == "primary") |>
+	group_by(census_no, plot) |>
+	summarise(n = sum(survival)) |>
+	pivot_wider(values_from = n, names_from = plot) |>
+	mutate(total = rowSums(pick(where(is.numeric)), na.rm = TRUE)) |>
+	rename(
+		"Census no." = census_no,
+		"Total" = total
+	) |>
+	arrange(`Census no.`) |>
+	knitr::kable(format = "latex", linesep = "", booktabs = TRUE) |>
+	kableExtra::kable_styling(font_size = 8)
+```
+
+:::

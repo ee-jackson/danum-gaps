@@ -1,6 +1,6 @@
 ---
 title: "Dynamic seedling growth and survival trajectories in logged and old-growth tropical forest over two decades"
-subtitle: "Supporting Information"
+subtitle: "Supporting Information, *Journal of Ecology*"
 knitr:
   opts_chunk:
     echo: false
@@ -185,7 +185,7 @@ readr::read_csv(
 
 # Growth-survival correlations
 
-![Pairwise Pearson's correlation coefficients for growth and survival parameters at the species level. _S~20~_ is the model derived basal diameter at 20 years (mm), _k~G~/e_ is the maximum relative growth rate, _T~i~_ is the time (years) at inflection of the growth curve, i.e., the time to reach maximum growth rate, and $\mu$ is the mean of the Weibull distribution, representing survival time. ](../code/notebooks/figures/2026-05-12_growth-survival-trade-off/unnamed-chunk-6-1.png){#fig-gro-surv-corr width=400}
+![Pairwise Pearson's correlation coefficients for growth and survival parameters at the species level. _B~20~_ is the model derived basal diameter at 20 years (mm), _k~G~/e_ is the maximum relative growth rate, _T~i~_ is the time (years) at inflection of the growth curve, i.e., the time to reach maximum growth rate, and $\mu$ is the mean of the Weibull distribution, representing survival time. ](../code/notebooks/figures/2026-05-12_growth-survival-trade-off/unnamed-chunk-6-1.png){#fig-gro-surv-corr width=400}
 
 # Temporal change in canopy cover and microclimate
 

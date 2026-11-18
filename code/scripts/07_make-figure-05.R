@@ -1,8 +1,8 @@
 #!/usr/bin/env Rscript
 
 ## Author: E E Jackson, eleanor.elizabeth.j@gmail.com
-## Script: make-figure-05.R
-## Desc: Make figure 4
+## Script: make-figure-05-06.R
+## Desc: Make figure 5 and 6
 ## Date created: 2025-04-21
 
 # Packages ----------------------------------------------------------------
@@ -420,8 +420,16 @@ pa <-
 		slab_alpha = 0.5,
 		point_interval = "median_qi",
 		size = 0.25,
-		normalize = "panels",
-		show.legend = FALSE
+		normalize = "panels"
+	) +
+	guides(
+		fill = guide_legend(
+			override.aes = list(
+				shape = NA,
+				linetype = 0,
+				slab_colour = NA
+			)
+		)
 	) +
 	theme(legend.position = "bottom") +
 	facet_wrap(~name, scales = "free", nrow = 2) +
@@ -485,6 +493,15 @@ pc <-
 		point_size = 0.25,
 		point_interval = "median_qi"
 	) +
+	guides(
+		fill = guide_legend(
+			override.aes = list(
+				shape = NA,
+				linetype = 0,
+				slab_colour = NA
+			)
+		)
+	) +
 	theme(legend.position = "bottom") +
 	facet_wrap(~name, scales = "free", nrow = 4) +
 	scale_y_discrete(limits = rev) +
@@ -511,15 +528,41 @@ pd <-
 	geom_vline(xintercept = 0, linetype = 2, colour = "red", linewidth = 0.25) +
 	labs(
 		x = "Additional effect of logging
-       <br>(logged forest estimate - old-growth forest estimate)",
+       (logged forest<br>estimate - old-growth forest estimate)",
 		y = "Species"
 	)
 
 
 # Combine panels ----------------------------------------------------------
 
+# figure 5
+
 png(
 	here::here("output", "figures", "figure_05.png"),
+	width = 8,
+	height = 14,
+	res = 600,
+	pointsize = 6,
+	units = "cm",
+	type = "cairo"
+)
+pa /
+	pb +
+	patchwork::plot_annotation(tag_levels = "a") &
+	theme_bw(base_size = 8) +
+		theme(
+			legend.position = "bottom",
+			legend.title = element_blank(),
+			axis.title.y = element_markdown(),
+			axis.title.x = element_markdown(),
+			strip.text = element_markdown(lineheight = 0.5)
+		)
+dev.off()
+
+# figure 6
+
+png(
+	here::here("output", "figures", "figure_06.png"),
 	width = 18,
 	height = 20,
 	res = 600,
@@ -527,20 +570,17 @@ png(
 	units = "cm",
 	type = "cairo"
 )
-pa +
-	pb +
-	pc +
+pc +
 	pd +
 	patchwork::plot_annotation(tag_levels = "a") +
-	patchwork::plot_layout(guides = "collect", heights = c(0.5, 2)) &
-	theme_bw(base_size = 7) +
+	patchwork::plot_layout(guides = "collect") &
+	theme_bw(base_size = 8) +
 		theme(
 			legend.position = "bottom",
 			legend.title = element_blank(),
 			axis.title.y = element_markdown(),
-			axis.text.y = element_markdown(size = 5),
+			axis.text.y = element_markdown(size = 6),
 			axis.title.x = element_markdown(),
-			strip.text = element_markdown(lineheight = 0.5),
-			legend.text = element_text(size = 8)
+			strip.text = element_markdown(lineheight = 0.5)
 		)
 dev.off()
